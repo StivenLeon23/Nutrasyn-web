@@ -116,19 +116,13 @@
             -webkit-transform: translateZ(0); transform: translateZ(0);
         }
 
-        /* Tarjetas Apilables */
+        /* Tarjetas Apilables (Flujo natural sin bloquear la altura) */
         .card-section {
             position: relative;
             border-top-left-radius: 3rem; border-top-right-radius: 3rem;
             box-shadow: 0 -20px 50px rgba(0,0,0,0.4);
             margin-top: -3rem;
-        }
-        @media (min-width: 1024px) {
-            .card-section {
-                position: sticky; top: 0; height: 100vh; margin-top: 0;
-                -webkit-transform: translateZ(0); transform: translateZ(0);
-                will-change: transform;
-            }
+            min-height: 100vh;
         }
 
         /* Scroll Horizontal */
