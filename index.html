@@ -132,6 +132,7 @@
         .reveal {
             opacity: 0; transform: translateY(60px) scale(0.95);
             transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: opacity, transform;
         }
         .reveal.active { opacity: 1; transform: none; }
         .text-gradient { background: linear-gradient(135deg, #00A896 0%, #2dd4bf 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
@@ -792,11 +793,18 @@
             }
         });
 
-        // Revelado Suave al Scroll
+        // Revelado Suave al Scroll (Efecto hacia abajo y hacia arriba)
         function reveal() {
             const reveals = document.querySelectorAll(".reveal");
             const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add("active"); });
+                entries.forEach(entry => { 
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add("active"); 
+                    } else {
+                        // Quitamos la clase para que el efecto se repita al regresar
+                        entry.target.classList.remove("active");
+                    }
+                });
             }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
             reveals.forEach(el => observer.observe(el));
         }
