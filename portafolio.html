@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>Portafolio de Ingredientes Funcionales B2B | NutraSyn Lab</title>
+    <meta name="description" content="Catálogo e ingredientes funcionales B2B para desarrollo de productos líquidos y polvos. Formule su producto, personalice empaques y cotice muestras.">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="https://res.cloudinary.com/dj761bgxw/image/upload/v1777037267/svg_1_-cropped_p9sqmo.svg" />
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS y Lucide Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Configuración de Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Manrope', 'sans-serif'],
+                        heading: ['Lexend', 'sans-serif'],
+                    },
+                    colors: {
+                        deepblue: {
+                            DEFAULT: '#0A2540',
+                            50: '#f0f4f8', 100: '#d9e2ec', 200: '#bcccdc', 300: '#9fb3c8', 400: '#829ab1',
+                            500: '#627d98', 600: '#486581', 700: '#334e68', 800: '#243b53', 900: '#0A2540', 950: '#061727',
+                        },
+                        emerald: {
+                            DEFAULT: '#00A896',
+                            50: '#f0fdfa', 100: '#ccfbf1', 200: '#99f6e4', 300: '#5eead4', 400: '#2dd4bf',
+                            500: '#00A896', 600: '#008c7d', 700: '#007064', 800: '#00574e', 900: '#00403a',
+                        }
+                    },
+                    boxShadow: {
+                        'glass': '0 8px 32px 0 rgba(10, 37, 64, 0.07)',
+                        'glow': '0 0 20px rgba(0, 168, 150, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { background-color: #061727; overflow-x: hidden; }
+        
+        .glass-nav {
+            background: rgba(10, 37, 64, 0.95);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .glass-dark {
+            background: rgba(10, 37, 64, 0.6);
+            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .text-gradient {
+            background: linear-gradient(135deg, #00A896 0%, #2dd4bf 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(10, 37, 64, 0.5);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #00A896;
+            border-radius: 4px;
+        }
+        
+        .slide-transition {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .no-scrollbar::-webkit-scrollbar {
+            display: none !important;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none !important;  /* IE and Edge */
+            scrollbar-width: none !important;  /* Firefox */
+        }
+        
+        /* Light Theme Styles */
+        .light-theme {
+            background-color: #f1f5f9 !important;
+            color: #334155 !important;
+        }
+        .light-theme .bg-grid {
+            background-image: linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px) !important;
+        }
+        .light-theme .bg-deepblue-900\/60 {
+            background-color: rgba(255, 255, 255, 0.85) !important;
+            border-color: rgba(0, 0, 0, 0.08) !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03), 0 8px 10px -6px rgba(0, 0, 0, 0.03) !important;
+        }
+        /* Targeted Text Color Overrides for Converted Light Containers */
+        .light-theme .bg-deepblue-900\/60 .text-white,
+        .light-theme .bg-deepblue-900\/60 h2,
+        .light-theme .bg-deepblue-900\/60 h3,
+        .light-theme .bg-deepblue-900\/60 h4,
+        .light-theme .bg-deepblue-900\/60 p,
+        .light-theme .bg-\[\#0A2540\]\/40 .text-white,
+        .light-theme .bg-\[\#0A2540\]\/40 h4,
+        .light-theme .bg-\[\#0A2540\]\/40 p,
+        .light-theme #catalog-explorer-section .text-white,
+        .light-theme #catalog-explorer-section h3,
+        .light-theme #catalog-explorer-section p,
+        .light-theme #sample-modal .text-white,
+        .light-theme #sample-modal h4,
+        .light-theme #sample-modal p,
+        .light-theme #sample-modal label,
+        .light-theme #sample-modal span {
+            color: #0f172a !important;
+        }
+        
+        .light-theme .bg-deepblue-900\/60 .text-gray-300,
+        .light-theme .bg-\[\#0A2540\]\/40 .text-gray-300,
+        .light-theme #catalog-explorer-section .text-gray-300,
+        .light-theme #sample-modal .text-gray-300 {
+            color: #475569 !important;
+        }
+
+        .light-theme .bg-deepblue-900\/60 .text-gray-400,
+        .light-theme .bg-\[\#0A2540\]\/40 .text-gray-400,
+        .light-theme #catalog-explorer-section .text-gray-400,
+        .light-theme #sample-modal .text-gray-400 {
+            color: #64748b !important;
+        }
+
+        .light-theme .bg-deepblue-900\/60 .text-emerald-300,
+        .light-theme .bg-deepblue-900\/60 .text-emerald-400,
+        .light-theme .bg-\[\#0A2540\]\/40 .text-emerald-300,
+        .light-theme .bg-\[\#0A2540\]\/40 .text-emerald-400,
+        .light-theme #catalog-explorer-section .text-emerald-300,
+        .light-theme #catalog-explorer-section .text-emerald-400,
+        .light-theme #sample-modal .text-emerald-300,
+        .light-theme #sample-modal .text-emerald-400 {
+            color: #0d9488 !important;
+        }
+        .light-theme input, .light-theme select, .light-theme textarea {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border-color: #cbd5e1 !important;
+        }
+        .light-theme input::placeholder, .light-theme textarea::placeholder {
+            color: #94a3b8 !important;
+        }
+        .light-theme .bg-deepblue-950 {
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
+        }
+        .light-theme .bg-deepblue-950\/80 {
+            background-color: #e2e8f0 !important;
+            border-color: #cbd5e1 !important;
+        }
+        /* Category Badges in Light Mode */
+        .light-theme .bg-emerald-950\/80 {
+            background-color: #ecfdf5 !important;
+            border-color: #a7f3d0 !important;
+            color: #065f46 !important;
+        }
+        .light-theme .bg-blue-950\/80 {
+            background-color: #eff6ff !important;
+            border-color: #bfdbfe !important;
+            color: #1e40af !important;
+        }
+        .light-theme .bg-yellow-950\/80 {
+            background-color: #fef9c3 !important;
+            border-color: #fef08a !important;
+            color: #854d0e !important;
+        }
+        .light-theme .bg-pink-950\/80 {
+            background-color: #fdf2f8 !important;
+            border-color: #fbcfe8 !important;
+            color: #9d174d !important;
+        }
+        /* Search counter badge override */
+        .light-theme #search-counter-badge {
+            background-color: #ecfdf5 !important;
+            border-color: #a7f3d0 !important;
+            color: #065f46 !important;
+        }
+        .light-theme .border-white\/10 {
+            border-color: rgba(0, 0, 0, 0.08) !important;
+        }
+        .light-theme .border-white\/5 {
+            border-color: rgba(0, 0, 0, 0.04) !important;
+        }
+        .light-theme .bg-\[\#0A2540\]\/40 {
+            background-color: #ffffff !important;
+            border-color: rgba(0, 0, 0, 0.08) !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02) !important;
+        }
+        .light-theme .bg-\[\#0A2540\]\/40:hover {
+            border-color: #00A896 !important;
+        }
+        .light-theme .tab-btn {
+            background-color: #f8fafc !important;
+            color: #64748b !important;
+            border-color: rgba(0, 0, 0, 0.08) !important;
+        }
+        .light-theme .tab-btn.bg-emerald-500 {
+            background-color: #00A896 !important;
+            color: #ffffff !important;
+            border-color: #008c7d !important;
+        }
+        .light-theme .btn-white {
+            --color: #0f172a;
+            --color-active: #334155;
+            border-color: rgba(0, 0, 0, 0.08) !important;
+        }
+        .light-theme .btn-white:hover {
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+        }
+        .light-theme .text-emerald-300 {
+            color: #0f766e !important;
+        }
+        .light-theme .bg-emerald-950\/40 {
+            background-color: #f0fdf4 !important;
+            border-color: #bbf7d0 !important;
+        }
+
+        /* Mobile layout enhancements */
+        @media (max-w: 640px) {
+            #mockup-render-box {
+                transform: scale(0.85);
+                transform-origin: center center;
+                margin: -15px 0;
+            }
+        }
+        
+        /* Botones Uiverse Animados */
+        .btn-uiverse { position: relative; cursor: pointer; overflow: hidden; border: 2px solid var(--color); transition: color 0.5s; z-index: 1; color: var(--color); background: transparent; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-uiverse::before { content: ""; position: absolute; z-index: -1; background: var(--color); height: 400px; width: 400px; border-radius: 50%; top: 100%; left: 100%; transition: transform 0.7s ease; transform: translate(-50%, -50%) scale(0); }
+        .btn-uiverse:hover { color: #fff; }
+        .btn-uiverse:hover::before { transform: translate(-50%, -50%) scale(1); top: 50%; left: 50%; }
+        .btn-uiverse:active::before { background: var(--color-active); transition: background 0s; }
+        .btn-emerald { --color: #00A896; --color-active: #007064; }
+        .btn-deepblue { --color: #0A2540; --color-active: #061727; }
+        .btn-white { --color: #ffffff; --color-active: #e2e8f0; }
+        .btn-white:hover { color: #0A2540 !important; }
+        
+        /* Preloader */
+        .pl { width: 6em; height: 6em; }
+        .pl__ring { animation: ringA 2s linear infinite; }
+        .pl__ring--a { stroke: #00A896; }
+        .pl__ring--b { animation-name: ringB; stroke: #2dd4bf; }
+        .pl__ring--c { animation-name: ringC; stroke: #486581; }
+        .pl__ring--d { animation-name: ringD; stroke: #5eead4; }
+        @keyframes ringA { from, 4% { stroke-dasharray: 0 660; stroke-width: 20; stroke-dashoffset: -330; } 12% { stroke-dasharray: 60 600; stroke-width: 30; stroke-dashoffset: -335; } 32% { stroke-dasharray: 60 600; stroke-width: 30; stroke-dashoffset: -595; } 40%, 54% { stroke-dasharray: 0 660; stroke-width: 20; stroke-dashoffset: -660; } 62% { stroke-dasharray: 60 600; stroke-width: 30; stroke-dashoffset: -665; } 82% { stroke-dasharray: 60 600; stroke-width: 30; stroke-dashoffset: -925; } 90%, to { stroke-dasharray: 0 660; stroke-width: 20; stroke-dashoffset: -990; } }
+        @keyframes ringB { from, 12% { stroke-dasharray: 0 220; stroke-width: 20; stroke-dashoffset: -110; } 20% { stroke-dasharray: 20 200; stroke-width: 30; stroke-dashoffset: -115; } 40% { stroke-dasharray: 20 200; stroke-width: 30; stroke-dashoffset: -195; } 48%, 62% { stroke-dasharray: 0 220; stroke-width: 20; stroke-dashoffset: -220; } 70% { stroke-dasharray: 20 200; stroke-width: 30; stroke-dashoffset: -225; } 90% { stroke-dasharray: 20 200; stroke-width: 30; stroke-dashoffset: -305; } 98%, to { stroke-dasharray: 0 220; stroke-width: 20; stroke-dashoffset: -330; } }
+        @keyframes ringC { from { stroke-dasharray: 0 440; stroke-width: 20; stroke-dashoffset: 0; } 8% { stroke-dasharray: 40 400; stroke-width: 30; stroke-dashoffset: -5; } 28% { stroke-dasharray: 40 400; stroke-width: 30; stroke-dashoffset: -175; } 36%, 58% { stroke-dasharray: 0 440; stroke-width: 20; stroke-dashoffset: -220; } 66% { stroke-dasharray: 40 400; stroke-width: 30; stroke-dashoffset: -225; } 86% { stroke-dasharray: 40 400; stroke-width: 30; stroke-dashoffset: -395; } 94%, to { stroke-dasharray: 0 440; stroke-width: 20; stroke-dashoffset: -440; } }
+        @keyframes ringD { from, 8% { stroke-dasharray: 0 440; stroke-width: 20; stroke-dashoffset: 0; } 16% { stroke-dasharray: 40 400; stroke-width: 30; stroke-dashoffset: -5; } 36% { stroke-dasharray: 40 400; stroke-width: 30; stroke-dashoffset: -175; } 44%, 50% { stroke-dasharray: 0 440; stroke-width: 20; stroke-dashoffset: -220; } 58% { stroke-dasharray: 40 400; stroke-width: 30; stroke-dashoffset: -225; } 78% { stroke-dasharray: 40 400; stroke-width: 30; stroke-dashoffset: -395; } 86%, to { stroke-dasharray: 0 440; stroke-width: 20; stroke-dashoffset: -440; } }
+
+        /* Estilos específicos para maquetación interactiva (HTML Mockups) */
+        .preview-can {
+            width: 140px;
+            height: 240px;
+            background: linear-gradient(90deg, #555 0%, #aaa 15%, #fff 35%, #aaa 65%, #555 100%);
+            border-radius: 20px / 12px;
+            position: relative;
+            box-shadow: 0 15px 25px rgba(0,0,0,0.5);
+            transition: all 0.5s ease;
+        }
+        .preview-can::before {
+            content: '';
+            position: absolute;
+            top: -6px; left: 6px; right: 6px; height: 10px;
+            background: linear-gradient(90deg, #444, #fff, #444);
+            border-radius: 50%;
+        }
+        .preview-can::after {
+            content: '';
+            position: absolute;
+            bottom: -4px; left: 10px; right: 10px; height: 8px;
+            background: linear-gradient(90deg, #444, #aaa, #444);
+            border-radius: 50%;
+        }
+
+        .preview-bottle {
+            width: 110px;
+            height: 260px;
+            background: linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(255,255,255,0.15) 30%, rgba(0,0,0,0.5) 70%, rgba(0,0,0,0.9) 100%);
+            border-radius: 40px 40px 15px 15px / 80px 80px 10px 10px;
+            position: relative;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.5s ease;
+        }
+        .preview-bottle-neck {
+            position: absolute;
+            top: -45px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 32px;
+            height: 50px;
+            background: linear-gradient(90deg, rgba(0,0,0,0.9), rgba(255,255,255,0.1), rgba(0,0,0,0.9));
+            border-radius: 4px;
+        }
+        .preview-bottle-cap {
+            position: absolute;
+            top: -55px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 36px;
+            height: 14px;
+            background: linear-gradient(90deg, #8B5A2B, #CD853F, #8B5A2B); /* Cork */
+            border-radius: 3px 3px 0 0;
+            box-shadow: inset 0 2px 2px rgba(255,255,255,0.2);
+        }
+
+        .preview-vial {
+            width: 80px;
+            height: 160px;
+            background: linear-gradient(90deg, #111, #444 20%, #777 40%, #222 75%, #111);
+            border-radius: 12px / 6px;
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+            transition: all 0.5s ease;
+        }
+        .preview-vial-cap {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 22px;
+            background: repeating-linear-gradient(90deg, #050505, #050505 4px, #222 4px, #222 8px);
+            border-radius: 4px 4px 0 0;
+            border-bottom: 2px solid #00A896;
+        }
+
+        .preview-pouch {
+            width: 160px;
+            height: 240px;
+            background: #a98f73; /* Kraft base */
+            background-image: radial-gradient(rgba(255,255,255,0.15) 1px, transparent 0),
+                              radial-gradient(rgba(0,0,0,0.1) 1px, transparent 0);
+            background-size: 8px 8px;
+            border-radius: 18px;
+            position: relative;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.5s ease;
+            overflow: hidden;
+        }
+        .preview-pouch::before {
+            content: '';
+            position: absolute;
+            top: 25px; left: 0; right: 0; height: 3px;
+            background: rgba(0,0,0,0.15);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.1);
+        }
+        .preview-pouch-seal {
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 16px;
+            background: rgba(0,0,0,0.2);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            padding: 0 10px;
+            align-items: center;
+        }
+        .preview-pouch-seal::before, .preview-pouch-seal::after {
+            content: '';
+            width: 8px; height: 4px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 2px;
+        }
+
+        .preview-canister {
+            width: 170px;
+            height: 210px;
+            background: linear-gradient(90deg, #111 0%, #333 25%, #666 45%, #222 75%, #111 100%);
+            border-radius: 24px;
+            position: relative;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.5);
+            transition: all 0.5s ease;
+        }
+        .preview-canister-cap {
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 154px;
+            height: 26px;
+            background: linear-gradient(90deg, #050505, #1f1f1f, #050505);
+            border-radius: 8px 8px 3px 3px;
+            box-shadow: inset 0 2px 2px rgba(255,255,255,0.1);
+        }
+
+        .preview-sachet {
+            width: 120px;
+            height: 180px;
+            background: linear-gradient(135deg, #1f3b4d, #0f1c24);
+            border-radius: 8px;
+            position: relative;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.45);
+            transition: all 0.5s ease;
+            border: 6px solid transparent;
+            border-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.05), rgba(255,255,255,0.05) 2px, transparent 2px, transparent 4px) 10;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-300 antialiased bg-grid min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
+
+    <!-- Preloader de entrada -->
+    <div id="preloader" class="fixed inset-0 z-[99999] bg-[#061727] flex flex-col items-center justify-center transition-opacity duration-700 ease-in-out">
+        <svg class="pl" width="240" height="240" viewBox="0 0 240 240">
+            <circle class="pl__ring pl__ring--a" cx="120" cy="120" r="105" fill="none" stroke="#000" stroke-width="20" stroke-dasharray="0 660" stroke-dashoffset="-330" stroke-linecap="round"></circle>
+            <circle class="pl__ring pl__ring--b" cx="120" cy="120" r="35" fill="none" stroke="#000" stroke-width="20" stroke-dasharray="0 220" stroke-dashoffset="-110" stroke-linecap="round"></circle>
+            <circle class="pl__ring pl__ring--c" cx="85" cy="120" r="70" fill="none" stroke="#000" stroke-width="20" stroke-dasharray="0 440" stroke-linecap="round"></circle>
+            <circle class="pl__ring pl__ring--d" cx="155" cy="120" r="70" fill="none" stroke="#000" stroke-width="20" stroke-dasharray="0 440" stroke-linecap="round"></circle>
+        </svg>
+        <div class="mt-8 flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-emerald-500 animate-bounce"></div>
+            <div class="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style="animation-delay: 0.1s"></div>
+            <div class="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style="animation-delay: 0.2s"></div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[150] flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- Navigation Header consistent with index.html -->
+    <nav class="fixed w-full z-[100] transition-all duration-300 bg-transparent py-4" id="navbar">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center bg-deepblue-900/90 backdrop-blur-md rounded-2xl px-6 py-3 border border-white/10 shadow-xl">
+                <!-- Logo -->
+                <a href="index.html" class="flex-shrink-0 flex items-center cursor-pointer transition-transform hover:scale-105">
+                    <img src="https://res.cloudinary.com/dj761bgxw/image/upload/v1777030919/svg_1_vfsoo4.svg" alt="NutraSyn Lab" class="h-14 w-auto object-contain brightness-0 invert">
+                </a>
+                
+                <!-- Center Links -->
+                <div class="hidden lg:flex items-center space-x-8">
+                    <a href="index.html#nosotros" class="text-gray-300 hover:text-emerald font-medium text-sm transition-colors">Nosotros</a>
+                    <a href="index.html#servicios" class="text-gray-300 hover:text-emerald font-medium text-sm transition-colors">Servicios</a>
+                    <a href="index.html#categorias" class="text-gray-300 hover:text-emerald font-medium text-sm transition-colors">Categorías</a>
+                    <a href="index.html#cotizador" class="text-gray-300 hover:text-emerald font-medium text-sm transition-colors">Cotizador</a>
+                    <a href="#" class="text-emerald font-bold text-sm border-b-2 border-emerald pb-0.5">Portafolio B2B</a>
+                </div>
+                
+                <!-- B2B Actions -->
+                <div class="flex items-center space-x-3">
+                    <span class="hidden md:inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-950/80 text-emerald-300 border border-emerald-500/20">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2 animate-pulse"></span> Catálogo B2B Activo
+                    </span>
+                    <button onclick="toggleTheme()" class="p-2.5 rounded-xl border border-white/10 bg-deepblue-950/50 hover:bg-deepblue-950 text-gray-400 hover:text-white flex items-center justify-center transition-all cursor-pointer" title="Alternar Modo Claro/Oscuro">
+                        <i id="theme-icon" data-lucide="sun" class="w-4 h-4 text-emerald-400"></i>
+                    </button>
+                    <button onclick="toggleModal('sample-modal')" class="btn-uiverse btn-emerald text-xs font-semibold px-4 py-2.5 rounded-xl shadow-glow transition-all flex items-center space-x-2">
+                        <i data-lucide="beaker" class="w-4 h-4"></i>
+                        <span>Maletín de Muestras</span>
+                        <span id="sample-badge-count" class="hidden ml-1.5 bg-red-500 text-white font-bold text-[10px] w-5 h-5 rounded-full flex items-center justify-center animate-bounce">0</span>
+                    </button>
+                </div>
+                <!-- Botón Menú Móbil -->
+                <div class="lg:hidden flex items-center ml-3">
+                    <button id="mobile-menu-btn" aria-label="Abrir menú" class="text-white hover:text-emerald focus:outline-none cursor-pointer">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Panel Menú Móbil -->
+        <div id="mobile-menu" class="hidden lg:hidden absolute top-20 left-4 right-4 bg-deepblue-900 border border-white/10 shadow-2xl rounded-2xl overflow-hidden z-50">
+            <div class="px-4 py-4 space-y-1">
+                <a href="index.html#nosotros" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">Nosotros</a>
+                <a href="index.html#servicios" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">Servicios</a>
+                <a href="index.html#categorias" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">Categorías</a>
+                <a href="index.html#cotizador" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">Cotizador</a>
+                <a href="#" class="block px-3 py-3 text-sm font-medium text-white hover:bg-white/5 rounded-lg font-semibold">Portafolio B2B</a>
+                <div class="flex justify-between items-center px-3 py-3 mt-2 border-t border-white/5">
+                    <span class="text-sm font-medium text-gray-300">Modo Claro</span>
+                    <button onclick="toggleTheme()" class="p-2 rounded-xl border border-white/10 bg-deepblue-950/50 text-emerald-400 cursor-pointer">
+                        <i id="theme-icon-mobile" data-lucide="sun" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <button onclick="toggleModal('sample-modal'); document.getElementById('mobile-menu').classList.add('hidden');" class="btn-uiverse btn-emerald w-full px-3 py-3 text-sm font-medium rounded-lg mt-4 flex items-center justify-center gap-2">
+                    <i data-lucide="beaker" class="w-4 h-4"></i> Maletín de Muestras
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Workspace Section -->
+    <div class="max-w-[1600px] w-full mx-auto p-4 lg:p-8 pt-28 lg:pt-32 relative z-10 flex flex-col space-y-8">
+        
+        <!-- B2B Hero Banner -->
+        <div class="bg-deepblue-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-6 lg:p-8 shadow-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div class="space-y-3 max-w-3xl">
+                <span class="text-xs uppercase tracking-widest text-emerald-400 font-extrabold font-heading flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Portal de Desarrollo B2B
+                </span>
+                <h2 class="font-heading text-3xl lg:text-4xl font-extrabold text-white leading-tight">Portafolio de Fórmulas Activas</h2>
+                <p class="text-sm text-gray-300 leading-relaxed text-balance">
+                    Explore y diseñe sus productos con nuestra base de <strong>68 conceptos de formulación limpia</strong> (sin colorantes sintéticos, edulcorantes artificiales ni sabores estáticos). Personalice la identidad visual de su envase, el perfil de saborización e indulgencia, y solicite muestras físicas directamente a nuestro laboratorio de R&D.
+                </p>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 shrink-0">
+                <div class="p-4 bg-deepblue-950/80 rounded-2xl border border-white/10 text-center min-w-[100px]">
+                    <span class="block text-3xl font-extrabold text-emerald-400 font-heading">68</span>
+                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Conceptos Listos</span>
+                </div>
+                <div class="p-4 bg-deepblue-950/80 rounded-2xl border border-white/10 text-center min-w-[100px]">
+                    <span class="block text-3xl font-extrabold text-emerald-400 font-heading">100%</span>
+                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Clean Label</span>
+                </div>
+                <div class="p-4 bg-deepblue-950/80 rounded-2xl border border-white/10 text-center min-w-[100px]">
+                    <span class="block text-3xl font-extrabold text-emerald-400 font-heading">7</span>
+                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Líneas Reg.</span>
+                </div>
+                <div class="p-4 bg-deepblue-950/80 rounded-2xl border border-white/10 text-center min-w-[100px]">
+                    <span class="block text-3xl font-extrabold text-emerald-400 font-heading">15d</span>
+                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Envío Muestras</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two-Column Workspace Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Full-Width Column: Product Catalog Explorer & Filter Engine -->
+            <div class="lg:col-span-12 flex flex-col space-y-6">
+                
+                <!-- B2B PRODUCT SEARCH & SPECIFICATION SEARCH ENGINE -->
+                <div class="bg-deepblue-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col space-y-6" id="catalog-explorer-section">
+                    
+                    <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-white/5 gap-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center">
+                                <i data-lucide="search" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-heading text-lg font-bold text-white">Buscador de Fórmulas B2B</h3>
+                                <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">Examine ingredientes limpios y beneficios de maquila</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Results Counters -->
+                        <span class="text-[10px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/20 px-2.5 py-1 rounded-lg" id="search-counter-badge">
+                            Mostrando 68 de 68 conceptos
+                        </span>
+                    </div>
+
+                    <!-- Live Query Inputs -->
+                    <div class="grid grid-cols-1 gap-4">
+                        <!-- Search Box -->
+                        <div class="relative">
+                            <input type="text" id="catalogue-search-input" onkeyup="searchCatalogue()" placeholder="Buscar por ingrediente activo (ej: Melena de León, Cúrcuma, Teanina, Zinc...)" class="w-full text-xs border border-white/10 rounded-xl p-3.5 pl-10 bg-deepblue-950 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                            <i data-lucide="search" class="w-4 h-4 text-gray-500 absolute left-3.5 top-4"></i>
+                        </div>
+                        
+                        <!-- Select dropdown (hidden, synced with tabs) -->
+                        <div class="hidden">
+                            <select id="catalogue-reg-select" onchange="searchCatalogue()" class="w-full text-xs border border-white/10 rounded-xl p-3 bg-deepblue-950 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                                <option value="all">Todas las Líneas (68)</option>
+                                <option value="polvos-reg1">Polvos: Avena Funcional (10)</option>
+                                <option value="polvos-reg2">Polvos: Protein Blend (9)</option>
+                                <option value="polvos-reg3">Polvos: Wellness & Adv Oats (10)</option>
+                                <option value="polvos-reg4">Polvos: Instant Mixes (10)</option>
+                                <option value="liquidos-reg1">Líquidos: Bebidas Básicas (10)</option>
+                                <option value="liquidos-reg2">Líquidos: Bebidas Premium (9)</option>
+                                <option value="liquidos-reg3">Líquidos: Shots Concentrados (10)</option>
+                            </select>
+                        </div>
+
+                        <!-- Horizontal Pill-Button Filter Tabs -->
+                        <div class="flex items-center overflow-x-auto no-scrollbar pb-2 gap-2" id="line-filter-tabs">
+                            <button onclick="setTabFilter('all')" id="tab-all" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-emerald-500 text-white transition-all shadow-glow">Todos (68)</button>
+                            <button onclick="setTabFilter('polvos-reg1')" id="tab-polvos-reg1" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-deepblue-950 text-gray-400 border border-white/5 hover:border-white/10 transition-all">Avena Funcional (10)</button>
+                            <button onclick="setTabFilter('polvos-reg2')" id="tab-polvos-reg2" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-deepblue-950 text-gray-400 border border-white/5 hover:border-white/10 transition-all">Protein Blend (9)</button>
+                            <button onclick="setTabFilter('polvos-reg3')" id="tab-polvos-reg3" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-deepblue-950 text-gray-400 border border-white/5 hover:border-white/10 transition-all">Wellness & Adv Oats (10)</button>
+                            <button onclick="setTabFilter('polvos-reg4')" id="tab-polvos-reg4" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-deepblue-950 text-gray-400 border border-white/5 hover:border-white/10 transition-all">Instant Mixes (10)</button>
+                            <button onclick="setTabFilter('liquidos-reg1')" id="tab-liquidos-reg1" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-deepblue-950 text-gray-400 border border-white/5 hover:border-white/10 transition-all">Bebidas Básicas (10)</button>
+                            <button onclick="setTabFilter('liquidos-reg2')" id="tab-liquidos-reg2" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-deepblue-950 text-gray-400 border border-white/5 hover:border-white/10 transition-all">Bebidas Premium (9)</button>
+                            <button onclick="setTabFilter('liquidos-reg3')" id="tab-liquidos-reg3" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-deepblue-950 text-gray-400 border border-white/5 hover:border-white/10 transition-all">Shots Concentrados (10)</button>
+                        </div>
+                    </div>
+
+                    <!-- Informative Banner about Customizable features -->
+                    <div class="p-4 bg-emerald-950/40 border border-emerald-500/20 rounded-2xl flex items-start space-x-3">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-emerald-400 shrink-0 mt-0.5 animate-pulse"></i>
+                        <p class="text-[11px] text-emerald-300 leading-relaxed">
+                            <strong>Nota de Desarrollo B2B:</strong> Todas las bases nutricionales están formuladas de forma <strong>100% limpia</strong>. La saborización definitiva (moka, frutos rojos, cítrico), coloración vegetal y perfil de dulzura se ajustan a medida en la etapa de desarrollo final en laboratorio.
+                        </p>
+                    </div>
+
+                    <!-- Products Grid / Scrollable Cards Deck -->
+                    <div class="grid grid-cols-1 gap-4 max-h-[680px] overflow-y-auto custom-scrollbar pr-2" id="catalogue-cards-container">
+                        <!-- Loaded dynamically via JS -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Footer consistent with index.html -->
+    <footer class="bg-deepblue-950 text-gray-400 py-8 px-8 mt-16 text-center border-t border-white/5 relative z-10">
+        <p class="text-xs text-gray-500">© 2026 NutraSyn Lab. Todos los derechos reservados. Colombia / LATAM.</p>
+        <p class="text-[9px] text-gray-600 mt-2 uppercase tracking-widest max-w-4xl mx-auto leading-relaxed">
+            Ingredientes y bases formulados bajo cumplimiento técnico de la normatividad alimentaria nacional e internacional. Muestras producidas en laboratorio piloto para validación sensorial.
+        </p>
+    </footer>
+
+    <!-- SAMPLE BAG REQUEST MODAL -->
+    <div id="sample-modal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-[200] p-4">
+        <div class="bg-deepblue-900 border border-white/10 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            <!-- Modal Header -->
+            <div class="p-6 bg-deepblue-950/80 border-b border-white/5 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i data-lucide="clipboard-check" class="w-6 h-6 text-emerald-400"></i>
+                    <div>
+                        <h3 class="font-heading text-lg font-bold text-white">Solicitud de Muestras B2B</h3>
+                        <p class="text-[10px] tracking-wider text-gray-400 uppercase font-semibold">Configuración de Kit de Desarrollo Industrial</p>
+                    </div>
+                </div>
+                <button onclick="toggleModal('sample-modal')" class="text-gray-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <!-- Modal Body Form -->
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+                <!-- Selected Products List -->
+                <div>
+                    <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 font-heading">Fórmulas Seleccionadas para su Kit (Máx. 5)</h4>
+                    <div id="modal-selected-list" class="space-y-2 max-h-[180px] overflow-y-auto custom-scrollbar pr-1">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+                
+                <hr class="border-white/5">
+                
+                <!-- Client Info Fields -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Nombre Representante</label>
+                        <input type="text" id="quote-name" placeholder="Ej: Diana Valencia" class="w-full text-xs border border-white/10 rounded-xl p-3 bg-deepblue-950 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Correo Corporativo</label>
+                        <input type="email" id="quote-email" placeholder="ejemplo@empresa.com" class="w-full text-xs border border-white/10 rounded-xl p-3 bg-deepblue-950 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Volumen de Compra Estimado</label>
+                        <select id="quote-volume" class="w-full text-xs border border-white/10 rounded-xl p-3 bg-deepblue-950 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                            <option value="Piloto">Piloto / Startup (< 5,000 uds/mes)</option>
+                            <option value="Escala Comercial">Escala Comercial (5,000 - 20,000 uds/mes)</option>
+                            <option value="Gran Distribución">Gran Distribución (> 20,000 uds/mes)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Tipo de Envasado Deseado</label>
+                        <select id="quote-packaging" class="w-full text-xs border border-white/10 rounded-xl p-3 bg-deepblue-950 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                            <option value="Bolsas Doypack">Bolsas Doypack</option>
+                            <option value="Canisters / Tarros">Canisters / Tarros</option>
+                            <option value="Botellas Vidrio">Botellas / Envases Líquidos</option>
+                            <option value="Monodosis / Sachets">Sachets Monodosis</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Perfil Sensorial Requerido (Sabor, Color y Dulzura)</label>
+                    <textarea id="quote-specs" rows="3" placeholder="Describa cómo desea el sabor (Ej: sabor moka-avellana endulzado con estevia, color morado derivado de remolacha...)" class="w-full text-xs border border-white/10 rounded-xl p-3 bg-deepblue-950 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none custom-scrollbar"></textarea>
+                </div>
+            </div>
+            
+            <!-- Modal Actions Footer -->
+            <div class="p-4 bg-deepblue-950/80 border-t border-white/5 flex items-center justify-between">
+                <button onclick="toggleModal('sample-modal')" class="btn-uiverse btn-white px-4 py-2.5 rounded-xl text-xs font-semibold">
+                    Regresar
+                </button>
+                <button onclick="submitSampleRequest()" class="btn-uiverse btn-emerald px-6 py-2.5 rounded-xl text-xs font-bold shadow-glow">
+                    Generar Solicitud de Desarrollo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT DATABASE & ENGINE -->
+    <script>
+        // Full product catalog database (68 items reconstructed)
+        const productDatabase = [
+            // POLVOS - REGISTRO 1: Avena Funcional
+            { id: "p1-1", category: "Wellness", format: "Polvo", line: "polvos-reg1", name: "Relax & Balance", desc: "Bienestar mental, equilibrio diario y relajación funcional.", ingredients: "Harina de Avena, Melena de León, Manzanilla, Cidrón, Passiflora, Canela, Cocoa, Vitamina B6, Vitamina B12, Vitamina C, Dióxido de Silicio, Benzoato de Sodio, Bisglicinato de Magnesio", benefits: ["Fuente de fibra y vitaminas", "Ingredientes botánicos funcionales", "Relajación y equilibrio mental"] },
+            { id: "p1-2", category: "Nutrición", format: "Polvo", line: "polvos-reg1", name: "Golden Recovery", desc: "Ingredientes botánicos para nutrición y recuperación corporal.", ingredients: "Harina de Avena, Cúrcuma, Pimienta Negra, Colágeno Bovino, Jengibre, Vitamina D, Vitamina C, Dióxido de Silicio, Benzoato de Sodio, Bisglicinato de Magnesio", benefits: ["Recuperación física y bienestar", "Con colágeno y antioxidantes", "Soporte óseo y articular"] },
+            { id: "p1-3", category: "Wellness", format: "Polvo", line: "polvos-reg1", name: "Natural Energy", desc: "Activación natural, energía funcional y consumo diario.", ingredients: "Harina de Avena, Remolacha, Espinaca, Yerba Mate, Vitamina C, Guaraná, Dióxido de Silicio, Benzoato de Sodio, Vitamina B6, L-Taurina, Vitamina B12", benefits: ["Energía y activación natural", "Soporte metabólico energético", "Superfoods y antioxidantes"] },
+            { id: "p1-4", category: "Wellness", format: "Polvo", line: "polvos-reg1", name: "Green Nutrition", desc: "Nutrición vegetal moderna con ingredientes verdes y enfoque wellness.", ingredients: "Harina de Avena, Proteína de Arveja, Harina de Banano Verde, Camu Camu, Espirulina Verde, Bisglicinato de Magnesio, Vitamina C, Sulfato Ferroso, Dióxido de Silicio, Benzoato de Sodio, Vitamina B6", benefits: ["Nutrición vegetal concentrada", "Rica en hierro y minerales", "Ingredientes verdes funcionales"] },
+            { id: "p1-5", category: "Wellness", format: "Polvo", line: "polvos-reg1", name: "Electrolyte Oat Blend", desc: "Hidratación funcional y reposición de minerales.", ingredients: "Harina de Avena, Limón, Agua de Coco, Citrato de Potasio, Azúcar de Coco, Bisglicinato de Magnesio, Vitamina C, Sal Rosada del Himalaya, Dióxido de Silicio, Sulfato de Zinc, Cloruro de Sodio", benefits: ["Reposición óptima de electrolitos", "Hidratación profunda", "Minerales y antioxidantes"] },
+            { id: "p1-6", category: "Digestivo", format: "Polvo", line: "polvos-reg1", name: "Fiber Balance", desc: "Fibras funcionales y prebióticos para bienestar digestivo.", ingredients: "Harina de Avena, Alcachofa, Inulina, Algarrobo, Yacón, Vinagre de Manzana, Goma Guar, Dióxido de Silicio, Goma Konjac, Lecitina de Soya, Benzoato de Sodio, Niacina", benefits: ["Soporte de la microbiota", "Con fibras funcionales y prebióticos", "Regulación del tránsito intestinal"] },
+            { id: "p1-7", category: "Belleza", format: "Polvo", line: "polvos-reg1", name: "Beauty Collagen", desc: "Nutrición funcional premium y tendencias beauty wellness.", ingredients: "Harina de Avena, Colágeno Marino, Péptidos de Colágeno, Arándano, Vitamina C, Bisglicinato de Magnesio, Sulfato de Zinc, Dióxido de Silicio, Benzoato de Sodio, Biotina", benefits: ["Nutrición enfocada en la belleza", "Con colágeno marino de alta absorción", "Soporte de piel, cabello y uñas"] },
+            { id: "p1-8", category: "Digestivo", format: "Polvo", line: "polvos-reg1", name: "Digestive Fiber", desc: "Fibras y semillas para saciedad y bienestar digestivo.", ingredients: "Harina de Avena, Semilla de Chía, Psyllium, Vitamina C, Bisglicinato de Magnesio, Lecitina de Soya, Dióxido de Silicio, Benzoato de Sodio, Vitamina B6, Goma Guar", benefits: ["Alta saciedad digestiva", "Regula el tránsito intestinal", "Semillas y fibras prebióticas"] },
+            { id: "p1-9", category: "Wellness", format: "Polvo", line: "polvos-reg1", name: "Immune Support", desc: "Nutrición diaria y soporte integral funcional.", ingredients: "Harina de Avena, Guayaba, Manzana, Calostro Bovino, Camu Camu, Vitamina C, Dióxido de Silicio, Benzoato de Sodio, Vitamina E, Vitamina B6, Vitamina B7, Vitamina D", benefits: ["Soporte al sistema inmunológico", "Antioxidantes y calostro", "Vitaminas esenciales"] },
+            { id: "p1-10", category: "Wellness", format: "Polvo", line: "polvos-reg1", name: "Smart Focus", desc: "Claridad mental, enfoque y nutrición funcional moderna.", ingredients: "Harina de Avena, Maca Negra, Levadura Nutricional, Vitamina C, Bisglicinato de Magnesio, Dióxido de Silicio, Melena de León, Vitamina B3, Benzoato de Sodio, Vitamina B6, Vitamina B5, Té Blanco", benefits: ["Concentración y enfoque mental", "Adaptógenos de alta calidad", "Vitamina B para energía cognitiva"] },
+
+            // POLVOS - REGISTRO 2: Protein Functional Blend
+            { id: "p2-1", category: "Wellness", format: "Polvo", line: "polvos-reg2", name: "Neuro Performance", desc: "Mezcla proteica con ingredientes funcionales para enfoque, claridad mental y rendimiento cognitivo diario.", ingredients: "Proteína Aislada de Soya, Copoazú, Treonato de Magnesio, Azafrán, Vitamina C, Maca Negra, Hongo Chaga, Té Blanco, Vitamina B3, Vitamina B6, Dióxido de Silicio, Benzoato de Sodio", benefits: ["Soporte cognitivo activo", "Hongo chaga y adaptógenos", "Proteína de alto valor biológico"] },
+            { id: "p2-2", category: "Wellness", format: "Polvo", line: "polvos-reg2", name: "Vital Force", desc: "Frutas funcionales, adaptógenos y extractos vegetales para sensación activa y dinámica.", ingredients: "Proteína Aislada de Soya, Azafrán, Borojó, Chontaduro, Maca, Guaraná, Vitamina C, Dióxido de Silicio, Benzoato de Sodio, Vitamina B3, Vitamina B6, Sulfato de Zinc, Selenito de Sodio", benefits: ["Energía y vitalidad física", "Frutas y adaptógenos de la selva", "Metabolismo activo"] },
+            { id: "p2-3", category: "Digestivo", format: "Polvo", line: "polvos-reg2", name: "Gut Protein Balance", desc: "Blend proteico con fibras funcionales y prebióticos para bienestar digestivo e intestinal.", ingredients: "Proteína Aislada de Soya, Alcaravea, Inulina, Psyllium, Alcachofa, Fructooligosacáridos (FOS), Harina Konjac, Vinagre de Sidra de Manzana, Dióxido de Silicio, Bisglicinato de Magnesio, Benzoato de Sodio, Vitamina B6, Tiamina", benefits: ["Bienestar digestivo avanzado", "Fibras prebióticas y probióticos", "Fácil asimilación proteica"] },
+            { id: "p2-4", category: "Wellness", format: "Polvo", line: "polvos-reg2", name: "Green Mineral Blend", desc: "Algas, clorofila y minerales para nutrición verde y micronutrición funcional.", ingredients: "Proteína Aislada de Soya, Espinaca, Espirulina, Chlorella, Vitamina C, Sulfato Ferroso, Alga Marina, Dióxido de Silicio, Vitamina B6, Vitamina B3, Benzoato de Sodio, Vitamina B9", benefits: ["Desintoxicación y verdes de alta pureza", "Rico en clorofila y minerales", "Oxigenación celular"] },
+            { id: "p2-5", category: "Nutrición", format: "Polvo", line: "polvos-reg2", name: "Amino Muscle Matrix", desc: "Proteína funcional con aminoácidos esenciales para rendimiento nutricional y recuperación muscular.", ingredients: "Proteína Aislada de Soya, Fenogreco, Proteína de Arveja, Vitamina C, L-Taurina, L-Isoleucina, L-Leucina, L-Valina, Dióxido de Silicio, DL Metionina, Vitamina B3, Vitamina B6, Benzoato de Sodio", benefits: ["Recuperación muscular rápida", "BCAAs y aminoácidos esenciales", "Soporte de masa muscular"] },
+            { id: "p2-6", category: "Belleza", format: "Polvo", line: "polvos-reg2", name: "Beauty Omega Protein", desc: "Concepto de belleza funcional con colágeno, DHA/Omega 3 y antioxidantes para líneas premium wellness.", ingredients: "Proteína Aislada de Soya, Colágeno Hidrolizado, Péptidos de Colágeno, Uva, Vitamina C, Sulfato de Zinc, Ácido Docosahexaenoico (DHA), Ácido Eicosapentaenoico (EPA), Dióxido de Silicio, Vitamina B3, Vitamina B6, Benzoato de Sodio, Biotina", benefits: ["Belleza desde el interior", "Omegas esenciales y colágeno", "Protección antioxidante celular"] },
+            { id: "p2-7", category: "Nutrición", format: "Polvo", line: "polvos-reg2", name: "Future Protein", desc: "Blend innovador con proteínas alternativas y semillas funcionales orientado a nutrición avanzada y diferenciación comercial.", ingredients: "Proteína Aislada de Soya, Proteína de Arveja, Semilla de Chía, Harina de Grillo, Semilla de Cáñamo, Cacao, Maca, Levadura Nutricional, Vitamina C, Dióxido de Silicio, Vitamina B3, Vitamina B6, Benzoato de Sodio", benefits: ["Proteínas alternativas de vanguardia", "Rico en semillas y aminoácidos", "Sostenibilidad e innovación"] },
+            { id: "p2-8", category: "Digestivo", format: "Polvo", line: "polvos-reg2", name: "Probiotic Beauty Mix", desc: "Mezcla con probióticos, prebióticos y frutas funcionales para líneas digestivas y bienestar integral femenino.", ingredients: "Proteína Aislada de Soya, Aguaje (Moriche), Inulina, Galactooligosacáridos (GOS), Vitamina C, Lactobacillus Rhamnosus, Pitahaya Amarilla, Pitahaya Rosada, Anís, Menta, Dióxido de Silicio, Vitamina B3, Vitamina B6", benefits: ["Microbiota y salud digestiva", "Enfoque en salud hormonal femenina", "Fibras de alta asimilación"] },
+            { id: "p2-9", category: "Wellness", format: "Polvo", line: "polvos-reg2", name: "Omega Green Fuel", desc: "Concepto funcional con omega 3, cáñamo y matcha enfocado en nutrición moderna y bienestar activo.", ingredients: "Proteína Aislada de Soya, Harina de Cáñamo, Aceite de Linaza, Omega 3, Té Matcha, Vitamina C, Jengibre, Dióxido de Silicio, Vitamina B3, Vitamina B6, L-Lisina, Bisglicinato de Magnesio, Sorbato de Potasio", benefits: ["Energía limpia y sostenida", "Omegas vegetales y matcha antioxidante", "Bienestar cardiovascular activo"] },
+
+            // POLVOS - REGISTRO 3: Wellness & Advanced Functional Oats
+            { id: "p3-1", category: "Wellness", format: "Polvo", line: "polvos-reg3", name: "Metabolic Balance", desc: "Fibras y extractos vegetales para equilibrio digestivo y bienestar metabólico.", ingredients: "Harina de Avena, Inulina, Alcachofa, Psyllium, Vinagre de Sidra de Manzana, Té Verde, Vitamina C, Alcaravea, Dióxido de Silicio, Sorbato de Potasio, Vitamina E, Picolinato de Cromo, Vitamina D", benefits: ["Control de glucosa y metabolismo", "Fibras de regulación activa", "Soporte metabólico integral"] },
+            { id: "p3-2", category: "Nutrición", format: "Polvo", line: "polvos-reg3", name: "Bone & Joint Support", desc: "Colágeno, magnesio y vitaminas para soporte osteomuscular y nutrición estructural.", ingredients: "Harina de Avena, Colágeno Hidrolizado, Citrato de Magnesio, Sorbato de Potasio, Bisglicinato de Magnesio, Vitamina C, Dióxido de Silicio, Vitamina K2, Vitamina D3", benefits: ["Fortalecimiento óseo y articular", "Magnesio de alta biodisponibilidad", "Colágeno estructural"] },
+            { id: "p3-3", category: "Wellness", format: "Polvo", line: "polvos-reg3", name: "Active Focus Energy", desc: "Maca, taurina y té verde para energía diaria y enfoque activo.", ingredients: "Harina de Avena, Maca, Remolacha, L-Citrulina Malato, Camu-Camu, Sorbato de Potasio, Taurina, Vitamina E, Acetil Taurinato de Magnesio, Té Verde, Dióxido de Silicio, Vitamina D", benefits: ["Enfoque y energía celular", "Aporte antioxidante y de óxido nítrico", "Soporte deportivo diario"] },
+            { id: "p3-4", category: "Wellness", format: "Polvo", line: "polvos-reg3", name: "Neuro Calm Focus", desc: "Treonato de magnesio, Alpha GPC y L-triptófano para bienestar mental y concentración.", ingredients: "Harina de Avena, Melena de León, Treonato de Magnesio, Té Blanco, Vitamina C, Alpha GPC, L-Triptófano, Citrato de Zinc, Sorbato de Potasio, Vitamina E, Ácido Cítrico, Dióxido de Silicio, Vitamina D", benefits: ["Equilibrio y calma cognitiva", "Treonato de Magnesio para barrera cerebral", "Soporte de neurotransmisores"] },
+            { id: "p3-5", category: "Digestivo", format: "Polvo", line: "polvos-reg3", name: "Total Fiber Complex", desc: "Prebióticos y fibras funcionales avanzadas para bienestar digestivo y microbiota.", ingredients: "Harina de Avena, Chía, Nopal, Psyllium, Inulina, Galactooligosacáridos (GOS), Fructooligosacáridos (FOS), Limón, Xilooligosacáridos (XOS), Sorbato de Potasio, Vitamina C, Vitamina E, Dióxido de Silicio", benefits: ["Soporte de microbiota avanzado", "Fibras de última generación", "Tránsito digestivo saludable"] },
+            { id: "p3-6", category: "Wellness", format: "Polvo", line: "polvos-reg3", name: "Exotic Energy Blend", desc: "Frutas funcionales y extractos botánicos tropicales para líneas modernas y sensoriales.", ingredients: "Harina de Avena, Lúcuma, Agua de Coco, Borojó, Maca Negra, Galanga, Citrato de Potasio, Guaraná, Ácido Cítrico, Sal de Maras, Goma Xantana, Vitamina C, Sorbato de Potasio, Vitamina E", benefits: ["Energía e hidratación tropical", "Electrolitos naturales andinos", "Adaptógenos exóticos"] },
+            { id: "p3-7", category: "Wellness", format: "Polvo", line: "polvos-reg3", name: "Immune Mushroom Defense", desc: "Hongos funcionales, beta-glucanos y antioxidantes para bienestar integral.", ingredients: "Harina de Avena, Shiitake, Saúco, Chaga, Beta-Glucanos, Camu Camu, Vitamina C, Sorbato de Potasio, Vitamina E, Bisglicinato de Zinc, Acetato de D-alfa Tocoferilo, Dióxido de Silicio, Vitamina D", benefits: ["Soporte inmunitario fúngico", "Beta-glucanos de alta pureza", "Protección antioxidante profunda"] },
+            { id: "p3-8", category: "Belleza", format: "Polvo", line: "polvos-reg3", name: "Beauty Collagen Glow", desc: "Fórmula de colágeno marino, péptidos y biotina para soporte de cabello, piel y uñas.", ingredients: "Harina de Avena, Colágeno Marino, Biotina, Extracto de Arándano, Vitamina C, Ácido Hialurónico, Citrato de Zinc, Sorbato de Potasio, Dióxido de Silicio", benefits: ["Soporte estructural y elasticidad", "Vitaminas clave de belleza", "Antioxidantes naturales contra el envejecimiento"] },
+            { id: "p3-9", category: "Digestivo", format: "Polvo", line: "polvos-reg3", name: "Probiotic Fiber Oat", desc: "Avena con fibras seleccionadas y microorganismos probióticos para balance gastrointestinal.", ingredients: "Harina de Avena, Inulina, Psyllium, Lactobacillus Acidophilus, Bifidobacterium Bifidum, Vitamina C, Goma Guar, Dióxido de Silicio, Sorbato de Potasio, Pectina de Manzana", benefits: ["Balance microbiótico activo", "Regulación de tránsito digestivo", "Nutrición de bacterias benéficas"] },
+            { id: "p3-10", category: "Wellness", format: "Polvo", line: "polvos-reg3", name: "Cognitive Power Oats", desc: "Base de avena premium con extracto neuro-cognitivo de Ginkgo Biloba y melena de león.", ingredients: "Harina de Avena, Melena de León, Ginkgo Biloba, Fosfatidilserina, Citrato de Magnesio, Vitamina B3, Vitamina B6, Vitamina B12, Dióxido de Silicio, Sorbato de Potasio", benefits: ["Claridad cognitiva y memoria", "Flujo sanguíneo cerebral saludable", "Energía mitocondrial para neuronas"] },
+
+            // POLVOS - REGISTRO 4: Instant Functional Mixes
+            { id: "p4-1", category: "Wellness", format: "Polvo", line: "polvos-reg4", name: "Instant Matcha Latte", desc: "Matcha japonés premium soluble con base de agua de coco y antioxidantes.", ingredients: "Té Matcha Orgánico, Leche de Coco en Polvo, Inulina de Achicoria, L-Teanina, Vitamina C, Dióxido de Silicio", benefits: ["Energía calma y sostenida", "Gran concentración de L-teanina", "Poderosa base antioxidante soluble"] },
+            { id: "p4-2", category: "Wellness", format: "Polvo", line: "polvos-reg4", name: "Chai Adaptogen Mix", desc: "Mezcla instantánea de té negro, especias chai y hongo Reishi para balance de estrés.", ingredients: "Té Negro Soluble, Hongo Reishi, Canela, Jengibre, Cardamomo, Clavo de Olor, Bisglicinato de Magnesio, Vitamina C, Dióxido de Silicio", benefits: ["Balance y manejo de estrés", "Inmunidad y defensas", "Preparación instantánea fría o caliente"] },
+            { id: "p4-3", category: "Wellness", format: "Polvo", line: "polvos-reg4", name: "Golden Milk Instant", desc: "Base instantánea para bebida dorada con cúrcuma de alta biodisponibilidad.", ingredients: "Leche de Coco en Polvo, Cúrcuma Soluble, Pimienta Negra, Jengibre, Canela, Vitamina D3, Vitamina C, Dióxido de Silicio", benefits: ["Poderoso efecto antiinflamatorio", "Absorción potenciada por piperina", "Fortalecimiento articular y óseo"] },
+            { id: "p4-4", category: "Wellness", format: "Polvo", line: "polvos-reg4", name: "Berry Antioxidant Mix", desc: "Concentrado soluble de frutos rojos y Camu Camu rico en vitamina C natural.", ingredients: "Polvo de Fresa, Polvo de Mora, Camu Camu, Arándano, Vitamina C, Citrato de Zinc, Dióxido de Silicio, Pectina Cítrica", benefits: ["Aporte masivo de antioxidantes", "Soporte de defensas inmunitarias", "Excelente para bebidas refrescantes instantáneas"] },
+            { id: "p4-5", category: "Wellness", format: "Polvo", line: "polvos-reg4", name: "Sleep Chamomile Golden", desc: "Mezcla de disolución ágil formulada para inducir un sueño profundo y reparador.", ingredients: "Extracto de Manzanilla, Passiflora, L-Triptófano, Bisglicinato de Magnesio, Extracto de Cidrón, Vitamina B6, Dióxido de Silicio", benefits: ["Apoyo a la relajación nocturna", "Inducción natural de melatonina", "Magnesio orgánico de alta absorción"] },
+            { id: "p4-6", category: "Digestivo", format: "Polvo", line: "polvos-reg4", name: "Detox Green Juice Powder", desc: "Jugo verde deshidratado instantáneo con ingredientes alcalinizantes.", ingredients: "Espinaca, Apio, Manzana Verde, Espirulina, Chlorella, Limón Deshidratado, Jengibre, Inulina, Dióxido de Silicio", benefits: ["Limpieza y desintoxicación diaria", "Alcalinización corporal y verde natural", "Fibras solubles para digestión limpia"] },
+            { id: "p4-7", category: "Wellness", format: "Polvo", line: "polvos-reg4", name: "Energy Guaraná Boost", desc: "Activador cognitivo instantáneo con guaraná y cafeína verde.", ingredients: "Extracto de Guaraná, Café Verde Soluble, Azafrán, L-Taurina, Vitamina B3, Vitamina B6, Vitamina B12, Dióxido de Silicio", benefits: ["Estimulación limpia y enfoque", "Sin picos de cafeína sintética", "Rápida acción instantánea"] },
+            { id: "p4-8", category: "Nutrición", format: "Polvo", line: "polvos-reg4", name: "Keto MCT Cocoa", desc: "Cacao soluble premium enriquecido con triglicéridos de cadena media (MCT).", ingredients: "Cacao Fino de Aroma, MCT de Coco, Péptidos de Colágeno, Goma Acacia, Vitamina E, Dióxido de Silicio", benefits: ["Aporte de grasas saludables cetogénicas", "Energía cerebral inmediata", "Soporte proteico colágeno"] },
+            { id: "p4-9", category: "Wellness", format: "Polvo", line: "polvos-reg4", name: "Hydra Electrolyte Berry", desc: "Bebida de hidratación rápida e instantánea con electrolitos orgánicos.", ingredients: "Agua de Coco Deshidratada, Citrato de Potasio, Sal del Himalaya, Citrato de Magnesio, Remolacha, Vitamina C, Dióxido de Silicio", benefits: ["Reposición salina ultra rápida", "Sin azúcar añadida", "Colorante 100% natural de remolacha"] },
+            { id: "p4-10", category: "Digestivo", format: "Polvo", line: "polvos-reg4", name: "Slim Probiotic Tea", desc: "Té verde instantáneo con prebióticos y activos depurativos.", ingredients: "Té Verde Soluble, Alcachofa, Inulina de Achicoria, Bacillus Coagulans (Probiótico), Vitamina C, Dióxido de Silicio", benefits: ["Depuración metabólica activa", "Estímulo de microbiota intestinal", "Fácil disolución fría o caliente"] },
+
+            // LÍQUIDOS - REGISTRO 1: Bebidas Funcionales Básicas
+            { id: "l1-1", category: "Digestivo", format: "Líquido", line: "liquidos-reg1", name: "Aloe Vera Digestive RTD", desc: "Bebida embotellada de aloe vera, manzanilla y jengibre para confort gástrico.", ingredients: "Agua Osmotizada, Gel de Aloe Vera, Extracto de Manzanilla, Extracto de Jengibre, Vitamina C, Ácido Cítrico, Benzoato de Sodio, Sorbato de Potasio", benefits: ["Alivio digestivo inmediato", "Acción protectora de mucosa gástrica", "Bajo aporte calórico"] },
+            { id: "l1-2", category: "Wellness", format: "Líquido", line: "liquidos-reg1", name: "Hydra Electro Lemon", desc: "Bebida isotónica base agua de coco fresca lista para consumir.", ingredients: "Agua de Coco, Agua Osmotizada, Citrato de Potasio, Sal de Maras, Bisglicinato de Magnesio, Ácido Cítrico, Vitamina C, Conservantes Orgánicos", benefits: ["Hidratación isotónica activa", "Minerales y oligoelementos naturales", "Sin colorantes sintéticos"] },
+            { id: "l1-3", category: "Wellness", format: "Líquido", line: "liquidos-reg1", name: "Green Tea Wellness RTD", desc: "Infusión líquida embotellada de té verde mentolado y micronutrientes.", ingredients: "Agua Osmotizada, Extracto de Té Verde, Extracto de Menta, Vitamina C, Sulfato de Zinc, Ácido Cítrico, Sorbato de Potasio", benefits: ["Antioxidante natural refrescante", "Aporte inmunitario con zinc", "Fórmula limpia y ligera"] },
+            { id: "l1-4", category: "Wellness", format: "Líquido", line: "liquidos-reg1", name: "Vitamin Water Zinc", desc: "Agua purificada fortificada con vitaminas esenciales y zinc orgánico.", ingredients: "Agua Osmotizada, Gluconato de Zinc, Vitamina C, Vitamina B3, Vitamina B6, Vitamina B12, Ácido Cítrico, Sorbato de Potasio", benefits: ["Inmunidad y defensa activa", "Aporte de energía metabólica", "Saborización 100% adaptable"] },
+            { id: "l1-5", category: "Wellness", format: "Líquido", line: "liquidos-reg1", name: "Hibiscus Antioxidant RTD", desc: "Bebida lista para consumir de flor de Jamaica y arándano rojo.", ingredients: "Agua Osmotizada, Extracto de Jamaica, Extracto de Arándano Rojo, Vitamina C, Ácido Cítrico, Benzoato de Sodio", benefits: ["Antioxidantes y apoyo urinario", "Acción diurética suave", "Color y sabor natural brillante"] },
+            { id: "l1-6", category: "Digestivo", format: "Líquido", line: "liquidos-reg1", name: "Slim Herbal Infusion", desc: "Infusión herbal purificadora lista para consumir.", ingredients: "Agua, Extracto de Té Verde, Extracto de Alcachofa, Extracto de Diente de León, Vitamina C, Ácido Cítrico, Sorbato de Potasio", benefits: ["Apoyo a la detoxificación", "Digestión de grasas mejorada", "Acción hepática depurativa"] },
+            { id: "l1-7", category: "Wellness", format: "Líquido", line: "liquidos-reg1", name: "Relax Lavender Water", desc: "Agua funcional con extractos herbales relajantes de lavanda.", ingredients: "Agua Osmotizada, Extracto de Lavanda, Extracto de Toronjil (Melisa), Bisglicinato de Magnesio, Ácido Cítrico, Vitamina C", benefits: ["Disminución del estrés mental", "Apoyo a la relajación diaria", "Sabor herbal suave y elegante"] },
+            { id: "l1-8", category: "Wellness", format: "Líquido", line: "liquidos-reg1", name: "Citrus Active Energy", desc: "Bebida energética natural e hidratante a base de frutos cítricos.", ingredients: "Agua, Extracto de Guaraná, Extracto de Café Verde, Vitamina C, Complejo B, Ácido Cítrico, Sorbato de Potasio", benefits: ["Estímulo físico y mental natural", "Apoyo metabólico energético", "Hidratación ligera y activa"] },
+            { id: "l1-9", category: "Digestivo", format: "Líquido", line: "liquidos-reg1", name: "Gut Prebiotic Water", desc: "Agua funcional transparente con aporte de fibras prebióticas.", ingredients: "Agua Osmotizada, Inulina Soluble, Fructooligosacáridos (FOS), Vitamina C, Ácido Málico, Sorbato de Potasio", benefits: ["Aporte de fibra invisible", "Soporte de la microbiota gástrica", "Fácil asimilación diaria"] },
+            { id: "l1-10", category: "Wellness", format: "Líquido", line: "liquidos-reg1", name: "Immune Citrus Shield", desc: "Agua vitamínica concentrada con extracto de saúco orgánico.", ingredients: "Agua Osmotizada, Extracto de Saúco, Vitamina C, Sulfato de Zinc, Vitamina D3, Ácido Cítrico, Sorbato de Potasio", benefits: ["Inmunidad en formatos listos para llevar", "Gran aporte de antocianinas", "Fórmula limpia sin azúcar"] },
+
+            // LÍQUIDOS - REGISTRO 2: Línea de Bebidas Premium
+            { id: "l2-1", category: "Belleza", format: "Líquido", line: "liquidos-reg2", name: "Marine Collagen Beauty Elixir", desc: "Elixir premium bebible con alta dosis de colágeno marino e hialurónico.", ingredients: "Agua Osmotizada, Colágeno Marino Hidrolizado (Pescado), Ácido Hialurónico, Coenzima Q10, Vitamina C, Biotina, Sorbato de Potasio", benefits: ["Elasticidad e hidratación de la piel", "Fortalecimiento de cabello y uñas", "Efecto antioxidante celular antienvejecimiento"] },
+            { id: "l2-2", category: "Nutrición", format: "Líquido", line: "liquidos-reg2", name: "Vegan Protein RTD Coffee", desc: "Bebida proteica de café vegetal con textura cremosa y aminoácidos.", ingredients: "Agua Osmotizada, Proteína de Arveja Aislada, Café Arábica, Leche de Almendras, MCT de Coco, Vitamina C, Benzoato de Sodio", benefits: ["Aporte proteico vegetal estable", "Energía y cafeína natural", "Fórmula equilibrada macronutriente"] },
+            { id: "l2-3", category: "Wellness", format: "Líquido", line: "liquidos-reg2", name: "Adaptogen Reishi Cocoa RTD", desc: "Bebida cremosa premium de cacao fino con hongos funcionales.", ingredients: "Agua Osmotizada, Cacao Fino de Aroma, Extracto de Reishi, Extracto de Melena de León, Magnesio, Goma Acacia, Conservantes Orgánicos", benefits: ["Balance adaptogénico diario", "Soporte cognitivo e inmunológico", "Sabor premium y gourmet"] },
+            { id: "l2-4", category: "Wellness", format: "Líquido", line: "liquidos-reg2", name: "Focus Matcha Ceremonial RTD", desc: "Bebida premium embotellada de matcha ceremonial y L-teanina.", ingredients: "Agua, Matcha Ceremonial Japonés, L-Teanina, Extracto de Ginseng, Vitamina C, Vitamina B12, Conservantes Orgánicos", benefits: ["Concentración mental prolongada", "Energía limpia sin nerviosismo", " मैच (Matcha) antioxidante premium"] },
+            { id: "l2-5", category: "Nutrición", format: "Líquido", line: "liquidos-reg2", name: "Joint Support Elixir", desc: "Bebida premium bebible para soporte estructural de articulaciones.", ingredients: "Agua, Glucosamina, Condroitina, Extracto de Cúrcuma Biodisponible, MSM, Colágeno Hidrolizado, Vitamina D3, Vitamina C", benefits: ["Salud articular y flexibilidad", "Reducción de molestias físicas", "Nutrición para cartílagos"] },
+            { id: "l2-6", category: "Wellness", format: "Líquido", line: "liquidos-reg2", name: "Detox Green Master RTD", desc: "Bebida verde premium superconcentrada con espirulina y clorofila.", ingredients: "Agua Osmotizada, Clorofila Líquida, Espirulina, Extracto de Jengibre, Extracto de Kale, Vitamina C, Bisglicinato de Magnesio", benefits: ["Alcalinización y purificación de la sangre", "Energía celular de clorofila", "Fórmula premium desintoxicante"] },
+            { id: "l2-7", category: "Nutrición", format: "Líquido", line: "liquidos-reg2", name: "Recovery BCAA Splash", desc: "Bebida de hidratación deportiva premium con aminoácidos ramificados suspendidos.", ingredients: "Agua Osmotizada, L-Leucina, L-Isoleucina, L-Valina, Citrato de Potasio, Citrato de Magnesio, Cloruro de Sodio, Vitamina B6, Vitamina C", benefits: ["Recuperación muscular posentrenamiento", "Reposición hidro-electrolítica premium", "Sin azúcar ni colorantes químicos"] },
+            { id: "l2-8", category: "Belleza", format: "Líquido", line: "liquidos-reg2", name: "Hormonal Balance Aguaje Elixir", desc: "Bebida premium femenina orientada a equilibrio hormonal y belleza.", ingredients: "Agua Osmotizada, Extracto Concentrado de Aguaje, Extracto de Maca Roja, Vitamina C, Vitamina E, Sulfato de Zinc, Biotina, Sorbato de Potasio", benefits: ["Equilibrio hormonal femenino natural", "Vitaminas antioxidantes para piel", "Soporte de vitalidad y bienestar"] },
+            { id: "l2-9", category: "Wellness", format: "Líquido", line: "liquidos-reg2", name: "Youth Resveratrol Elixir", desc: "Bebida premium antienvejecimiento de alta gama con resveratrol.", ingredients: "Agua, Resveratrol Puro, Extracto de Semilla de Uva, Extracto de Granada, Vitamina C, Vitamina E, Conservante Orgánico", benefits: ["Poderoso rejuvenecedor celular", "Soporte cardiovascular activo", "Gran concentración de polifenoles"] },
+
+            // LÍQUIDOS - REGISTRO 3: Functional Liquid Shots
+            { id: "l3-1", category: "Wellness", format: "Líquido", line: "liquidos-reg3", name: "Ginger Turmeric Fire Shot", desc: "Shot intensivo ultraconcentrado de jengibre y cúrcuma con cayena.", ingredients: "Jugo de Jengibre Prensado en Frío, Cúrcuma Soluble, Pimienta Cayena, Jugo de Limón, Vitamina C, Sorbato de Potasio", benefits: ["Estímulo inmunológico y digestivo", "Acción termogénica y antiinflamatoria", "Formato concentrado y ágil"] },
+            { id: "l3-2", category: "Wellness", format: "Líquido", line: "liquidos-reg3", name: "Focus Lion's Mane Shot", desc: "Dosis neuro-cognitiva ultra concentrada con melena de león y ginseng.", ingredients: "Agua, Extracto de Melena de León, Extracto de Ginkgo Biloba, L-Teanina, Cafeína Natural de Café Verde, Complejo B, Vitamina C", benefits: ["Impulso de concentración inmediata", "Claridad mental y lucidez", "Acción energética cerebral limpia"] },
+            { id: "l3-3", category: "Wellness", format: "Líquido", line: "liquidos-reg3", name: "Sleep Melatonin Passiflora Shot", desc: "Shot concentrado para relajación muscular e inducción del sueño.", ingredients: "Agua, L-Triptófano, Extracto de Passiflora, Citrato de Magnesio, Extracto de Manzanilla, Vitamina B6, Conservante Orgánico", benefits: ["Inducción del sueño reparador", "Relajación del sistema nervioso", "Formato práctico de noche"] },
+            { id: "l3-4", category: "Wellness", format: "Líquido", line: "liquidos-reg3", name: "Immune Elderberry Zinc Shot", desc: "Dosis masiva inmunitaria concentrada de saúco, zinc y propóleo.", ingredients: "Agua Osmotizada, Extracto de Saúco, Vitamina C, Gluconato de Zinc, Extracto de Propóleo, Vitamina D3, Sorbato de Potasio", benefits: ["Soporte de defensas inmediato", "Fórmula antiviral y antibacteriana", "Rico en antioxidantes fúngicos"] },
+            { id: "l3-5", category: "Wellness", format: "Líquido", line: "liquidos-reg3", name: "Energy Maca Guaraná Shot", desc: "Concentrado energético físico y mental de alta potencia.", ingredients: "Agua, Extracto de Maca Negra, Extracto de Guaraná, L-Taurina, Cafeína Natural, Complejo B, Ácido Cítrico, Conservante Orgánico", benefits: ["Impulso de energía física inmediata", "Soporte metabólico y deportivo", "Efecto rápido contra la fatiga"] },
+            { id: "l3-6", category: "Digestivo", format: "Líquido", line: "liquidos-reg3", name: "Detox Artichoke Milk Thistle Shot", desc: "Shot de soporte hepático y depurativo digestivo.", ingredients: "Agua, Extracto de Alcachofa, Extracto de Cardo Mariano, Extracto de Boldo, Jugo de Limón, Vitamina C, Sorbato de Potasio", benefits: ["Limpieza y desintoxicación hepática", "Alivio de pesadez estomacal", "Soporte de digestión de grasas"] },
+            { id: "l3-7", category: "Belleza", format: "Líquido", line: "liquidos-reg3", name: "Beauty Biotina Collagen Shot", desc: "Dosis concentrada bebible de colágeno, biotina e hialurónico.", ingredients: "Agua Osmotizada, Colágeno Marino, Biotina, Ácido Hialurónico, Vitamina C, Sulfato de Zinc, Sorbato de Potasio", benefits: ["Nutrición intensiva para piel y cabello", "Soporte estructural antiedad", "Fórmula de belleza express"] },
+            { id: "l3-8", category: "Nutrición", format: "Líquido", line: "liquidos-reg3", name: "Burn L-Carnitine Green Tea Shot", desc: "Shot termogénico concentrado para aceleración del metabolismo.", ingredients: "Agua, L-Carnitina, Extracto de Té Verde, Cafeína de Café Verde, Picolinato de Cromo, Ácido Cítrico, Conservante Orgánico", benefits: ["Conversión de grasa en energía celular", "Aceleración metabólica termogénica", "Control de apetito dulce"] },
+            { id: "l3-9", category: "Digestivo", format: "Líquido", line: "liquidos-reg3", name: "Digestive Enzymes Shot", desc: "Shot enzimático rápido de frutas tropicales para digestión pesada.", ingredients: "Agua, Extracto de Piña (Bromelina), Extracto de Papaya (Papaína), Extracto de Anís Verde, Vitamina C, Conservantes Orgánicos", benefits: ["Asimilación rápida de proteínas pesadas", "Reducción de inflamación estomacal", "Acción digestiva express"] },
+            { id: "l3-10", category: "Wellness", format: "Líquido", line: "liquidos-reg3", name: "Zen Ashwagandha Shot", desc: "Dosis concentrada adaptogénica de Ashwagandha KSM-66 y lavanda.", ingredients: "Agua Osmotizada, Extracto de Ashwagandha KSM-66, Bisglicinato de Magnesio, Extracto de Lavanda, Vitamina B6, Conservante Orgánico", benefits: ["Reducción de cortisol y ansiedad", "Calma mental sin adormecimiento", "Estabilidad emocional y enfoque Zen"] }
+        ];
+
+        // B2B Portfolio State & Interactions
+        let selectedSamples = []; // Cart storage
+
+        // Load Theme on Boot
+        (function() {
+            const theme = localStorage.getItem('theme');
+            if (theme === 'light') {
+                document.body.classList.add('light-theme');
+            }
+        })();
+
+        // Bootstrapping
+        window.addEventListener('DOMContentLoaded', () => {
+            // Initialize Lucide Icons
+            lucide.createIcons();
+            
+            // Render first catalog cards
+            searchCatalogue();
+
+            // Navbar Blur scroll listener
+            const handleScroll = () => {
+                const nav = document.getElementById('navbar');
+                if (window.scrollY > 50) {
+                    nav.classList.add('glass-nav', 'py-2');
+                    nav.classList.remove('bg-transparent', 'py-4');
+                } else {
+                    nav.classList.remove('glass-nav', 'py-2');
+                    nav.classList.add('bg-transparent', 'py-4');
+                }
+            };
+            window.addEventListener('scroll', handleScroll);
+            handleScroll();
+
+            // Mobile Menu Drawer Toggle
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('hidden');
+                });
+                mobileMenu.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', () => mobileMenu.classList.add('hidden'));
+                });
+            }
+
+            // Fade out preloader
+            setTimeout(() => {
+                const preloader = document.getElementById('preloader');
+                preloader.classList.add('opacity-0');
+                setTimeout(() => preloader.classList.add('hidden'), 700);
+            }, 600);
+        });
+
+        // Pill-Button Tabs Filter Control
+        function setTabFilter(regName) {
+            // Sync with hidden select dropdown
+            const regSelect = document.getElementById('catalogue-reg-select');
+            regSelect.value = regName;
+
+            // Update active states on visual tabs
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(tab => {
+                if (tab.id === `tab-${regName}`) {
+                    tab.className = "tab-btn px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-emerald-500 text-white transition-all shadow-glow";
+                } else {
+                    tab.className = "tab-btn px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap bg-deepblue-950 text-gray-400 border border-white/5 hover:border-white/10 transition-all";
+                }
+            });
+
+            searchCatalogue();
+            showToast("Filtro Aplicado", `Mostrando conceptos de la línea seleccionada.`);
+        }
+
+        function scrollToExplorer() {
+            document.getElementById('catalog-explorer-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Live Product Search and Registry Filtering
+        function searchCatalogue() {
+            const searchInput = document.getElementById('catalogue-search-input');
+            const regSelect = document.getElementById('catalogue-reg-select');
+            const container = document.getElementById('catalogue-cards-container');
+            const counter = document.getElementById('search-counter-badge');
+
+            const query = searchInput.value.toLowerCase().trim();
+            const filterLine = regSelect.value;
+
+            // Filter products
+            const filteredProducts = productDatabase.filter(prod => {
+                const matchesSearch = prod.name.toLowerCase().includes(query) ||
+                                      prod.ingredients.toLowerCase().includes(query) ||
+                                      prod.desc.toLowerCase().includes(query) ||
+                                      prod.benefits.some(b => b.toLowerCase().includes(query));
+
+                const matchesLine = filterLine === 'all' || prod.line === filterLine;
+
+                return matchesSearch && matchesLine;
+            });
+
+            // Update badge counter
+            counter.textContent = `Mostrando ${filteredProducts.length} de ${productDatabase.length} conceptos`;
+
+            // Draw Cards
+            if (filteredProducts.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-gray-500 border border-dashed border-white/10 rounded-2xl">
+                        <i data-lucide="help-circle" class="w-8 h-8 mx-auto text-gray-500 mb-2"></i>
+                        <p class="text-xs">No se encontraron conceptos comerciales con ese ingrediente o línea.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            let cardsHtml = '';
+            filteredProducts.forEach(prod => {
+                const isSelected = selectedSamples.includes(prod.id);
+                
+                // Color formatting based on category
+                let badgeColor = 'bg-emerald-950/80 text-emerald-300 border-emerald-500/20';
+                if (prod.category === 'Nutrición') badgeColor = 'bg-blue-950/80 text-blue-300 border-blue-500/20';
+                if (prod.category === 'Digestivo') badgeColor = 'bg-yellow-950/80 text-yellow-300 border-yellow-500/20';
+                if (prod.category === 'Belleza') badgeColor = 'bg-pink-950/80 text-pink-300 border-pink-500/20';
+
+                cardsHtml += `
+                    <div class="bg-[#0A2540]/40 border border-white/5 hover:border-emerald-500/30 p-5 rounded-2xl shadow-lg transition-all duration-300 hover:-translate-y-0.5 group">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <div class="flex items-center gap-2 flex-wrap mb-2">
+                                    <span class="text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${badgeColor}">${prod.category}</span>
+                                    <span class="text-[9px] font-medium px-2 py-0.5 bg-deepblue-950 text-gray-400 rounded-full border border-white/5 uppercase">${prod.format}</span>
+                                    <span class="text-[9px] font-mono text-gray-500">${prod.id.toUpperCase()}</span>
+                                </div>
+                                <h4 class="text-base font-heading font-extrabold text-white group-hover:text-emerald-400 transition-colors">${prod.name}</h4>
+                                <p class="text-xs text-gray-400 mt-1 leading-relaxed">${prod.desc}</p>
+                            </div>
+                            <div class="flex items-center space-x-2 shrink-0">
+                                <button onclick="toggleSampleItem('${prod.id}')" class="btn-uiverse ${isSelected ? 'btn-emerald' : 'btn-white'} p-2 rounded-xl text-xs font-semibold" title="Añadir a muestras">
+                                    <i data-lucide="${isSelected ? 'check-circle' : 'plus-circle'}" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Toggleable raw ingredients list -->
+                        <div class="mt-4 pt-3 border-t border-white/5">
+                            <details class="group/details">
+                                <summary class="list-none flex items-center justify-between text-[11px] font-semibold text-emerald-400 cursor-pointer select-none hover:text-emerald-300 transition-colors">
+                                    <span class="flex items-center gap-1.5"><i data-lucide="info" class="w-3.5 h-3.5"></i> Ver ingredientes</span>
+                                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform group-open/details:rotate-180"></i>
+                                </summary>
+                                <p class="text-[10px] text-emerald-400/90 leading-relaxed font-mono mt-2 bg-deepblue-950/80 p-2.5 rounded-lg border border-white/5">${prod.ingredients}</p>
+                            </details>
+                        </div>
+
+                        <!-- Benefits -->
+                        <div class="mt-3 flex flex-col space-y-1.5">
+                            ${prod.benefits.map(b => `
+                                <div class="flex items-center space-x-2 text-[10px]">
+                                    <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
+                                    <span class="text-gray-300 font-medium">${b}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = cardsHtml;
+            lucide.createIcons();
+        }
+
+        // Direct line filtering
+        function filterByReg(regName) {
+            setTabFilter(regName);
+        }
+
+        // Toggle Theme (Light / Dark)
+        function toggleTheme() {
+            const body = document.body;
+            body.classList.toggle('light-theme');
+            
+            const themeIcon = document.getElementById('theme-icon');
+            const themeIconMobile = document.getElementById('theme-icon-mobile');
+            
+            if (body.classList.contains('light-theme')) {
+                localStorage.setItem('theme', 'light');
+                if (themeIcon) themeIcon.setAttribute('data-lucide', 'moon');
+                if (themeIconMobile) themeIconMobile.setAttribute('data-lucide', 'moon');
+                showToast("Modo Claro", "Se ha activado la versión clara del portafolio.");
+            } else {
+                localStorage.setItem('theme', 'dark');
+                if (themeIcon) themeIcon.setAttribute('data-lucide', 'sun');
+                if (themeIconMobile) themeIconMobile.setAttribute('data-lucide', 'sun');
+                showToast("Modo Oscuro", "Se ha activado la versión oscura del portafolio.");
+            }
+            lucide.createIcons();
+        }
+
+        // Toggle Sample Kit items
+        function toggleSampleItem(id) {
+            const index = selectedSamples.indexOf(id);
+            const prod = productDatabase.find(p => p.id === id);
+
+            if (index > -1) {
+                // Remove
+                selectedSamples.splice(index, 1);
+                showToast("Kit Actualizado", `Eliminado: ${prod.name}`);
+            } else {
+                // Add (Limit to 5)
+                if (selectedSamples.length >= 5) {
+                    showToast("Límite Alcanzado", "El maletín de desarrollo B2B permite un máximo de 5 muestras.", "warning");
+                    return;
+                }
+                selectedSamples.push(id);
+                showToast("Kit Actualizado", `Añadido: ${prod.name}`);
+            }
+
+            // Sync Badge and Redraw
+            updateSampleBadge();
+            searchCatalogue();
+        }
+
+        function updateSampleBadge() {
+            const badge = document.getElementById('sample-badge-count');
+            if (selectedSamples.length > 0) {
+                badge.textContent = selectedSamples.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // Toast Feedback System
+        function showToast(title, message, type = "success") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let colorBorder = 'border-emerald-500 bg-deepblue-950';
+            let iconMarkup = '<i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>';
+            
+            if (type === 'warning') {
+                colorBorder = 'border-yellow-500 bg-deepblue-950';
+                iconMarkup = '<i data-lucide="alert-triangle" class="w-4 h-4 text-yellow-400"></i>';
+            }
+
+            toast.className = `p-4 border-l-4 rounded-xl shadow-2xl flex items-start space-x-3 pointer-events-auto transition-all duration-300 transform translate-y-4 opacity-0 border border-white/5 ${colorBorder}`;
+            toast.innerHTML = `
+                <div class="shrink-0 mt-0.5">${iconMarkup}</div>
+                <div>
+                    <h5 class="text-xs font-bold text-white font-heading">${title}</h5>
+                    <p class="text-[10px] text-gray-400 mt-0.5">${message}</p>
+                </div>
+            `;
+
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            // Animate In
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            }, 50);
+
+            // Auto Remove
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-10px]');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Modal Drawer toggler
+        function toggleModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.toggle('hidden');
+
+            if (modalId === 'sample-modal' && !modal.classList.contains('hidden')) {
+                // Populate selected list in form
+                const listContainer = document.getElementById('modal-selected-list');
+                
+                if (selectedSamples.length === 0) {
+                    listContainer.innerHTML = `
+                        <div class="text-center py-6 text-gray-500 border border-dashed border-white/5 rounded-xl">
+                            <p class="text-xs">El maletín está vacío. Agregue conceptos desde el catálogo.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let listHtml = '';
+                selectedSamples.forEach(id => {
+                    const prod = productDatabase.find(p => p.id === id);
+                    listHtml += `
+                        <div class="flex items-center justify-between p-3 bg-deepblue-950 rounded-xl border border-white/5">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded uppercase font-mono">${prod.id}</span>
+                                <span class="text-xs font-bold text-white">${prod.name}</span>
+                            </div>
+                            <button onclick="toggleSampleItem('${prod.id}'); toggleModal('sample-modal'); toggleModal('sample-modal');" class="text-gray-500 hover:text-red-400 transition-colors">
+                                <i data-lucide="trash" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    `;
+                });
+                listContainer.innerHTML = listHtml;
+                lucide.createIcons();
+            }
+        }
+
+        // Submit B2B sample request
+        function submitSampleRequest() {
+            const name = document.getElementById('quote-name').value.trim();
+            const email = document.getElementById('quote-email').value.trim();
+            const volume = document.getElementById('quote-volume').value;
+            const packaging = document.getElementById('quote-packaging').value;
+            const specs = document.getElementById('quote-specs').value.trim();
+
+            if (selectedSamples.length === 0) {
+                showToast("Fórmulas Vacías", "Debe agregar al menos 1 concepto para cotizar muestras.", "warning");
+                return;
+            }
+
+            if (!name || !email) {
+                showToast("Datos Faltantes", "Por favor complete su nombre y correo corporativo.", "warning");
+                return;
+            }
+
+            // Generate Mock PDF / Document string
+            const selectedText = selectedSamples.map(id => {
+                const p = productDatabase.find(x => x.id === id);
+                return `- ${p.name} [ID: ${p.id.toUpperCase()}, Formato: ${p.format}]`;
+            }).join('\n');
+
+            const docContent = `
+=========================================
+SOLICITUD DE DESARROLLO DE MUESTRAS B2B
+=========================================
+NutraSyn Lab Foodtech - Corporativo
+
+DATOS DEL CLIENTE:
+- Nombre: ${name}
+- Correo: ${email}
+- Volumen Estimado: ${volume}
+- Tipo Empaque: ${packaging}
+
+ESPECIFICACIONES SENSORIALES:
+${specs ? specs : 'Ninguna especificada.'}
+
+FÓRMULAS SELECCIONADAS:
+${selectedText}
+=========================================
+            `;
+
+            console.log("Documento generado:\n", docContent);
+
+            // Success feedback
+            toggleModal('sample-modal');
+            showToast("Solicitud Enviada", "Se ha generado el documento de desarrollo en la consola. Un asesor técnico lo contactará.");
+            
+            // Clean kit
+            selectedSamples = [];
+            updateSampleBadge();
+            searchCatalogue();
+        }
+    </script>
+</body>
+</html>

@@ -117,6 +117,131 @@
 
     <style>
         body { background-color: #061727; overflow-x: hidden; }
+        
+        /* Light Theme Styles for index.html */
+        .light-theme {
+            background-color: #f1f5f9 !important;
+            color: #334155 !important;
+        }
+        .light-theme .glass-nav {
+            background: rgba(10, 37, 64, 0.95) !important; /* Keep navigation header dark so white logo is visible! */
+        }
+        .light-theme .bg-grid {
+            background-image: linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px) !important;
+        }
+        
+        /* Make dark sections light in light-theme */
+        .light-theme #servicios, 
+        .light-theme #cotizador, 
+        .light-theme #contacto, 
+        .light-theme footer {
+            background-color: #f1f5f9 !important;
+            color: #334155 !important;
+        }
+        .light-theme #contacto, .light-theme footer {
+            background-color: #ffffff !important;
+        }
+        .light-theme footer {
+            border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+        }
+
+        /* Targeted Text Color Overrides for Converted Light Containers */
+        .light-theme #servicios .text-white,
+        .light-theme #servicios h2,
+        .light-theme #servicios h3,
+        .light-theme #servicios h4,
+        .light-theme #servicios p,
+        .light-theme #cotizador .text-white,
+        .light-theme #cotizador h2,
+        .light-theme #cotizador h3,
+        .light-theme #cotizador p,
+        .light-theme #contacto .text-white,
+        .light-theme #contacto h2,
+        .light-theme #contacto p,
+        .light-theme footer .text-white,
+        .light-theme footer p,
+        .light-theme footer span {
+            color: #0f172a !important;
+        }
+        
+        .light-theme #servicios .text-gray-300,
+        .light-theme #cotizador .text-gray-300,
+        .light-theme #contacto .text-gray-300,
+        .light-theme footer .text-gray-300 {
+            color: #475569 !important;
+        }
+
+        .light-theme #servicios .text-gray-400,
+        .light-theme #cotizador .text-gray-400,
+        .light-theme #contacto .text-gray-400,
+        .light-theme footer .text-gray-400 {
+            color: #64748b !important;
+        }
+
+        .light-theme #servicios .text-emerald-300,
+        .light-theme #cotizador .text-emerald-300,
+        .light-theme #contacto .text-emerald-300 {
+            color: #0d9488 !important;
+        }
+
+        .light-theme .glass-dark {
+            background-color: #ffffff !important;
+            border-color: rgba(0,0,0,0.08) !important;
+            color: #334155 !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03), 0 8px 10px -6px rgba(0, 0, 0, 0.03) !important;
+        }
+        /* Make stats card numbers black/blue in light mode */
+        .light-theme .glass-dark .text-white {
+            color: #0A2540 !important;
+        }
+        .light-theme .glass-dark .text-emerald-300 {
+            color: #00A896 !important;
+        }
+
+        .light-theme .bg-deepblue-900 {
+            background-color: #ffffff !important;
+            border-color: rgba(0, 0, 0, 0.08) !important;
+            color: #334155 !important;
+        }
+
+        .light-theme .cotizador-card {
+            background: #ffffff !important;
+            color: #334155 !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05) !important;
+        }
+        .light-theme input, .light-theme select, .light-theme textarea {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border-color: #cbd5e1 !important;
+        }
+        .light-theme input::placeholder, .light-theme textarea::placeholder {
+            color: #94a3b8 !important;
+        }
+        .light-theme #cotizador span, .light-theme #cotizador label {
+            color: #334155 !important;
+        }
+        .light-theme #cotizador .text-emerald-400 {
+            color: #00A896 !important;
+        }
+        /* MOQ launch alert should be dark blue with soft blue background */
+        .light-theme .bg-emerald\/20 {
+            background-color: #eff6ff !important;
+            border-color: #bfdbfe !important;
+            color: #1e3a8a !important;
+        }
+        .light-theme #cotizador input[type=range]::-webkit-slider-runnable-track {
+            background: #cbd5e1 !important;
+        }
+        .light-theme .border-white\/10 {
+            border-color: rgba(0, 0, 0, 0.08) !important;
+        }
+        .light-theme .border-white\/5 {
+            border-color: rgba(0, 0, 0, 0.04) !important;
+        }
+        .light-theme .card-section {
+            box-shadow: 0 -20px 50px rgba(0,0,0,0.05);
+        }
 
         .glass-nav {
             background: rgba(10, 37, 64, 0.95);
@@ -271,6 +396,10 @@
                     <a href="#servicios" class="text-gray-300 hover:text-emerald font-medium text-sm transition-colors">Servicios</a>
                     <a href="#categorias" class="text-gray-300 hover:text-emerald font-medium text-sm transition-colors">Categorías</a>
                     <a href="#cotizador" class="text-gray-300 hover:text-emerald font-medium text-sm transition-colors">Cotizador</a>
+                    <a href="portafolio.html" class="text-gray-300 hover:text-emerald font-semibold text-sm transition-colors">Portafolio B2B</a>
+                    <button onclick="toggleTheme()" class="p-2 rounded-xl border border-white/10 bg-deepblue-950/50 hover:bg-deepblue-950 text-gray-400 hover:text-white flex items-center justify-center transition-all cursor-pointer" title="Alternar Modo Claro/Oscuro">
+                        <i id="theme-icon" data-lucide="sun" class="w-4 h-4 text-emerald-400"></i>
+                    </button>
                     <a href="#contacto" class="btn-uiverse btn-emerald px-5 py-2 rounded-xl text-sm font-semibold shadow-glow">Solicitar Asesoría</a>
                 </div>
                 <!-- Botón Menú Móbil -->
@@ -284,6 +413,13 @@
                 <a href="#servicios" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">Servicios</a>
                 <a href="#categorias" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">Categorías</a>
                 <a href="#cotizador" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">Cotizador</a>
+                <a href="portafolio.html" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg font-semibold">Portafolio B2B</a>
+                <div class="flex justify-between items-center px-3 py-3 mt-2 border-t border-white/5">
+                    <span class="text-sm font-medium text-gray-300">Modo Claro</span>
+                    <button onclick="toggleTheme()" class="p-2 rounded-xl border border-white/10 bg-deepblue-950/50 text-emerald-400 cursor-pointer">
+                        <i id="theme-icon-mobile" data-lucide="sun" class="w-4 h-4"></i>
+                    </button>
+                </div>
                 <a href="#contacto" class="btn-uiverse btn-emerald w-full px-3 py-3 text-sm font-medium rounded-lg mt-4">Solicitar Asesoría</a>
             </div>
         </div>
@@ -529,6 +665,14 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            
+            <!-- Botón CTA al Portafolio B2B -->
+            <div class="mt-12 text-center reveal" style="transition-delay: 300ms;">
+                <a href="portafolio.html" class="btn-uiverse btn-emerald px-8 py-4 rounded-xl font-semibold shadow-glow gap-2 inline-flex items-center">
+                    <span>Explorar Catálogo B2B Completo</span>
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </a>
             </div>
         </div>
     </section>
@@ -944,6 +1088,33 @@
             document.getElementById('b2bForm').style.display = 'block';
             const s = document.getElementById('successMessage'); s.classList.add('hidden'); s.classList.remove('flex');
         }
+
+        // Toggle Theme (Light / Dark)
+        function toggleTheme() {
+            const body = document.body;
+            body.classList.toggle('light-theme');
+            const themeIcon = document.getElementById('theme-icon');
+            const themeIconMobile = document.getElementById('theme-icon-mobile');
+            
+            if (body.classList.contains('light-theme')) {
+                localStorage.setItem('theme', 'light');
+                if (themeIcon) themeIcon.setAttribute('data-lucide', 'moon');
+                if (themeIconMobile) themeIconMobile.setAttribute('data-lucide', 'moon');
+            } else {
+                localStorage.setItem('theme', 'dark');
+                if (themeIcon) themeIcon.setAttribute('data-lucide', 'sun');
+                if (themeIconMobile) themeIconMobile.setAttribute('data-lucide', 'sun');
+            }
+            lucide.createIcons();
+        }
+
+        // Load Theme on Boot
+        (function() {
+            const theme = localStorage.getItem('theme');
+            if (theme === 'light') {
+                document.body.classList.add('light-theme');
+            }
+        })();
     </script>
 </body>
 </html>
