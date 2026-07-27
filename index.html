@@ -280,6 +280,7 @@
             box-shadow: 0 -20px 50px rgba(0,0,0,0.4);
             margin-top: -3rem;
             min-height: 100vh;
+            overflow-x: hidden; /* Evita desbordamiento horizontal en celular */
         }
 
         /* Scroll Horizontal */
@@ -577,7 +578,7 @@
                             <div class="bg-emerald text-white p-3 rounded-xl shadow-md"><i data-lucide="file-check-2" class="w-6 h-6"></i></div>
                             <div>
                                 <p class="font-bold text-gray-900 leading-tight">Registros Sanitarios</p>
-                                <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Documentación Vigente</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 uppercase tracking-widest font-bold">Documentación Vigente</p>
                             </div>
                         </div>
                     </div>
@@ -782,7 +783,7 @@
                 </div>
 
                 <div class="cotizador-wrapper">
-                    <div class="cotizador-card p-10 space-y-10">
+                    <div class="cotizador-card p-6 sm:p-10 space-y-10">
                         <div>
                             <label class="block text-sm font-bold text-white mb-5">Formato del Producto</label>
                             <div class="grid grid-cols-2 gap-4">
@@ -933,6 +934,11 @@
                 <span class="text-emerald-600 font-bold tracking-widest uppercase text-xs mb-2 block">Ventajas de Co-Crear con NutraSyn Lab</span>
                 <h2 class="font-heading text-3xl sm:text-4xl font-extrabold text-slate-900 mb-4">NutraSyn Lab vs Maquila Tradicional</h2>
                 <p class="text-slate-600 text-base">Compara nuestra agilidad en prototipado y flexibilidad de lotes frente a esquemas de producción masiva convencional.</p>
+            </div>
+
+            <!-- Ayuda de scroll para celular -->
+            <div class="flex md:hidden items-center justify-center gap-2 text-xs text-slate-500 mb-4 animate-pulse font-semibold">
+                <i data-lucide="arrow-left-right" class="w-4 h-4 text-emerald-500"></i> Desliza horizontalmente para ver la tabla completa
             </div>
 
             <div class="overflow-x-auto rounded-2xl border border-slate-200 shadow-xl reveal">
@@ -1145,7 +1151,7 @@
                 </div>
 
                 <div class="lg:w-7/12 cotizador-wrapper rounded-[2.5rem] w-full reveal" style="transition-delay: 200ms;">
-                    <div class="cotizador-card p-10 lg:p-12">
+                    <div class="cotizador-card p-6 sm:p-10 lg:p-12">
                         <h3 class="font-heading text-2xl font-bold text-white mb-8">Solicitud Oficial B2B</h3>
                         <!-- Formulario conectado a Netlify Forms -->
                         <form id="b2bForm" name="contacto" method="POST" data-netlify="true" class="space-y-6" onsubmit="handleFormSubmit(event)">
