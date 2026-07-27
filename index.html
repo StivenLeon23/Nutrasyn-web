@@ -85,6 +85,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- Generación Dinámica de Catálogos Infográficos PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="js/formulas-db.js"></script>
+    <script src="js/ingredient-functions.js"></script>
+
     <!-- Configuración de Tailwind -->
     <script>
         tailwind.config = {
@@ -203,6 +209,15 @@
             background-color: #ffffff !important;
             border-color: rgba(0, 0, 0, 0.08) !important;
             color: #334155 !important;
+        }
+
+        /* El panel del menú móvil y el dropdown "Recursos" deben permanecer oscuros
+           incluso en modo claro (el texto gris claro no es legible sobre blanco). */
+        .light-theme #mobile-menu,
+        .light-theme nav .group .bg-deepblue-900 {
+            background-color: #0A2540 !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #e5e7eb !important;
         }
 
         .light-theme .cotizador-card {
@@ -357,7 +372,7 @@
         @keyframes rain-fall-gpu { 0% { transform: translateY(0); } 100% { transform: translateY(33.333%); } }
     </style>
 </head>
-<body class="font-sans text-gray-700 antialiased selection:bg-emerald-500 selection:text-white">
+<body class="light-theme font-sans text-gray-700 antialiased selection:bg-emerald-500 selection:text-white">
 
     <!-- Pantalla de Carga (Preloader) -->
     <div id="preloader" class="fixed inset-0 z-[99999] bg-[#061727] flex flex-col items-center justify-center transition-opacity duration-700 ease-in-out">
@@ -387,32 +402,48 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center bg-deepblue-900/90 backdrop-blur-md rounded-2xl px-6 py-3 border border-white/10 shadow-xl">
                 <!-- Logo -->
-                <div class="flex-shrink-0 flex items-center cursor-pointer transition-transform hover:scale-105">
+                <a href="#" class="flex-shrink-0 flex items-center cursor-pointer transition-transform hover:scale-105" title="Volver al Inicio">
                     <img src="https://res.cloudinary.com/dj761bgxw/image/upload/v1777030919/svg_1_vfsoo4.svg" alt="NutraSyn Lab" class="h-14 w-auto object-contain brightness-0 invert">
-                </div>
+                </a>
                 <!-- Menú Escritorio -->
-                <div class="hidden lg:flex items-center space-x-8">
-                    <a href="#nosotros" class="text-gray-300 hover:text-emerald font-medium text-sm transition-colors">Nosotros</a>
-                    <a href="#servicios" class="text-gray-300 hover:text-emerald font-medium text-sm transition-colors">Servicios</a>
-                    <a href="#categorias" class="text-gray-300 hover:text-emerald font-medium text-sm transition-colors">Categorías</a>
-                    <a href="#cotizador" class="text-gray-300 hover:text-emerald font-medium text-sm transition-colors">Cotizador</a>
-                    <a href="portafolio.html" class="text-gray-300 hover:text-emerald font-semibold text-sm transition-colors">Portafolio B2B</a>
-                    <button onclick="toggleTheme()" class="p-2 rounded-xl border border-white/10 bg-deepblue-950/50 hover:bg-deepblue-950 text-gray-400 hover:text-white flex items-center justify-center transition-all cursor-pointer" title="Alternar Modo Claro/Oscuro">
+                <div class="hidden xl:flex items-center space-x-5 2xl:space-x-7">
+                    <a href="#" class="text-gray-300 hover:text-emerald font-medium text-sm transition-colors whitespace-nowrap">Inicio</a>
+                    <a href="#servicios" class="text-gray-300 hover:text-emerald font-medium text-sm transition-colors whitespace-nowrap">Servicios</a>
+                    <a href="#cotizador" class="text-gray-300 hover:text-emerald font-medium text-sm transition-colors whitespace-nowrap">Cotizador</a>
+                    <!-- Dropdown Recursos -->
+                    <div class="relative group">
+                        <button class="flex items-center gap-1 text-gray-300 hover:text-emerald font-medium text-sm transition-colors whitespace-nowrap cursor-pointer">
+                            Recursos
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:rotate-180"></i>
+                        </button>
+                        <div class="absolute top-full left-1/2 -translate-x-1/2 pt-3 opacity-0 invisible translate-y-2 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-200 z-50">
+                            <div class="w-60 bg-deepblue-900 border border-white/10 rounded-2xl shadow-2xl p-2">
+                                <a href="#comparativa" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors whitespace-nowrap"><i data-lucide="scale" class="w-4 h-4 text-emerald-400 shrink-0"></i> NutraSyn vs Otros</a>
+                                <a href="#descargas-pdf" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors whitespace-nowrap"><i data-lucide="download" class="w-4 h-4 text-emerald-400 shrink-0"></i> Catálogos PDF</a>
+                                <a href="#ecosistema" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors whitespace-nowrap"><i data-lucide="sparkles" class="w-4 h-4 text-emerald-400 shrink-0"></i> Ecosistema NutraSyn</a>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="portafolio.html" class="shrink-0 text-white hover:text-emerald font-semibold text-sm transition-colors bg-white/10 px-3 py-1.5 rounded-lg border border-white/20 whitespace-nowrap">Portafolio B2B</a>
+                    <button onclick="toggleTheme()" class="shrink-0 p-2 rounded-xl border border-white/10 bg-deepblue-950/50 hover:bg-deepblue-950 text-gray-400 hover:text-white flex items-center justify-center transition-all cursor-pointer" title="Alternar Modo Claro/Oscuro">
                         <i id="theme-icon" data-lucide="sun" class="w-4 h-4 text-emerald-400"></i>
                     </button>
-                    <a href="#contacto" class="btn-uiverse btn-emerald px-5 py-2 rounded-xl text-sm font-semibold shadow-glow">Solicitar Asesoría</a>
+                    <a href="#contacto" class="shrink-0 btn-uiverse btn-emerald px-5 py-2 rounded-xl text-sm font-semibold shadow-glow whitespace-nowrap">Solicitar Asesoría</a>
                 </div>
                 <!-- Botón Menú Móbil -->
-                <div class="lg:hidden flex items-center"><button id="mobile-menu-btn" aria-label="Abrir menú" class="text-white hover:text-emerald focus:outline-none"><i data-lucide="menu" class="w-6 h-6"></i></button></div>
+                <div class="xl:hidden flex items-center"><button id="mobile-menu-btn" aria-label="Abrir menú" class="text-white hover:text-emerald focus:outline-none"><i data-lucide="menu" class="w-6 h-6"></i></button></div>
             </div>
         </div>
         <!-- Panel Menú Móbil -->
-        <div id="mobile-menu" class="hidden lg:hidden absolute top-20 left-4 right-4 bg-deepblue-900 border border-white/10 shadow-2xl rounded-2xl overflow-hidden">
+        <div id="mobile-menu" class="hidden xl:hidden absolute top-20 left-4 right-4 bg-deepblue-900 border border-white/10 shadow-2xl rounded-2xl overflow-hidden max-h-[calc(100vh-6rem)] overflow-y-auto">
             <div class="px-4 py-4 space-y-1">
                 <a href="#nosotros" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">Nosotros</a>
                 <a href="#servicios" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">Servicios</a>
+                <a href="#comparativa" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">NutraSyn vs Otros</a>
                 <a href="#categorias" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">Categorías</a>
                 <a href="#cotizador" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">Cotizador</a>
+                <a href="#descargas-pdf" class="flex items-center gap-2 px-3 py-3 text-sm font-medium text-emerald-400 hover:text-white hover:bg-white/5 rounded-lg"><i data-lucide="download" class="w-4 h-4"></i> Catálogos PDF</a>
+                <a href="#ecosistema" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">Ecosistema (Asesorías & App)</a>
                 <a href="portafolio.html" class="block px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg font-semibold">Portafolio B2B</a>
                 <div class="flex justify-between items-center px-3 py-3 mt-2 border-t border-white/5">
                     <span class="text-sm font-medium text-gray-300">Modo Claro</span>
@@ -425,50 +456,102 @@
         </div>
     </nav>
 
-    <!-- 1. HERO SECTION -->
-    <header class="relative min-h-screen flex items-center bg-deepblue overflow-hidden pt-20 z-[1] sticky top-0">
+    <!-- 1. HERO SECTION CON SELLOS DE ALTA CONFIANZA Y ESTADÍSTICAS B2B -->
+    <header class="relative min-h-screen flex items-center bg-slate-900 overflow-hidden pt-20 z-[1]">
         <!-- Parallax Video -->
-        <video autoplay loop muted playsinline fetchpriority="high" preload="metadata" poster="https://images.pexels.com/photos/3825586/pexels-photo-3825586.jpeg?auto=compress&cs=tinysrgb&w=1920" class="parallax absolute inset-0 w-[110%] h-[110%] -top-[5%] -left-[5%] object-cover opacity-30 z-0 mix-blend-screen" data-speed="0.15" data-scale="0.0003" style="-webkit-transform: translateZ(0); transform: translateZ(0);">
+        <video autoplay loop muted playsinline fetchpriority="high" preload="metadata" poster="https://images.pexels.com/photos/3825586/pexels-photo-3825586.jpeg?auto=compress&cs=tinysrgb&w=1920" class="parallax absolute inset-0 w-[110%] h-[110%] -top-[5%] -left-[5%] object-cover opacity-25 z-0 mix-blend-screen" data-speed="0.15" data-scale="0.0003">
             <source src="https://res.cloudinary.com/dj761bgxw/video/upload/v1777002856/20315759-hd_1280_720_25fps_rfy0zj.mp4" type="video/mp4">
         </video>
         
         <div class="absolute inset-0 bg-grid opacity-20 z-0"></div>
-        <div class="absolute inset-0 bg-gradient-to-r from-deepblue-950 via-deepblue-900/80 to-transparent z-0"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/90 to-transparent z-0"></div>
 
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-20 flex flex-col justify-center min-h-[calc(100vh-5rem)]">
-            <div class="grid lg:grid-cols-2 gap-12 items-center">
-                <div class="reveal parallax" data-speed="-0.08">
-                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-emerald-300 font-medium text-xs mb-6 backdrop-blur-sm uppercase tracking-wider">
-                        <i data-lucide="activity" class="w-4 h-4"></i> Socios B2B en Nutrición Funcional
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-16 flex flex-col justify-center min-h-[calc(100vh-5rem)]">
+            <div class="grid lg:grid-cols-12 gap-8 items-center">
+                <div class="lg:col-span-7 reveal">
+                    
+                    <!-- Badges de Confianza Industrial -->
+                    <div class="flex flex-wrap items-center gap-2 mb-6">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-bold text-xs">
+                            <i data-lucide="rocket" class="w-3.5 h-3.5"></i> Maquila desde 100 Unidades
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 font-semibold text-xs">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Ley 9 de 1979 & Res. 810 INVIMA
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 font-semibold text-xs">
+                            <i data-lucide="clock" class="w-3.5 h-3.5"></i> Muestras R&D en 15 Días
+                        </span>
                     </div>
-                    <h1 class="font-heading text-5xl lg:text-6xl lg:leading-[1.1] font-extrabold text-white mb-6">
-                        Innovación científica que <br><span class="text-gradient">potencia tu marca</span>
+
+                    <h1 class="font-heading text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6">
+                        Desarrollo y Maquila FoodTech <br><span class="text-gradient">para Marcas & Emprendedores</span>
                     </h1>
-                    <p class="text-lg text-gray-300 mb-10 leading-relaxed max-w-xl">
-                        Desarrollamos y fabricamos alimentos funcionales de alta calidad para empresas. Fórmulas líquidas y en polvo con respaldo tecnológico industrial y registros sanitarios vigentes.
+
+                    <p class="text-lg text-slate-300 mb-8 leading-relaxed max-w-2xl">
+                        Acompañamos a marcas emergentes e industriales a escalar productos funcionales en líquidos y polvos solubles con respaldo científico, Clean Label bajo pedido y cero complicaciones legales.
                     </p>
-                    <div class="flex flex-col sm:flex-row gap-4">
-                        <a href="#contacto" class="btn-uiverse btn-emerald px-8 py-4 rounded-xl font-semibold shadow-glow gap-2">Solicitar asesoría</a>
-                        <a href="#nosotros" class="btn-uiverse btn-white px-8 py-4 rounded-xl font-semibold gap-2">Ver servicios <i data-lucide="arrow-down" class="w-4 h-4"></i></a>
+
+                    <div class="flex flex-wrap items-center gap-4 mb-10">
+                        <a href="#cotizador" class="btn-uiverse btn-emerald px-7 py-3.5 rounded-xl font-bold shadow-glow gap-2 text-white">
+                            <span>Cotizar Desde 100 Unidades</span>
+                            <i data-lucide="calculator" class="w-4 h-4"></i>
+                        </a>
+                        <a href="portafolio.html" class="btn-uiverse btn-white px-7 py-3.5 rounded-xl font-bold gap-2 bg-white text-slate-900 border-white hover:bg-slate-100">
+                            <span>Ver Catálogo de 65 Fórmulas</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </a>
+                    </div>
+
+                    <!-- Cuadrícula de Garantías Clave -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-slate-800/80">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Pedido Mínimo</p>
+                            <p class="text-lg font-extrabold text-emerald-400">Desde 100 unds</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Registros INVIMA</p>
+                            <p class="text-lg font-extrabold text-white">7 Líneas Listas</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Clean Label</p>
+                            <p class="text-lg font-extrabold text-white">Bajo Pedido</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Fórmulas R&D</p>
+                            <p class="text-lg font-extrabold text-emerald-400">65 Disponibles</p>
+                        </div>
                     </div>
                 </div>
-                <!-- Estadísticas -->
-                <div class="relative hidden lg:grid grid-cols-2 gap-6 reveal parallax" data-speed="0.1">
-                    <div class="glass-dark rounded-3xl p-6 border border-white/10 shadow-2xl flex flex-col justify-center items-center text-center">
-                        <div class="text-5xl font-heading font-bold text-white mb-2">+<span class="counter" data-target="50">0</span></div>
-                        <p class="text-emerald-300 font-medium text-xs uppercase tracking-widest">Activos<br>Funcionales</p>
+
+                <!-- Tarjetas de Estadísticas e Impacto B2B -->
+                <div class="lg:col-span-5 relative grid grid-cols-2 gap-4 reveal">
+                    <div class="glass-dark rounded-2xl p-6 border border-white/10 shadow-2xl flex flex-col justify-center items-center text-center">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-3">
+                            <i data-lucide="zap" class="w-6 h-6"></i>
+                        </div>
+                        <div class="text-4xl font-heading font-bold text-white mb-1"><span class="counter" data-target="100">0</span>u</div>
+                        <p class="text-emerald-300 font-bold text-xs uppercase tracking-wider">MOQ Inicial<br>Emprendedores</p>
                     </div>
-                    <div class="glass-dark rounded-3xl p-6 border border-white/10 shadow-2xl flex flex-col justify-center items-center text-center translate-y-8">
-                        <div class="text-5xl font-heading font-bold text-white mb-2"><span class="counter" data-target="100">0</span></div>
-                        <p class="text-emerald-300 font-medium text-xs uppercase tracking-widest">Unidades<br>MOQ Inicial</p>
+                    <div class="glass-dark rounded-2xl p-6 border border-white/10 shadow-2xl flex flex-col justify-center items-center text-center translate-y-4">
+                        <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-3">
+                            <i data-lucide="shield-check" class="w-6 h-6"></i>
+                        </div>
+                        <div class="text-4xl font-heading font-bold text-white mb-1"><span class="counter" data-target="65">0</span></div>
+                        <p class="text-blue-300 font-bold text-xs uppercase tracking-wider">Conceptos<br>B2B Listos</p>
                     </div>
-                    <div class="glass-dark rounded-3xl p-6 border border-white/10 shadow-2xl flex flex-col justify-center items-center text-center -translate-y-8">
-                        <div class="text-5xl font-heading font-bold text-white mb-2">+<span class="counter" data-target="15">0</span></div>
-                        <p class="text-emerald-300 font-medium text-xs uppercase tracking-widest">Formatos de<br>Producto</p>
+                    <div class="glass-dark rounded-2xl p-6 border border-white/10 shadow-2xl flex flex-col justify-center items-center text-center -translate-y-4">
+                        <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center mb-3">
+                            <i data-lucide="award" class="w-6 h-6"></i>
+                        </div>
+                        <div class="text-4xl font-heading font-bold text-white mb-1"><span class="counter" data-target="15">0</span>d</div>
+                        <p class="text-amber-300 font-bold text-xs uppercase tracking-wider">Despacho de<br>Muestras</p>
                     </div>
-                    <div class="glass-dark rounded-3xl p-6 border border-white/10 shadow-2xl flex flex-col justify-center items-center text-center">
-                        <div class="text-5xl font-heading font-bold text-white mb-2"><span class="counter" data-target="99">0</span>%</div>
-                        <p class="text-emerald-300 font-medium text-xs uppercase tracking-widest">Precisión<br>Analítica</p>
+                    <div class="glass-dark rounded-2xl p-6 border border-white/10 shadow-2xl flex flex-col justify-center items-center text-center">
+                        <div class="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center mb-3">
+                            <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                        </div>
+                        <div class="text-4xl font-heading font-bold text-white mb-1"><span class="counter" data-target="100">0</span>%</div>
+                        <p class="text-teal-300 font-bold text-xs uppercase tracking-wider">Cumplimiento<br>INVIMA</p>
                     </div>
                 </div>
             </div>
@@ -503,50 +586,50 @@
 
             <!-- Carrusel Horizontal Dinámico Makemepulse -->
             <div class="relative w-full flex-grow flex items-center reveal overflow-hidden" style="transition-delay: 200ms;">
-                <div class="horizontal-scroll-container flex gap-6 overflow-x-auto snap-x snap-mandatory hide-scrollbar px-4 md:px-[10vw] pb-10 w-full cursor-grab active:cursor-grabbing">
+                <div id="carousel-scroll" class="horizontal-scroll-container flex gap-6 overflow-x-auto snap-x snap-mandatory hide-scrollbar px-4 md:px-[10vw] pb-6 w-full cursor-grab active:cursor-grabbing">
                     
-                    <div class="snap-center shrink-0 w-[85vw] md:w-[45vw] h-[50vh] md:h-[60vh] rounded-[2.5rem] overflow-hidden relative group shadow-2xl">
+                    <div class="snap-center shrink-0 w-[80vw] md:w-[40vw] h-[38vh] md:h-[45vh] max-h-[420px] rounded-[2rem] overflow-hidden relative group shadow-xl">
                         <img loading="lazy" decoding="async" src="https://images.pexels.com/photos/10994727/pexels-photo-10994727.jpeg" alt="Desarrollo de Fórmulas y suplementos en laboratorio" class="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105 pointer-events-none">
                         <div class="absolute inset-0 bg-gradient-to-t from-deepblue/90 via-deepblue/20 to-transparent"></div>
-                        <div class="absolute bottom-8 left-8 text-white">
-                            <span class="text-emerald text-sm font-bold tracking-widest uppercase mb-2 block">Paso 01</span>
-                            <h3 class="font-heading text-3xl font-bold">Desarrollo de Fórmulas</h3>
+                        <div class="absolute bottom-6 left-6 text-white">
+                            <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/30 border border-emerald-400/40 text-emerald-300 font-bold text-xs uppercase tracking-wider mb-2">Etapa I+D</span>
+                            <h3 class="font-heading text-2xl md:text-3xl font-bold">Desarrollo de Fórmulas</h3>
                         </div>
                     </div>
 
-                    <div class="snap-center shrink-0 w-[85vw] md:w-[45vw] h-[50vh] md:h-[60vh] rounded-[2.5rem] overflow-hidden relative group shadow-2xl">
+                    <div class="snap-center shrink-0 w-[80vw] md:w-[40vw] h-[38vh] md:h-[45vh] max-h-[420px] rounded-[2rem] overflow-hidden relative group shadow-xl">
                         <img loading="lazy" decoding="async" src="https://images.pexels.com/photos/5953770/pexels-photo-5953770.jpeg" alt="Análisis Científico y pruebas de calidad de suplementos" class="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105 pointer-events-none">
                         <div class="absolute inset-0 bg-gradient-to-t from-deepblue/90 via-deepblue/20 to-transparent"></div>
-                        <div class="absolute bottom-8 left-8 text-white">
-                            <span class="text-emerald text-sm font-bold tracking-widest uppercase mb-2 block">Paso 02</span>
-                            <h3 class="font-heading text-3xl font-bold">Análisis Científico</h3>
+                        <div class="absolute bottom-6 left-6 text-white">
+                            <span class="inline-block px-3 py-1 rounded-full bg-blue-500/30 border border-blue-400/40 text-blue-300 font-bold text-xs uppercase tracking-wider mb-2">Análisis Científico</span>
+                            <h3 class="font-heading text-2xl md:text-3xl font-bold">Pruebas de Estabilidad</h3>
                         </div>
                     </div>
 
-                    <div class="snap-center shrink-0 w-[85vw] md:w-[45vw] h-[50vh] md:h-[60vh] rounded-[2.5rem] overflow-hidden relative group shadow-2xl">
+                    <div class="snap-center shrink-0 w-[80vw] md:w-[40vw] h-[38vh] md:h-[45vh] max-h-[420px] rounded-[2rem] overflow-hidden relative group shadow-xl">
                         <img loading="lazy" decoding="async" src="https://images.pexels.com/photos/9628837/pexels-photo-9628837.jpeg" alt="Selección de Activos e ingredientes funcionales" class="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105 pointer-events-none">
                         <div class="absolute inset-0 bg-gradient-to-t from-deepblue/90 via-deepblue/20 to-transparent"></div>
-                        <div class="absolute bottom-8 left-8 text-white">
-                            <span class="text-emerald text-sm font-bold tracking-widest uppercase mb-2 block">Paso 03</span>
-                            <h3 class="font-heading text-3xl font-bold">Selección de Activos</h3>
+                        <div class="absolute bottom-6 left-6 text-white">
+                            <span class="inline-block px-3 py-1 rounded-full bg-amber-500/30 border border-amber-400/40 text-amber-300 font-bold text-xs uppercase tracking-wider mb-2">Materias Primas</span>
+                            <h3 class="font-heading text-2xl md:text-3xl font-bold">Selección de Activos</h3>
                         </div>
                     </div>
 
-                    <div class="snap-center shrink-0 w-[85vw] md:w-[45vw] h-[50vh] md:h-[60vh] rounded-[2.5rem] overflow-hidden relative group shadow-2xl">
+                    <div class="snap-center shrink-0 w-[80vw] md:w-[40vw] h-[38vh] md:h-[45vh] max-h-[420px] rounded-[2rem] overflow-hidden relative group shadow-xl">
                         <img loading="lazy" decoding="async" src="https://images.pexels.com/photos/15120889/pexels-photo-15120889.jpeg" alt="Maquinaria Industrial de envasado de suplementos" class="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105 pointer-events-none">
                         <div class="absolute inset-0 bg-gradient-to-t from-deepblue/90 via-deepblue/20 to-transparent"></div>
-                        <div class="absolute bottom-8 left-8 text-white">
-                            <span class="text-emerald text-sm font-bold tracking-widest uppercase mb-2 block">Paso 04</span>
-                            <h3 class="font-heading text-3xl font-bold">Producción Industrial</h3>
+                        <div class="absolute bottom-6 left-6 text-white">
+                            <span class="inline-block px-3 py-1 rounded-full bg-teal-500/30 border border-teal-400/40 text-teal-300 font-bold text-xs uppercase tracking-wider mb-2">Escalado Industrial</span>
+                            <h3 class="font-heading text-2xl md:text-3xl font-bold">Producción Industrial</h3>
                         </div>
                     </div>
 
-                    <div class="snap-center shrink-0 w-[85vw] md:w-[45vw] h-[50vh] md:h-[60vh] rounded-[2.5rem] overflow-hidden relative group shadow-2xl">
+                    <div class="snap-center shrink-0 w-[80vw] md:w-[40vw] h-[38vh] md:h-[45vh] max-h-[420px] rounded-[2rem] overflow-hidden relative group shadow-xl">
                         <img loading="lazy" decoding="async" src="https://images.pexels.com/photos/17891259/pexels-photo-17891259.jpeg" alt="Control de Calidad estricto en laboratorio" class="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105 pointer-events-none">
                         <div class="absolute inset-0 bg-gradient-to-t from-deepblue/90 via-deepblue/20 to-transparent"></div>
-                        <div class="absolute bottom-8 left-8 text-white">
-                            <span class="text-emerald text-sm font-bold tracking-widest uppercase mb-2 block">Paso 05</span>
-                            <h3 class="font-heading text-3xl font-bold">Control de Calidad</h3>
+                        <div class="absolute bottom-6 left-6 text-white">
+                            <span class="inline-block px-3 py-1 rounded-full bg-purple-500/30 border border-purple-400/40 text-purple-300 font-bold text-xs uppercase tracking-wider mb-2">Certificación BPM</span>
+                            <h3 class="font-heading text-2xl md:text-3xl font-bold">Control de Calidad Estricto</h3>
                         </div>
                     </div>
                 </div>
@@ -642,15 +725,15 @@
                     </div>
                 </div>
 
-                <!-- Polvos (Azul Profundo) -->
+                <!-- Polvos (Fondo Índigo Oscuro de Alto Contraste) -->
                 <div class="group cursor-pointer reveal" style="transition-delay: 100ms;">
-                    <div class="relative h-[400px] rounded-[2.5rem] overflow-hidden mb-6 bg-deepblue-900 border border-deepblue-800 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
-                        <div class="absolute inset-0 flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-700">
-                            <i data-lucide="wind" class="w-32 h-32 opacity-10"></i>
+                    <div class="relative h-[400px] rounded-[2.5rem] overflow-hidden mb-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 border border-indigo-500/40 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 text-white">
+                        <div class="absolute inset-0 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform duration-700">
+                            <i data-lucide="wind" class="w-32 h-32 opacity-20"></i>
                         </div>
                         <div class="absolute bottom-8 left-8 z-20 pr-8">
                             <h4 class="font-heading text-3xl font-bold text-white mb-2">Polvos</h4>
-                            <p class="text-gray-300 text-sm font-medium leading-relaxed">Proteínas y pre-entrenos con disolución perfecta.</p>
+                            <p class="text-indigo-100 text-sm font-medium leading-relaxed">Proteínas y pre-entrenos con disolución perfecta.</p>
                         </div>
                     </div>
                 </div>
@@ -843,8 +926,201 @@
         </div>
     </section>
 
-    <!-- 7. CONTACTO B2B -->
-    <section id="contacto" class="card-section bg-deepblue-950 text-white z-[60]">
+    <!-- 6. MATRIZ COMPARATIVA DE VALOR (NUTRASYN LAB VS OTROS) -->
+    <section id="comparativa" class="card-section bg-slate-50 text-slate-800 z-[60] border-t border-slate-200 py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16 reveal">
+                <span class="text-emerald-600 font-bold tracking-widest uppercase text-xs mb-2 block">Ventajas de Co-Crear con NutraSyn Lab</span>
+                <h2 class="font-heading text-3xl sm:text-4xl font-extrabold text-slate-900 mb-4">NutraSyn Lab vs Maquila Tradicional</h2>
+                <p class="text-slate-600 text-base">Compara nuestra agilidad en prototipado y flexibilidad de lotes frente a esquemas de producción masiva convencional.</p>
+            </div>
+
+            <div class="overflow-x-auto rounded-2xl border border-slate-200 shadow-xl reveal">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-900 text-white font-heading text-sm">
+                            <th class="p-5">Criterio de Evaluación</th>
+                            <th class="p-5 bg-emerald-600 text-white font-extrabold text-base">🚀 NutraSyn Lab</th>
+                            <th class="p-5 text-slate-300">Maquila Tradicional</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 text-sm bg-white">
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-5 font-bold text-slate-900">Pedido Mínimo (MOQ)</td>
+                            <td class="p-5 font-extrabold text-emerald-700 bg-emerald-50/50">✅ Desde 100 unidades (Flexibilidad para emprendedores)</td>
+                            <td class="p-5 text-slate-500">❌ Lotes rígidos de 500 a 5.000 unidades mínimo</td>
+                        </tr>
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-5 font-bold text-slate-900">Despacho de Muestras R&D</td>
+                            <td class="p-5 font-extrabold text-emerald-700 bg-emerald-50/50">✅ 15 Días Laboratorio</td>
+                            <td class="p-5 text-slate-500">❌ Tiempos prolongados de 2 a 3 meses</td>
+                        </tr>
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-5 font-bold text-slate-900">Catálogo de Fórmulas Listas</td>
+                            <td class="p-5 font-extrabold text-emerald-700 bg-emerald-50/50">✅ 65 Fórmulas B2B Explorables en 7 Registros</td>
+                            <td class="p-5 text-slate-500">❌ Catálogos estáticos o sin especificación online</td>
+                        </tr>
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-5 font-bold text-slate-900">Asesoría en Ley 9/1979 & INVIMA</td>
+                            <td class="p-5 font-extrabold text-emerald-700 bg-emerald-50/50">✅ Proclamas Nutricionales Validadas (Res. 810 Minsalud)</td>
+                            <td class="p-5 text-slate-500">❌ Asesoría legal no incluida o riesgo por claims medicinales</td>
+                        </tr>
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-5 font-bold text-slate-900">Personalización de Formulación</td>
+                            <td class="p-5 font-extrabold text-emerald-700 bg-emerald-50/50">✅ Adaptabilidad Total (Desde Clean Label hasta Fórmulas Convencionales a Medida)</td>
+                            <td class="p-5 text-slate-500">❌ Opciones predeterminadas con poca flexibilidad de desarrollo</td>
+                        </tr>
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-5 font-bold text-slate-900">Documentación & Fichas PDF</td>
+                            <td class="p-5 font-extrabold text-emerald-700 bg-emerald-50/50">✅ Descarga de Catálogos Infográficos en 1-Clic</td>
+                            <td class="p-5 text-slate-500">❌ Solicitud manual por correo sin ficha descargable</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 7. CENTRO DE DESCARGAS DE CATÁLOGOS PDF (INFOGRAFÍA COMPLETA POR REGISTROS) -->
+    <section id="descargas-pdf" class="card-section bg-slate-900 text-white z-[70] py-20 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16 reveal">
+                <span class="text-emerald-400 font-bold tracking-widest uppercase text-xs mb-2 block">Documentación Técnica B2B</span>
+                <h2 class="font-heading text-3xl sm:text-4xl font-extrabold text-white mb-4">Centro de Descargas de Catálogos PDF</h2>
+                <p class="text-slate-300 text-base">Descarga fichas técnicas e infografías completas con la composición, función de ingredientes y registros sanitarios vigentes.</p>
+            </div>
+
+            <!-- Botón Destacado: Catálogo General 65 Fórmulas -->
+            <div class="bg-gradient-to-r from-emerald-600 to-teal-700 p-8 rounded-3xl shadow-2xl mb-12 flex flex-col md:flex-row items-center justify-between gap-6 border border-emerald-400/30 reveal">
+                <div class="flex items-center gap-5">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-white shrink-0">
+                        <i data-lucide="file-text" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <span class="px-3 py-1 bg-white/20 text-white rounded-full text-xs font-bold uppercase tracking-wider inline-block mb-1">Documento Maestro</span>
+                        <h3 class="font-heading text-2xl font-bold text-white">Catálogo General de 65 Conceptos Funcionales</h3>
+                        <p class="text-emerald-100 text-sm">Infografía completa de todas las formulaciones en polvo y líquidas.</p>
+                    </div>
+                </div>
+                <button onclick="downloadGeneralCatalogPDF()" class="btn-uiverse btn-white px-6 py-3.5 rounded-xl font-bold bg-white text-emerald-800 hover:bg-slate-100 shrink-0 gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i> Descargar Catálogo General PDF
+                </button>
+            </div>
+
+            <!-- Descargas Individuales por Línea de Registro -->
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 reveal">
+                <!-- Polvos Reg 1 -->
+                <div class="bg-slate-800/80 border border-slate-700 p-6 rounded-2xl hover:border-emerald-500 transition-colors">
+                    <div class="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">Polvos - Registro 1</div>
+                    <h4 class="font-bold text-white text-lg mb-2">Avena Funcional</h4>
+                    <p class="text-slate-400 text-xs mb-4">10 Conceptos con Superalimentos & Fibras.</p>
+                    <button onclick="downloadLineCatalogPDF('polvos-reg1')" class="w-full py-2.5 bg-slate-700 hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF Registro 1
+                    </button>
+                </div>
+                <!-- Polvos Reg 2 -->
+                <div class="bg-slate-800/80 border border-slate-700 p-6 rounded-2xl hover:border-emerald-500 transition-colors">
+                    <div class="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">Polvos - Registro 2</div>
+                    <h4 class="font-bold text-white text-lg mb-2">Protein Blend Matrix</h4>
+                    <p class="text-slate-400 text-xs mb-4">9 Conceptos Proteicos Avanzados.</p>
+                    <button onclick="downloadLineCatalogPDF('polvos-reg2')" class="w-full py-2.5 bg-slate-700 hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF Registro 2
+                    </button>
+                </div>
+                <!-- Polvos Reg 3 -->
+                <div class="bg-slate-800/80 border border-slate-700 p-6 rounded-2xl hover:border-emerald-500 transition-colors">
+                    <div class="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">Polvos - Registro 3</div>
+                    <h4 class="font-bold text-white text-lg mb-2">Advanced Functional Oats</h4>
+                    <p class="text-slate-400 text-xs mb-4">10 Conceptos Nootrópicos & Digestivos.</p>
+                    <button onclick="downloadLineCatalogPDF('polvos-reg3')" class="w-full py-2.5 bg-slate-700 hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF Registro 3
+                    </button>
+                </div>
+                <!-- Polvos Reg 4 -->
+                <div class="bg-slate-800/80 border border-slate-700 p-6 rounded-2xl hover:border-emerald-500 transition-colors">
+                    <div class="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">Polvos - Registro 4</div>
+                    <h4 class="font-bold text-white text-lg mb-2">Instant Mixes Solubles</h4>
+                    <p class="text-slate-400 text-xs mb-4">9 Conceptos Bienestar, Detox & Belleza.</p>
+                    <button onclick="downloadLineCatalogPDF('polvos-reg4')" class="w-full py-2.5 bg-slate-700 hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF Registro 4
+                    </button>
+                </div>
+                <!-- Líquidos Reg 1 -->
+                <div class="bg-slate-800/80 border border-slate-700 p-6 rounded-2xl hover:border-cyan-500 transition-colors">
+                    <div class="text-cyan-400 text-xs font-bold uppercase tracking-wider mb-2">Líquidos - Registro 1</div>
+                    <h4 class="font-bold text-white text-lg mb-2">Bebidas Básicas</h4>
+                    <p class="text-slate-400 text-xs mb-4">9 Conceptos Líquidos Funcionales.</p>
+                    <button onclick="downloadLineCatalogPDF('liquidos-reg1')" class="w-full py-2.5 bg-slate-700 hover:bg-cyan-600 text-white font-semibold text-xs rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF Líquidos 1
+                    </button>
+                </div>
+                <!-- Líquidos Reg 2 -->
+                <div class="bg-slate-800/80 border border-slate-700 p-6 rounded-2xl hover:border-cyan-500 transition-colors">
+                    <div class="text-cyan-400 text-xs font-bold uppercase tracking-wider mb-2">Líquidos - Registro 2</div>
+                    <h4 class="font-bold text-white text-lg mb-2">Elixires Concentrados</h4>
+                    <p class="text-slate-400 text-xs mb-4">9 Conceptos Bioactivos Sin Agua.</p>
+                    <button onclick="downloadLineCatalogPDF('liquidos-reg2')" class="w-full py-2.5 bg-slate-700 hover:bg-cyan-600 text-white font-semibold text-xs rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF Líquidos 2
+                    </button>
+                </div>
+                <!-- Líquidos Reg 3 -->
+                <div class="bg-slate-800/80 border border-slate-700 p-6 rounded-2xl hover:border-cyan-500 transition-colors">
+                    <div class="text-cyan-400 text-xs font-bold uppercase tracking-wider mb-2">Líquidos - Registro 3</div>
+                    <h4 class="font-bold text-white text-lg mb-2">Bebidas Funcionales Activas</h4>
+                    <p class="text-slate-400 text-xs mb-4">9 Conceptos Bienestar Integral.</p>
+                    <button onclick="downloadLineCatalogPDF('liquidos-reg3')" class="w-full py-2.5 bg-slate-700 hover:bg-cyan-600 text-white font-semibold text-xs rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF Líquidos 3
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 7.5 ECOSISTEMA NUTRASYN (ASESORÍAS Y APP) -->
+    <section id="ecosistema" class="card-section bg-white text-deepblue z-[75] py-20 border-t border-slate-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14 reveal">
+                <span class="text-emerald font-bold tracking-widest uppercase text-xs mb-2 block">Más Allá del Laboratorio</span>
+                <h2 class="font-heading text-3xl sm:text-4xl font-extrabold text-deepblue-900 mb-4">Nuestro Ecosistema NutraSyn</h2>
+                <p class="text-gray-600 text-base">Un respaldo integral para tu marca: desde la asesoría estratégica de negocio hasta la gestión digital de tu producción.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Synergia 360 (Asesorías) -->
+                <a href="https://synergia360.co" target="_blank" rel="noopener noreferrer" class="group relative overflow-hidden rounded-3xl p-8 md:p-10 border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 reveal">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                            <i data-lucide="compass" class="w-8 h-8"></i>
+                        </div>
+                        <span class="inline-flex items-center gap-1 text-amber-700 bg-amber-100 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">Asesorías <i data-lucide="arrow-up-right" class="w-3 h-3"></i></span>
+                    </div>
+                    <h3 class="font-heading text-2xl font-bold text-deepblue-900 mb-2">Synergia 360°</h3>
+                    <p class="text-gray-600 text-sm leading-relaxed mb-6">Consultoría y asesorías estratégicas de negocio para marcas que quieren escalar con visión integral: normativa, comercial y financiera.</p>
+                    <span class="inline-flex items-center gap-2 text-amber-600 font-bold text-sm group-hover:gap-3 transition-all">
+                        Visitar Synergia 360 <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </span>
+                </a>
+
+                <!-- SynSpace (App) -->
+                <a href="https://app.nutrasynlab.co/" target="_blank" rel="noopener noreferrer" class="group relative overflow-hidden rounded-3xl p-8 md:p-10 border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-slate-50 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 reveal" style="transition-delay: 100ms;">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                            <i data-lucide="layout-dashboard" class="w-8 h-8"></i>
+                        </div>
+                        <span class="inline-flex items-center gap-1 text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">App <i data-lucide="arrow-up-right" class="w-3 h-3"></i></span>
+                    </div>
+                    <h3 class="font-heading text-2xl font-bold text-deepblue-900 mb-2">SynSpace</h3>
+                    <p class="text-gray-600 text-sm leading-relaxed mb-6">Tu plataforma digital B2B: gestiona cotizaciones, da seguimiento a tu producción y comunícate directo con el laboratorio.</p>
+                    <span class="inline-flex items-center gap-2 text-indigo-600 font-bold text-sm group-hover:gap-3 transition-all">
+                        Entrar a SynSpace <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 8. CONTACTO Y SOLICITUD B2B -->
+    <section id="contacto" class="card-section bg-deepblue text-white z-[80]">
         <div class="absolute -top-40 -right-40 w-96 h-96 bg-emerald rounded-full blur-[120px] opacity-20 pointer-events-none"></div>
         <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 flex flex-col justify-center min-h-screen">
             <div class="flex flex-col lg:flex-row gap-12 lg:gap-16 items-center">
@@ -901,13 +1177,25 @@
             </div>
         </div>
 
-        <!-- Footer Integrado al final de la última tarjeta -->
-        <footer class="border-t border-white/10 pt-10 pb-6 mt-12 bg-[#04101d]">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
-                <div class="flex items-center">
-                    <img src="https://res.cloudinary.com/dj761bgxw/image/upload/v1777030919/svg_1_vfsoo4.svg" alt="NutraSyn Lab" class="h-12 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity brightness-0 invert">
+        <!-- Footer Corporativo B2B -->
+        <footer class="relative z-10 border-t border-slate-800 pt-10 pb-8 mt-12 bg-slate-950">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6 text-xs text-slate-400">
+                <div class="flex items-center gap-3">
+                    <img src="https://res.cloudinary.com/dj761bgxw/image/upload/v1777030919/svg_1_vfsoo4.svg" alt="NutraSyn Lab" class="h-10 w-auto object-contain brightness-0 invert">
+                    <div>
+                        <span class="font-bold text-slate-200 text-sm block">NutraSyn Lab FoodTech B2B</span>
+                        <span class="text-slate-400 text-[11px]">Maquila y desarrollo industrial de alimentos funcionales</span>
+                    </div>
                 </div>
-                <p>&copy; <span id="year"></span> Todos los derechos reservados.</p>
+                <div class="text-center md:text-right">
+                    <div class="flex items-center justify-center md:justify-end gap-4 mb-2">
+                        <a href="https://synergia360.co" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:text-emerald-400 font-semibold text-xs transition-colors">Synergia 360° (Asesorías)</a>
+                        <span class="text-slate-700">|</span>
+                        <a href="https://app.nutrasynlab.co/" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:text-emerald-400 font-semibold text-xs transition-colors">SynSpace (App)</a>
+                    </div>
+                    <p class="mb-1">&copy; <span id="year"></span> NutraSyn Lab. Todos los derechos reservados.</p>
+                    <p class="text-[11px] text-slate-500">Cumplimiento Ley 9 de 1979 & Res. 810 de 2021 Minsalud / INVIMA | Tel: +57 300 667 7534</p>
+                </div>
             </div>
         </footer>
     </section>
@@ -1089,6 +1377,21 @@
             const s = document.getElementById('successMessage'); s.classList.add('hidden'); s.classList.remove('flex');
         }
 
+        // Sincronización de Scroll Horizontal para Carrusel de Etapas
+        window.addEventListener('scroll', () => {
+            const carousel = document.getElementById('carousel-scroll');
+            const section = document.getElementById('nosotros');
+            if (carousel && section) {
+                const rect = section.getBoundingClientRect();
+                const windowHeight = window.innerHeight;
+                if (rect.top < windowHeight && rect.bottom > 0) {
+                    const progress = (windowHeight - rect.top) / (windowHeight + rect.height);
+                    const maxScroll = carousel.scrollWidth - carousel.clientWidth;
+                    carousel.scrollLeft = progress * maxScroll * 0.45;
+                }
+            }
+        });
+
         // Toggle Theme (Light / Dark)
         function toggleTheme() {
             const body = document.body;
@@ -1115,6 +1418,548 @@
                 document.body.classList.add('light-theme');
             }
         })();
+
+        // ============================================================
+        // CENTRO DE NOTIFICACIONES LIGERO (feedback de generación de PDF)
+        // ============================================================
+        function ensureToastContainer() {
+            let container = document.getElementById('pdf-toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'pdf-toast-container';
+                container.className = 'fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none';
+                document.body.appendChild(container);
+            }
+            return container;
+        }
+
+        function showPdfToast(title, message, type = 'success') {
+            const container = ensureToastContainer();
+            const colors = {
+                success: 'border-emerald-500',
+                info: 'border-cyan-500',
+                error: 'border-red-500'
+            };
+            const toast = document.createElement('div');
+            toast.className = `p-4 border-l-4 ${colors[type] || colors.success} bg-slate-900 rounded-xl shadow-2xl max-w-xs transition-all duration-300 transform translate-y-4 opacity-0`;
+            toast.innerHTML = `<h5 class="text-xs font-bold text-white">${title}</h5><p class="text-[11px] text-slate-400 mt-1">${message}</p>`;
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.remove('translate-y-4', 'opacity-0'));
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-8px]');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // ============================================================
+        // GENERADOR DE PDF INFOGRÁFICO PROFESIONAL — FICHA POR FÓRMULA
+        // ============================================================
+
+        // Asigna una imagen temática de Pexels según variedad/mezcla del producto
+        function getVarietyImage(prod) {
+            const name = prod.name.toLowerCase();
+            const ing = prod.ingredients.toLowerCase();
+            const cat = prod.category.toLowerCase();
+
+            if (name.includes('matcha') || ing.includes('matcha')) return 'https://images.pexels.com/photos/461428/pexels-photo-461428.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('curcuma') || name.includes('golden milk') || ing.includes('cúrcuma')) return 'https://images.pexels.com/photos/1340116/pexels-photo-1340116.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('oat') || name.includes('avena') || ing.includes('harina de avena')) return 'https://images.pexels.com/photos/543730/pexels-photo-543730.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('blueberr') || ing.includes('arándano')) return 'https://images.pexels.com/photos/4022090/pexels-photo-4022090.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('berry') || ing.includes('frutos rojos') || ing.includes('fresa') || ing.includes('mora')) return 'https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('green') || name.includes('detox') || name.includes('kale') || ing.includes('espirulina') || ing.includes('clorofila')) return 'https://images.pexels.com/photos/1346347/pexels-photo-1346347.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('cocoa') || name.includes('cacao') || name.includes('mct')) return 'https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('coffee') || name.includes('café') || ing.includes('café arábica')) return 'https://images.pexels.com/photos/894695/pexels-photo-894695.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('aloe') || ing.includes('aloe vera')) return 'https://images.pexels.com/photos/807598/pexels-photo-807598.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('hibiscus') || name.includes('jamaica') || ing.includes('jamaica')) return 'https://images.pexels.com/photos/4051221/pexels-photo-4051221.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('chamomile') || ing.includes('manzanilla')) return 'https://images.pexels.com/photos/1638280/pexels-photo-1638280.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('relax') || name.includes('lavender') || name.includes('sleep') || name.includes('zen') || ing.includes('lavanda') || ing.includes('passiflora') || ing.includes('ashwagandha')) return 'https://images.pexels.com/photos/1166869/pexels-photo-1166869.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('ginger') || name.includes('jengibre') || name.includes('fire') || ing.includes('jengibre')) return 'https://images.pexels.com/photos/161559/ginger-plant-spices-rhizome-161559.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('mushroom') || name.includes('reishi') || name.includes('lion') || name.includes('cognitive') || name.includes('neuro') || name.includes('smart') || ing.includes('chaga') || ing.includes('ginkgo') || ing.includes('melena de león')) return 'https://images.pexels.com/photos/1400249/pexels-photo-1400249.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('resveratrol') || name.includes('youth') || ing.includes('uva') || ing.includes('granada')) return 'https://images.pexels.com/photos/708777/pexels-photo-708777.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('yoga') || name.includes('balance')) return 'https://images.pexels.com/photos/3823207/pexels-photo-3823207.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('elixir')) return 'https://images.pexels.com/photos/5946630/pexels-photo-5946630.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('coconut') || (ing.includes('agua de coco') && !name.includes('electro'))) return 'https://images.pexels.com/photos/5946071/pexels-photo-5946071.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('citrus') || name.includes('lemon') || ing.includes('limón')) return 'https://images.pexels.com/photos/4021978/pexels-photo-4021978.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('banana') || ing.includes('banano')) return 'https://images.pexels.com/photos/5966630/pexels-photo-5966630.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('omega') || ing.includes('aguacate') || ing.includes('linaza') || ing.includes('cáñamo')) return 'https://images.pexels.com/photos/6157049/pexels-photo-6157049.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('protein') || name.includes('amino') || name.includes('vital') || name.includes('recovery') || name.includes('force')) return 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('bcaa') || name.includes('muscle') || name.includes('active') || name.includes('burn') || name.includes('carnitine')) return 'https://images.pexels.com/photos/841130/pexels-photo-841130.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('electro') || name.includes('hydra')) return 'https://images.pexels.com/photos/1030973/pexels-photo-1030973.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (name.includes('capsule') || name.includes('vitamin')) return 'https://images.pexels.com/photos/7615566/pexels-photo-7615566.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (cat.includes('belleza') || name.includes('collagen') || name.includes('beauty')) return 'https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?auto=compress&cs=tinysrgb&w=800';
+            if (cat.includes('digestivo') || name.includes('fiber') || name.includes('gut') || name.includes('enzyme') || name.includes('probiotic') || name.includes('slim')) return 'https://images.pexels.com/photos/1537169/pexels-photo-1537169.jpeg?auto=compress&cs=tinysrgb&w=800';
+
+            // Sin coincidencia específica: rotamos entre varias imágenes por categoría
+            // (usando un hash estable del ID del producto) en vez de repetir siempre la misma.
+            const fallbackPools = {
+                'wellness': [
+                    'https://images.pexels.com/photos/1002703/pexels-photo-1002703.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/1346347/pexels-photo-1346347.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/1030973/pexels-photo-1030973.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/894695/pexels-photo-894695.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/3823207/pexels-photo-3823207.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/1638280/pexels-photo-1638280.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/2113556/pexels-photo-2113556.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/3735706/pexels-photo-3735706.jpeg?auto=compress&cs=tinysrgb&w=800'
+                ],
+                'nutrición': [
+                    'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/841130/pexels-photo-841130.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/6157049/pexels-photo-6157049.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/5966630/pexels-photo-5966630.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/3735709/pexels-photo-3735709.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/7615566/pexels-photo-7615566.jpeg?auto=compress&cs=tinysrgb&w=800'
+                ],
+                'digestivo': [
+                    'https://images.pexels.com/photos/1537169/pexels-photo-1537169.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/807598/pexels-photo-807598.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/4021978/pexels-photo-4021978.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/4021991/pexels-photo-4021991.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/3735747/pexels-photo-3735747.jpeg?auto=compress&cs=tinysrgb&w=800'
+                ],
+                'belleza': [
+                    'https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/708777/pexels-photo-708777.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/7615573/pexels-photo-7615573.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/1099680/pexels-photo-1099680.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/842571/pexels-photo-842571.jpeg?auto=compress&cs=tinysrgb&w=800'
+                ]
+            };
+            const pool = fallbackPools[cat] || fallbackPools['wellness'];
+            let hash = 0;
+            for (let i = 0; i < prod.id.length; i++) hash = (hash * 31 + prod.id.charCodeAt(i)) | 0;
+            return pool[Math.abs(hash) % pool.length];
+        }
+
+        // Recorta y precarga una imagen remota como dataURL "cover" lista para insertar en el PDF
+        function cropImageToDataUrl(url, boxW, boxH) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = boxW;
+                        canvas.height = boxH;
+                        const ctx = canvas.getContext('2d');
+                        const srcRatio = img.naturalWidth / img.naturalHeight;
+                        const boxRatio = boxW / boxH;
+                        let sx, sy, sw, sh;
+                        if (srcRatio > boxRatio) {
+                            sh = img.naturalHeight;
+                            sw = sh * boxRatio;
+                            sy = 0;
+                            sx = (img.naturalWidth - sw) / 2;
+                        } else {
+                            sw = img.naturalWidth;
+                            sh = sw / boxRatio;
+                            sx = 0;
+                            sy = (img.naturalHeight - sh) / 2;
+                        }
+                        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, boxW, boxH);
+                        resolve(canvas.toDataURL('image/jpeg', 0.82));
+                    } catch (e) {
+                        resolve(null);
+                    }
+                };
+                img.onerror = () => resolve(null);
+                img.src = url;
+            });
+        }
+
+        // Precarga (con concurrencia limitada) todas las imágenes únicas que necesita el listado
+        async function preloadProductImages(list) {
+            const cache = {};
+            const urls = [...new Set(list.map(p => getVarietyImage(p)))];
+            const IMG_W = 1200, IMG_H = 440;
+            let i = 0;
+            async function worker() {
+                while (i < urls.length) {
+                    const idx = i++;
+                    cache[urls[idx]] = await cropImageToDataUrl(urls[idx], IMG_W, IMG_H);
+                }
+            }
+            await Promise.all(Array.from({ length: Math.min(6, urls.length) }, worker));
+            return cache;
+        }
+
+        // Carga el logo oficial de NutraSyn Lab (SVG) y lo convierte en silueta blanca
+        // (misma transformación que el filtro CSS "brightness-0 invert" usado en el sitio)
+        // rasterizada como PNG, lista para insertarse sobre los fondos oscuros del PDF.
+        let cachedLogoDataUrl;
+        async function getWhiteLogoDataUrl() {
+            if (cachedLogoDataUrl !== undefined) return cachedLogoDataUrl;
+            try {
+                const res = await fetch('https://res.cloudinary.com/dj761bgxw/image/upload/v1777030919/svg_1_vfsoo4.svg');
+                const svgText = (await res.text()).replace(/fill="#000000"/gi, 'fill="#ffffff"');
+                const blobUrl = URL.createObjectURL(new Blob([svgText], { type: 'image/svg+xml' }));
+                cachedLogoDataUrl = await new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        try {
+                            const scale = 2;
+                            const w = (img.naturalWidth || 550) * scale;
+                            const h = (img.naturalHeight || 129) * scale;
+                            const canvas = document.createElement('canvas');
+                            canvas.width = w;
+                            canvas.height = h;
+                            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                            resolve(canvas.toDataURL('image/png'));
+                        } catch (e) {
+                            resolve(null);
+                        }
+                    };
+                    img.onerror = () => resolve(null);
+                    img.src = blobUrl;
+                });
+                URL.revokeObjectURL(blobUrl);
+            } catch (e) {
+                cachedLogoDataUrl = null;
+            }
+            return cachedLogoDataUrl;
+        }
+
+        // Inserta el logo manteniendo su relación de aspecto original (550:129) dentro de un ancho fijo
+        function drawLogo(doc, logoDataUrl, x, y, w) {
+            if (!logoDataUrl) return false;
+            doc.addImage(logoDataUrl, 'PNG', x, y, w, w * (129 / 550));
+            return true;
+        }
+
+        const CATEGORY_COLORS = {
+            'Wellness': [16, 185, 129],
+            'Nutrición': [37, 99, 235],
+            'Digestivo': [217, 160, 12],
+            'Belleza': [219, 39, 119]
+        };
+
+        // Colores por categoría de función de ingrediente (ver js/ingredient-functions.js)
+        const INGREDIENT_CATEGORY_COLORS = {
+            matriz: [100, 116, 139],
+            activo: [16, 185, 129],
+            botanico: [21, 128, 61],
+            digestivo: [217, 160, 12],
+            probiotico: [180, 130, 10],
+            belleza: [219, 39, 119],
+            antioxidante: [124, 58, 237],
+            energia: [234, 88, 12],
+            inmunidad: [37, 99, 235],
+            deporte: [220, 38, 38],
+            mineral: [8, 145, 178],
+            vitamina: [5, 150, 105],
+            tecnologia: [100, 116, 139],
+            salud_articular: [180, 83, 9]
+        };
+
+        function drawPill(doc, text, x, y, fillRgb, textRgb) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7.5);
+            const w = doc.getTextWidth(text) + 6;
+            doc.setFillColor(fillRgb[0], fillRgb[1], fillRgb[2]);
+            doc.roundedRect(x, y, w, 5.2, 1.3, 1.3, 'F');
+            doc.setTextColor(textRgb[0], textRgb[1], textRgb[2]);
+            doc.text(text, x + 3, y + 3.6);
+            return w;
+        }
+
+        function drawPdfHeader(doc, subtitle, pageLabel, logoDataUrl) {
+            doc.setFillColor(10, 37, 64);
+            doc.rect(0, 0, 210, 26, 'F');
+            const hasLogo = drawLogo(doc, logoDataUrl, 15, 5, 42);
+            if (!hasLogo) {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(15);
+                doc.setTextColor(255, 255, 255);
+                doc.text('NutraSyn Lab FoodTech B2B', 15, 12);
+            }
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8.5);
+            doc.setTextColor(0, 168, 150);
+            doc.text(subtitle, 15, 19.5);
+            if (pageLabel) {
+                doc.setFontSize(8);
+                doc.setTextColor(148, 163, 184);
+                doc.text(pageLabel, 195, 12, { align: 'right' });
+            }
+        }
+
+        function drawPdfFooter(doc) {
+            doc.setFillColor(15, 23, 42);
+            doc.rect(0, 284, 210, 13, 'F');
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.3);
+            doc.setTextColor(226, 232, 240);
+            doc.text('NutraSyn Lab | Cumplimiento Ley 9 de 1979 & Res. 810 de 2021 Minsalud/INVIMA', 15, 289.5);
+            doc.setTextColor(148, 163, 184);
+            doc.text('operaciones@synergia-360.com | +57 300 667 7534 | www.nutrasynlab.co', 15, 293.5);
+        }
+
+        function drawCoverPage(doc, title, list, logoDataUrl) {
+            doc.setFillColor(10, 37, 64);
+            doc.rect(0, 0, 210, 90, 'F');
+            const hasLogo = drawLogo(doc, logoDataUrl, 15, 16, 90);
+            if (!hasLogo) {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(24);
+                doc.setTextColor(255, 255, 255);
+                doc.text('NutraSyn Lab', 15, 40);
+            }
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(13);
+            doc.setTextColor(0, 168, 150);
+            doc.text('FoodTech B2B | Desarrollo & Maquila de Alimentos Funcionales', 15, 50);
+
+            doc.setFontSize(16);
+            doc.setTextColor(255, 255, 255);
+            doc.text(doc.splitTextToSize(title, 180), 15, 68);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(148, 163, 184);
+            doc.text('Cumplimiento Ley 9 de 1979 & Res. 810 de 2021 Minsalud / INVIMA', 15, 82);
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.setTextColor(10, 37, 64);
+            doc.text('Capacidades e Ingredientes Estandarizados B2B:', 15, 104);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(51, 65, 85);
+            const bulletPoints = [
+                `• ${list.length} Fórmulas B2B documentadas en este catálogo con ficha técnica completa.`,
+                '• Formulación Clean Label disponible bajo pedido (Adaptabilidad según requerimiento de cliente).',
+                '• Formatos Solubles en Polvo: Doypack, Canister y Sachets Monodosis.',
+                '• Formatos Líquidos Bioactivos: Frascos PET, Goteros y Shots Concentrados.',
+                '• Muestras R&D despachadas en 15 días hábiles a laboratorio.',
+                '• Asesoría continua en sellos de advertencia y etiquetado nutricional.'
+            ];
+            let y = 114;
+            bulletPoints.forEach(pt => { doc.text(pt, 15, y); y += 8; });
+
+            const counts = {};
+            list.forEach(p => { counts[p.line] = (counts[p.line] || 0) + 1; });
+            const lineKeys = Object.keys(counts);
+
+            const boxY = y + 6;
+            const boxH = 14 + lineKeys.length * 7;
+            doc.setFillColor(241, 245, 249);
+            doc.rect(15, boxY, 180, boxH, 'F');
+            doc.setDrawColor(203, 213, 225);
+            doc.rect(15, boxY, 180, boxH, 'S');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(10, 37, 64);
+            doc.text('Líneas de Producción Incluidas en este Documento:', 20, boxY + 9);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(71, 85, 105);
+            let ly = boxY + 17;
+            lineKeys.forEach(k => {
+                const label = (window.lineNamesMap && window.lineNamesMap[k]) || k;
+                doc.text(`• ${label} (${counts[k]} Conceptos)`, 20, ly);
+                ly += 7;
+            });
+
+            drawPdfFooter(doc);
+        }
+
+        // Dibuja el degradado oscuro simulado en la base de la imagen hero (jsPDF no tiene gradientes nativos)
+        function drawImageCaptionGradient(doc, imgX, imgY, imgW, imgH) {
+            const gradSteps = 16;
+            const gradH = 26;
+            for (let g = 0; g < gradSteps; g++) {
+                const alpha = (g / gradSteps) * 0.82;
+                doc.setGState(new doc.GState({ opacity: alpha }));
+                doc.setFillColor(3, 10, 20);
+                doc.rect(imgX, imgY + imgH - gradH + (g * gradH / gradSteps), imgW, (gradH / gradSteps) + 0.6, 'F');
+            }
+            doc.setGState(new doc.GState({ opacity: 1 }));
+        }
+
+        // Salta de página si el bloque siguiente (altura `needed`) no cabe antes del footer
+        // Dibuja un bloque de ingrediente (nombre + rol/función combinados) dentro de una columna
+        function drawIngredientBlock(doc, ing, block, x, y, nameSize, bodySize, nameLineH, bodyLineH) {
+            const ingColor = INGREDIENT_CATEGORY_COLORS[block.info.category] || [100, 116, 139];
+            doc.setFillColor(ingColor[0], ingColor[1], ingColor[2]);
+            doc.rect(x, y - 2.6, 1.2, nameLineH + block.lines.length * bodyLineH - 0.8, 'F');
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(nameSize);
+            doc.setTextColor(15, 23, 42);
+            doc.text(ing, x + 3, y);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(bodySize);
+            doc.setTextColor(90, 100, 115);
+            doc.text(block.lines, x + 3, y + nameLineH);
+        }
+
+        // Ficha de fórmula: diseño de una sola página, con tamaño de fuente y grilla de ingredientes en
+        // 2 columnas que se compactan automáticamente según la cantidad de ingredientes de cada fórmula.
+        function drawProductPage(doc, prod, imgCache, idx, total, logoDataUrl) {
+            doc.addPage();
+            const lineLabel = (window.lineNamesMap && window.lineNamesMap[prod.line]) || prod.line;
+            drawPdfHeader(doc, lineLabel, `Ficha ${idx} de ${total}`, logoDataUrl);
+
+            const ingredientList = prod.ingredients.split(',').map(s => s.trim()).filter(Boolean);
+            const tier = ingredientList.length <= 9 ? 0 : ingredientList.length <= 13 ? 1 : 2;
+            const imgH = [52, 44, 36][tier];
+            const nameSize = [7.8, 7.2, 6.6][tier];
+            const bodySize = [7.0, 6.4, 5.8][tier];
+            const nameLineH = [3.6, 3.3, 3.0][tier];
+            const bodyLineH = [3.4, 3.1, 2.8][tier];
+            const rowGap = [3.5, 3, 2.5][tier];
+            const descSize = tier === 2 ? 8.5 : 9.5;
+            const headSize = tier === 2 ? 9.5 : 11;
+
+            const imgX = 15, imgY = 28, imgW = 180;
+            const catColor = CATEGORY_COLORS[prod.category] || [100, 116, 139];
+
+            const dataUrl = imgCache[getVarietyImage(prod)];
+            if (dataUrl) {
+                doc.addImage(dataUrl, 'JPEG', imgX, imgY, imgW, imgH);
+            } else {
+                doc.setFillColor(226, 232, 240);
+                doc.rect(imgX, imgY, imgW, imgH, 'F');
+            }
+            doc.setDrawColor(catColor[0], catColor[1], catColor[2]);
+            doc.setLineWidth(1.2);
+            doc.rect(imgX, imgY, imgW, imgH, 'S');
+
+            // Efecto "hero" de infografía: degradado + nombre superpuesto en la base de la imagen
+            drawImageCaptionGradient(doc, imgX, imgY, imgW, imgH);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(tier === 2 ? 13 : 16);
+            doc.setTextColor(255, 255, 255);
+            doc.text(prod.name, imgX + 5, imgY + imgH - 7);
+
+            // Insignias flotando sobre la esquina superior de la imagen (categoría, formato, ID)
+            doc.setGState(new doc.GState({ opacity: 0.9 }));
+            let px = imgX + 4;
+            px += drawPill(doc, prod.category.toUpperCase(), px, imgY + 4, catColor, [255, 255, 255]) + 3;
+            px += drawPill(doc, prod.format.toUpperCase(), px, imgY + 4, [15, 23, 42], [255, 255, 255]) + 3;
+            drawPill(doc, prod.id.toUpperCase(), px, imgY + 4, [255, 255, 255], [15, 23, 42]);
+            doc.setGState(new doc.GState({ opacity: 1 }));
+
+            let y = imgY + imgH + (tier === 2 ? 6 : 8);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(descSize);
+            doc.setTextColor(71, 85, 105);
+            const descLines = doc.splitTextToSize(prod.desc, imgW);
+            doc.text(descLines, imgX, y);
+            y += descLines.length * (tier === 2 ? 4 : 4.6) + (tier === 2 ? 4 : 5);
+
+            doc.setDrawColor(catColor[0], catColor[1], catColor[2]);
+            doc.setLineWidth(0.6);
+            doc.line(imgX, y, imgX + imgW, y);
+            y += tier === 2 ? 5 : 6;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(headSize);
+            doc.setTextColor(10, 37, 64);
+            doc.text('Ingredientes Funcionales y su Función en la Mezcla:', imgX, y);
+            y += tier === 2 ? 5.5 : 6.5;
+
+            // Desglose por ingrediente en grilla de 2 columnas (nombre + rol/función combinados)
+            const colGap = 6;
+            const colW = (imgW - colGap) / 2;
+            const col2X = imgX + colW + colGap;
+
+            function ingBlock(ing) {
+                const info = (window.ingredientFunctions && window.ingredientFunctions[ing]) || {
+                    role: 'Ingrediente Funcional Activo',
+                    desc: 'Contribuye a la matriz nutricional y perfil activo de la fórmula.',
+                    category: 'activo'
+                };
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(bodySize);
+                const lines = doc.splitTextToSize(`${info.role.toUpperCase()} — ${info.desc}`, colW - 4);
+                return { info, lines };
+            }
+
+            for (let i = 0; i < ingredientList.length; i += 2) {
+                const leftIng = ingredientList[i];
+                const rightIng = ingredientList[i + 1];
+                const left = ingBlock(leftIng);
+                const right = rightIng ? ingBlock(rightIng) : null;
+
+                const leftH = nameLineH + left.lines.length * bodyLineH;
+                const rightH = right ? nameLineH + right.lines.length * bodyLineH : 0;
+
+                drawIngredientBlock(doc, leftIng, left, imgX, y, nameSize, bodySize, nameLineH, bodyLineH);
+                if (right) drawIngredientBlock(doc, rightIng, right, col2X, y, nameSize, bodySize, nameLineH, bodyLineH);
+
+                y += Math.max(leftH, rightH) + rowGap;
+            }
+
+            y += tier === 2 ? 3 : 4;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(headSize);
+            doc.setTextColor(10, 37, 64);
+            doc.text('Beneficios Clave:', imgX, y);
+            y += tier === 2 ? 5.5 : 6.5;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(tier === 2 ? 8 : 9);
+            prod.benefits.forEach(b => {
+                const bLines = doc.splitTextToSize(b, imgW - 8);
+                doc.setFillColor(catColor[0], catColor[1], catColor[2]);
+                doc.circle(imgX + 1.3, y - 1.2, 1.2, 'F');
+                doc.setTextColor(51, 65, 85);
+                doc.text(bLines, imgX + 6, y);
+                y += bLines.length * (tier === 2 ? 3.8 : 4.6) + 2;
+            });
+
+            drawPdfFooter(doc);
+        }
+
+        // Genera un PDF infográfico completo: portada + una ficha detallada por cada fórmula del listado
+        async function generateInfographicCatalogPDF(title, filename, prodsList) {
+            const list = (prodsList && prodsList.length) ? prodsList : window.productDatabase;
+            if (!list || !list.length) {
+                showPdfToast('Error en PDF', 'No hay fórmulas disponibles para esta línea.', 'error');
+                return;
+            }
+            showPdfToast('Generando PDF', `Preparando ${list.length} ficha(s) técnica(s) con imágenes...`, 'info');
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                const logoDataUrl = await getWhiteLogoDataUrl();
+                drawCoverPage(doc, title, list, logoDataUrl);
+
+                const imgCache = await preloadProductImages(list);
+                list.forEach((prod, i) => drawProductPage(doc, prod, imgCache, i + 1, list.length, logoDataUrl));
+
+                doc.save(filename);
+                showPdfToast('PDF Descargado', 'El catálogo con fichas técnicas se generó exitosamente.', 'success');
+            } catch (e) {
+                console.error('Error al generar PDF infográfico:', e);
+                showPdfToast('Error en PDF', 'Hubo un error al generar el PDF. Por favor reintenta.', 'error');
+            }
+        }
+
+        function downloadGeneralCatalogPDF() {
+            generateInfographicCatalogPDF(
+                'Catálogo General NutraSyn Lab (65 Fórmulas B2B)',
+                'NutraSyn_Lab_Catalogo_General_65_Formulas.pdf',
+                window.productDatabase
+            );
+        }
+
+        function downloadLineCatalogPDF(lineId) {
+            const filtered = (window.productDatabase || []).filter(p => p.line === lineId);
+            const label = (window.lineNamesMap && window.lineNamesMap[lineId]) || lineId.toUpperCase();
+            generateInfographicCatalogPDF(
+                `Ficha Técnica B2B - ${label}`,
+                `NutraSyn_Lab_Ficha_${lineId}.pdf`,
+                filtered
+            );
+        }
     </script>
 </body>
 </html>
