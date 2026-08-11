@@ -2251,6 +2251,14 @@ ${selectedText}
                 filtered
             );
         }
+
+        // Si el navegador intenta mostrar esta página desde su caché de
+        // navegación (bfcache, al volver atrás/adelante) en vez de pedirla
+        // de nuevo al servidor, forzamos una recarga real para que siempre
+        // vuelva a pasar por el control de acceso de portafolio.html.
+        window.addEventListener('pageshow', function (e) {
+            if (e.persisted) window.location.reload();
+        });
     </script>
 </body>
 

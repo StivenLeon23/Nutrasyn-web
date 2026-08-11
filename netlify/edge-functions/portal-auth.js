@@ -97,6 +97,14 @@ function loginPage({ error = false } = {}) {
     </form>
     <a href="/index.html#acceso-portafolio">¿No tienes acceso? Solicítalo aquí</a>
   </div>
+  <script>
+    // Si el navegador intenta mostrar esta página desde su caché de
+    // navegación (al volver atrás/adelante) en vez de pedirla de nuevo,
+    // forzamos una recarga real para que siempre pase por el servidor.
+    window.addEventListener('pageshow', function (e) {
+      if (e.persisted) window.location.reload();
+    });
+  </script>
 </body>
 </html>`;
 }
