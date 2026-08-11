@@ -1,3 +1,10 @@
 [[edge_functions]]
   path = "/portafolio.html"
   function = "portal-auth"
+
+# Netlify también sirve el mismo archivo en la URL "bonita" sin extensión
+# (/portafolio), y las variantes con mayúsculas o slash final redirigen
+# ahí — esa ruta se quedaba sin proteger si no se declara aparte.
+[[edge_functions]]
+  path = "/portafolio"
+  function = "portal-auth"
