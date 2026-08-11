@@ -6,9 +6,10 @@ Todo generado a partir del logo oficial (el mismo que usa el sitio en `index.htm
 
 | Necesito... | Usa este archivo |
 |---|---|
-| Foto de perfil de WhatsApp Business | `whatsapp-icon-navy-1024.png` |
-| Foto de perfil de WhatsApp (alternativa color) | `whatsapp-icon-emerald-1024.png` |
-| Ícono para poner sobre tu propio fondo/diseño | `whatsapp-icon-transparent-1024.png` |
+| Foto de perfil de WhatsApp Business (ícono + "NUTRASYN LAB" con las letras reales del logo) | `whatsapp-profile-navy-1024.png` |
+| Foto de perfil de WhatsApp (alternativa color) | `whatsapp-profile-emerald-1024.png` |
+| Foto de perfil de WhatsApp, solo el ícono (sin texto) | `whatsapp-icon-navy-1024.png` |
+| Ícono solo, para poner sobre tu propio fondo/diseño | `whatsapp-icon-transparent-1024.png` |
 | Foto de perfil Instagram / Facebook / LinkedIn (fondo oscuro) | `social-profile-navy-1080.png` |
 | Foto de perfil Instagram / Facebook / LinkedIn (fondo claro) | `social-profile-white-1080.png` |
 | Logo para un documento o presentación con fondo blanco | `logo-full-black-2000w.png` |
@@ -21,7 +22,8 @@ Todo generado a partir del logo oficial (el mismo que usa el sitio en `index.htm
 ## Archivos maestros (SVG)
 
 - `logo-icon-*.svg` — solo el símbolo de la llama, sin texto (negro / blanco / esmeralda / navy).
-- `logo-full-*.svg` — el logotipo completo "NUTRASYN LAB" (negro / blanco / esmeralda / navy).
+- `logo-full-*.svg` — el logotipo completo "NUTRASYN LAB" en una sola línea (negro / blanco / esmeralda / navy).
+- `logo-word-nutrasyn-*.svg` / `logo-word-lab-*.svg` — las palabras "NUTRASYN" y "LAB" por separado, con las mismas letras del logo (útiles para armar composiciones apiladas como las de WhatsApp/redes).
 
 Todos con fondo transparente, listos para colocar sobre cualquier color.
 
