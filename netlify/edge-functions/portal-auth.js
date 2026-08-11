@@ -80,9 +80,11 @@ function loginPage({ error = false } = {}) {
   button:hover { background: #00A896; color: #fff; }
   a { display: block; margin-top: 18px; color: #64748b; font-size: 12px; text-decoration: none; }
   a:hover { color: #00A896; }
+  .back-link { position: fixed; top: 20px; left: 20px; margin: 0; display: flex; align-items: center; gap: 6px; font-size: 13px; }
 </style>
 </head>
 <body>
+  <a href="/index.html" class="back-link">&#8592; Volver al inicio</a>
   <div class="card">
     <div class="icon">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
