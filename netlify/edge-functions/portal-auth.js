@@ -18,7 +18,10 @@
 // tocar código.
 
 const COOKIE_NAME = "portal_auth";
-const MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 días
+// Sin Max-Age: cookie de sesión. El navegador la borra al cerrarse, así que
+// cada vez que se abre el sitio de nuevo, vuelve a pedir usuario y clave
+// (el colaborador puede guardarla en su gestor de contraseñas para no
+// tener que escribirla a mano cada vez).
 
 async function sha256Hex(text) {
   const data = new TextEncoder().encode(text);
@@ -98,8 +101,8 @@ function loginPage({ error = false } = {}) {
     <h1>Acceso Colaboradores</h1>
     <p>Este portafolio es de uso exclusivo para colaboradores y clientes autorizados de NutraSyn Lab.</p>
     <form method="POST">
-      <input type="text" name="username" placeholder="Usuario" autocomplete="off" autofocus>
-      <input type="password" name="password" placeholder="Clave de acceso" autocomplete="off">
+      <input type="text" name="username" placeholder="Usuario" autocomplete="username" autofocus>
+      <input type="password" name="password" placeholder="Clave de acceso" autocomplete="current-password">
       ${error ? '<p class="err">Usuario o clave incorrectos. Intenta de nuevo.</p>' : ""}
       <button type="submit">Ingresar</button>
     </form>
@@ -132,7 +135,7 @@ export default async (request, context) => {
       headers.set("Location", url.pathname);
       headers.set(
         "Set-Cookie",
-        `${COOKIE_NAME}=${cookieValue}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE_SECONDS}`
+        `${COOKIE_NAME}=${cookieValue}; Path=/; HttpOnly; Secure; SameSite=Lax`
       );
       return new Response(null, { status: 303, headers });
     }
