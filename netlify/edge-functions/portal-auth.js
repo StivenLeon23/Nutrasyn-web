@@ -1,7 +1,17 @@
 // Netlify Edge Function: protege /portafolio.html a nivel de servidor.
-// Sin cookie de sesión válida, el visitante NUNCA recibe el HTML real de
-// portafolio.html (ni las fórmulas embebidas en él) — solo este formulario
-// de usuario + clave.
+//
+// Diseño SIN estado (sin cookies, sin sesión): cada GET a /portafolio.html
+// devuelve siempre el formulario de usuario + clave, sin excepción — aunque
+// sea la misma persona que ya entró antes, aunque tenga la pestaña abierta,
+// aunque recargue. El contenido real (con las fórmulas) solo se entrega
+// como respuesta directa al POST con las credenciales correctas, en esa
+// misma respuesta, y nunca se guarda para reutilizarse después.
+//
+// Esto también elimina cualquier riesgo de que la CDN de Netlify guarde en
+// caché una copia autenticada y se la sirva a otra persona: como no hay
+// cookie ni redirect, cada visita GET siempre recibe el mismo formulario
+// (fácil y seguro de cachear tal cual), y las respuestas POST no se
+// cachean nunca por defecto en ninguna CDN.
 //
 // Configuración en Netlify (Site configuration -> Environment variables):
 //
@@ -17,23 +27,7 @@
 // PORTAL_USERS (o PORTAL_PASSWORD) y volver a desplegar. No hay que
 // tocar código.
 
-const COOKIE_NAME = "portal_auth";
-// Sin Max-Age: cookie de sesión. El navegador la borra al cerrarse, así que
-// cada vez que se abre el sitio de nuevo, vuelve a pedir usuario y clave
-// (el colaborador puede guardarla en su gestor de contraseñas para no
-// tener que escribirla a mano cada vez).
-
-async function sha256Hex(text) {
-  const data = new TextEncoder().encode(text);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
-function getCookie(request, name) {
-  const header = request.headers.get("cookie") || "";
-  const match = header.split(";").map(c => c.trim()).find(c => c.startsWith(name + "="));
-  return match ? match.slice(name.length + 1) : null;
-}
+const NO_STORE = "private, no-store, no-cache, must-revalidate";
 
 // Resuelve el modo de autenticación activo a partir de las variables de entorno.
 function getAuthConfig() {
@@ -50,19 +44,14 @@ function getAuthConfig() {
     .filter(Boolean);
 
   if (accounts.length > 0) {
-    return {
-      matches: (u, p) => accounts.some(a => a.user === u && a.pass === p),
-      identifierFor: (u, p) => `user:${u}:${p}`,
-      validIdentifiers: accounts.map(a => `user:${a.user}:${a.pass}`),
-    };
+    return { matches: (u, p) => accounts.some(a => a.user === u && a.pass === p) };
   }
 
   // Alternativa simple: una sola clave compartida, cualquier usuario no vacío.
   const singlePassword = Deno.env.get("PORTAL_PASSWORD") || "";
   return {
+    // Sin PORTAL_USERS ni PORTAL_PASSWORD configuradas -> nadie entra (fail-closed).
     matches: (u, p) => Boolean(singlePassword) && Boolean(u) && p === singlePassword,
-    identifierFor: (u, p) => `shared:${p}`,
-    validIdentifiers: singlePassword ? [`shared:${singlePassword}`] : [], // vacío = nadie entra (fail-closed)
   };
 }
 
@@ -116,47 +105,32 @@ export default async (request, context) => {
   const url = new URL(request.url);
   const config = getAuthConfig();
 
-  // Hashes válidos para la configuración actual (para validar cookies existentes).
-  const validHashes = new Set(await Promise.all(config.validIdentifiers.map(sha256Hex)));
-
-  const cookie = getCookie(request, COOKIE_NAME);
-  if (cookie && validHashes.has(cookie)) {
-    // OJO: sin esto, la CDN de Netlify puede guardar en caché la página real
-    // (autenticada) y servírsela luego a otra persona sin pedirle la clave,
-    // porque el caché no distingue por cookie. "private, no-store" prohíbe
-    // que se guarde una copia compartida en cualquier punto de la red.
-    const response = await context.next();
-    const headers = new Headers(response.headers);
-    headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
-    headers.set("Vary", "Cookie");
-    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
-  }
-
   if (request.method === "POST") {
     const form = await request.formData();
     const submittedUser = (form.get("username") || "").toString().trim();
     const submittedPass = (form.get("password") || "").toString();
 
     if (config.matches(submittedUser, submittedPass)) {
-      const cookieValue = await sha256Hex(config.identifierFor(submittedUser, submittedPass));
-      const headers = new Headers();
-      headers.set("Location", url.pathname);
-      headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
-      headers.set(
-        "Set-Cookie",
-        `${COOKIE_NAME}=${cookieValue}; Path=/; HttpOnly; Secure; SameSite=Lax`
-      );
-      return new Response(null, { status: 303, headers });
+      // Clave correcta: pedimos el contenido real al origen con un GET propio
+      // (el POST original no se puede reenviar tal cual a un archivo estático)
+      // y lo devolvemos DIRECTAMENTE en esta respuesta. Sin cookie, sin
+      // redirect: no queda ningún rastro de sesión para la próxima visita.
+      const originRequest = new Request(url, { method: "GET", headers: request.headers });
+      const realResponse = await context.next(originRequest);
+      const headers = new Headers(realResponse.headers);
+      headers.set("Cache-Control", NO_STORE);
+      return new Response(realResponse.body, { status: realResponse.status, headers });
     }
 
     return new Response(loginPage({ error: true }), {
       status: 401,
-      headers: { "content-type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex, nofollow", "Cache-Control": "private, no-store, no-cache, must-revalidate" },
+      headers: { "content-type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex, nofollow", "Cache-Control": NO_STORE },
     });
   }
 
+  // Cualquier visita GET (nueva pestaña, recarga, lo que sea) siempre ve el login.
   return new Response(loginPage({ error: false }), {
     status: 401,
-    headers: { "content-type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex, nofollow", "Cache-Control": "private, no-store, no-cache, must-revalidate" },
+    headers: { "content-type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex, nofollow", "Cache-Control": NO_STORE },
   });
 };
