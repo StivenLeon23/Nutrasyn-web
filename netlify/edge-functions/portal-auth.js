@@ -1,11 +1,21 @@
 // Netlify Edge Function: protege /portafolio.html a nivel de servidor.
 // Sin cookie de sesión válida, el visitante NUNCA recibe el HTML real de
-// portafolio.html (ni las fórmulas embebidas en él) — solo este formulario.
+// portafolio.html (ni las fórmulas embebidas en él) — solo este formulario
+// de usuario + clave.
 //
-// Requiere una variable de entorno en Netlify (Site configuration ->
-// Environment variables): PORTAL_PASSWORD = la clave compartida con
-// colaboradores. Para rotarla, solo hay que cambiar esa variable y
-// redesplegar (no hay que tocar código).
+// Configuración en Netlify (Site configuration -> Environment variables):
+//
+//   PORTAL_USERS  (recomendado) — una cuenta por colaborador, formato:
+//     usuario1:clave1,usuario2:clave2,usuario3:clave3
+//     (sin comas ni dos puntos dentro de usuarios/claves)
+//
+//   PORTAL_PASSWORD (alternativa simple) — si no defines PORTAL_USERS,
+//     se acepta cualquier nombre de usuario (no vacío) junto con esta
+//     clave única compartida.
+//
+// Para dar de alta/baja o rotar la clave de un colaborador: editar
+// PORTAL_USERS (o PORTAL_PASSWORD) y volver a desplegar. No hay que
+// tocar código.
 
 const COOKIE_NAME = "portal_auth";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 días
@@ -20,6 +30,37 @@ function getCookie(request, name) {
   const header = request.headers.get("cookie") || "";
   const match = header.split(";").map(c => c.trim()).find(c => c.startsWith(name + "="));
   return match ? match.slice(name.length + 1) : null;
+}
+
+// Resuelve el modo de autenticación activo a partir de las variables de entorno.
+function getAuthConfig() {
+  const usersRaw = Deno.env.get("PORTAL_USERS") || "";
+  const accounts = usersRaw
+    .split(",")
+    .map(entry => entry.trim())
+    .filter(Boolean)
+    .map(entry => {
+      const idx = entry.indexOf(":");
+      if (idx === -1) return null;
+      return { user: entry.slice(0, idx).trim(), pass: entry.slice(idx + 1).trim() };
+    })
+    .filter(Boolean);
+
+  if (accounts.length > 0) {
+    return {
+      matches: (u, p) => accounts.some(a => a.user === u && a.pass === p),
+      identifierFor: (u, p) => `user:${u}:${p}`,
+      validIdentifiers: accounts.map(a => `user:${a.user}:${a.pass}`),
+    };
+  }
+
+  // Alternativa simple: una sola clave compartida, cualquier usuario no vacío.
+  const singlePassword = Deno.env.get("PORTAL_PASSWORD") || "";
+  return {
+    matches: (u, p) => Boolean(singlePassword) && Boolean(u) && p === singlePassword,
+    identifierFor: (u, p) => `shared:${p}`,
+    validIdentifiers: singlePassword ? [`shared:${singlePassword}`] : [], // vacío = nadie entra (fail-closed)
+  };
 }
 
 function loginPage({ error = false } = {}) {
@@ -39,7 +80,8 @@ function loginPage({ error = false } = {}) {
   .icon { width: 64px; height: 64px; margin: 0 auto 20px; border-radius: 16px; background: rgba(0,168,150,0.1); color: #00A896; display: flex; align-items: center; justify-content: center; }
   h1 { font-family: 'Lexend', sans-serif; font-size: 20px; font-weight: 800; color: #fff; margin: 0 0 8px; }
   p { color: #94a3b8; font-size: 14px; line-height: 1.5; margin: 0 0 24px; }
-  input { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #fff; font-size: 14px; text-align: center; letter-spacing: 0.1em; outline: none; margin-bottom: 12px; }
+  input { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #fff; font-size: 14px; text-align: center; outline: none; margin-bottom: 12px; }
+  input[type=password] { letter-spacing: 0.1em; }
   input:focus { border-color: #00A896; }
   .err { color: #f87171; font-size: 12px; margin: 0 0 12px; }
   button { width: 100%; padding: 13px; border-radius: 12px; border: 2px solid #00A896; background: transparent; color: #00A896; font-weight: 700; font-size: 14px; cursor: pointer; transition: all .3s; }
@@ -53,14 +95,15 @@ function loginPage({ error = false } = {}) {
     <div class="icon">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
     </div>
-    <h1>Acceso Restringido</h1>
+    <h1>Acceso Colaboradores</h1>
     <p>Este portafolio es de uso exclusivo para colaboradores y clientes autorizados de NutraSyn Lab.</p>
     <form method="POST">
-      <input type="password" name="password" placeholder="Clave de acceso" autocomplete="off" autofocus>
-      ${error ? '<p class="err">Clave incorrecta. Intenta de nuevo.</p>' : ""}
+      <input type="text" name="username" placeholder="Usuario" autocomplete="off" autofocus>
+      <input type="password" name="password" placeholder="Clave de acceso" autocomplete="off">
+      ${error ? '<p class="err">Usuario o clave incorrectos. Intenta de nuevo.</p>' : ""}
       <button type="submit">Ingresar</button>
     </form>
-    <a href="/index.html#acceso-portafolio">¿No tienes clave? Solicita acceso aquí</a>
+    <a href="/index.html#acceso-portafolio">¿No tienes acceso? Solicítalo aquí</a>
   </div>
 </body>
 </html>`;
@@ -68,27 +111,28 @@ function loginPage({ error = false } = {}) {
 
 export default async (request, context) => {
   const url = new URL(request.url);
-  // Si PORTAL_PASSWORD no está configurada en Netlify, esto queda como cadena vacía:
-  // ninguna clave enviada (ni vacía) podrá coincidir, así que la página se queda
-  // bloqueada por defecto en vez de abierta (fail-closed).
-  const correctPassword = Deno.env.get("PORTAL_PASSWORD") || "";
-  const expectedCookie = await sha256Hex(correctPassword);
-  const cookie = getCookie(request, COOKIE_NAME);
+  const config = getAuthConfig();
 
-  if (cookie === expectedCookie) {
+  // Hashes válidos para la configuración actual (para validar cookies existentes).
+  const validHashes = new Set(await Promise.all(config.validIdentifiers.map(sha256Hex)));
+
+  const cookie = getCookie(request, COOKIE_NAME);
+  if (cookie && validHashes.has(cookie)) {
     return context.next();
   }
 
   if (request.method === "POST") {
     const form = await request.formData();
-    const submitted = (form.get("password") || "").toString();
+    const submittedUser = (form.get("username") || "").toString().trim();
+    const submittedPass = (form.get("password") || "").toString();
 
-    if (submitted && submitted === correctPassword) {
+    if (config.matches(submittedUser, submittedPass)) {
+      const cookieValue = await sha256Hex(config.identifierFor(submittedUser, submittedPass));
       const headers = new Headers();
       headers.set("Location", url.pathname);
       headers.set(
         "Set-Cookie",
-        `${COOKIE_NAME}=${expectedCookie}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE_SECONDS}`
+        `${COOKIE_NAME}=${cookieValue}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE_SECONDS}`
       );
       return new Response(null, { status: 303, headers });
     }
