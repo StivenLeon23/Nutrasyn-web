@@ -121,7 +121,15 @@ export default async (request, context) => {
 
   const cookie = getCookie(request, COOKIE_NAME);
   if (cookie && validHashes.has(cookie)) {
-    return context.next();
+    // OJO: sin esto, la CDN de Netlify puede guardar en caché la página real
+    // (autenticada) y servírsela luego a otra persona sin pedirle la clave,
+    // porque el caché no distingue por cookie. "private, no-store" prohíbe
+    // que se guarde una copia compartida en cualquier punto de la red.
+    const response = await context.next();
+    const headers = new Headers(response.headers);
+    headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
+    headers.set("Vary", "Cookie");
+    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
   }
 
   if (request.method === "POST") {
@@ -133,6 +141,7 @@ export default async (request, context) => {
       const cookieValue = await sha256Hex(config.identifierFor(submittedUser, submittedPass));
       const headers = new Headers();
       headers.set("Location", url.pathname);
+      headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
       headers.set(
         "Set-Cookie",
         `${COOKIE_NAME}=${cookieValue}; Path=/; HttpOnly; Secure; SameSite=Lax`
@@ -142,12 +151,12 @@ export default async (request, context) => {
 
     return new Response(loginPage({ error: true }), {
       status: 401,
-      headers: { "content-type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex, nofollow" },
+      headers: { "content-type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex, nofollow", "Cache-Control": "private, no-store, no-cache, must-revalidate" },
     });
   }
 
   return new Response(loginPage({ error: false }), {
     status: 401,
-    headers: { "content-type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex, nofollow" },
+    headers: { "content-type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex, nofollow", "Cache-Control": "private, no-store, no-cache, must-revalidate" },
   });
 };
