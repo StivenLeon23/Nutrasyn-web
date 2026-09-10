@@ -816,6 +816,21 @@
     <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed bottom-5 right-5 z-[150] flex flex-col space-y-2 pointer-events-none"></div>
 
+    <!-- Formulario oculto SOLO para que Netlify Forms detecte y registre "solicitud-muestras-b2b"
+         en el build. El envío real se hace por AJAX (fetch a "/") desde submitSampleRequest(). -->
+    <form name="solicitud-muestras-b2b" data-netlify="true" netlify-honeypot="bot-field" hidden>
+        <input type="hidden" name="form-name" value="solicitud-muestras-b2b" />
+        <input type="text" name="nombre" />
+        <input type="email" name="email" />
+        <input type="tel" name="telefono" />
+        <input type="text" name="empresa" />
+        <input type="text" name="volumen-estimado" />
+        <input type="text" name="tipo-empaque" />
+        <textarea name="perfil-sensorial"></textarea>
+        <textarea name="formulas-seleccionadas"></textarea>
+        <input type="text" name="bot-field" />
+    </form>
+
     <!-- Navigation Header consistent with index.html -->
     <nav class="fixed w-full z-[100] transition-all duration-300 bg-transparent py-4" id="navbar">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1007,14 +1022,21 @@
                         </div>
 
                         <!-- Results Counters & PDF Download Buttons -->
-                        <div class="flex items-center gap-3">
+                        <div class="flex flex-wrap items-center gap-3 md:justify-end">
                             <span
                                 class="text-[10px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/20 px-2.5 py-1 rounded-lg"
                                 id="search-counter-badge">
                                 Mostrando 65 de 65 conceptos
                             </span>
+                            <button id="btn-download-selected" onclick="downloadSelectedSamplesPDF()"
+                                class="hidden px-3 py-1.5 bg-deepblue-950 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                                title="Descargar un PDF solo con las fórmulas de tu maletín">
+                                <i data-lucide="briefcase" class="w-3.5 h-3.5"></i>
+                                <span>PDF del maletín (<span id="selected-pdf-count">0</span>)</span>
+                            </button>
                             <button onclick="downloadFilteredCatalogPDF()"
-                                class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5">
+                                class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                                title="Descargar el PDF de la línea/filtro actual">
                                 <i data-lucide="download" class="w-3.5 h-3.5"></i>
                                 <span>Descargar PDF</span>
                             </button>
@@ -1134,7 +1156,7 @@
             </div>
 
             <!-- Modal Body Form -->
-            <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+            <div id="sample-form-body" class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
                 <!-- Selected Products List -->
                 <div>
                     <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 font-heading">Fórmulas
@@ -1155,9 +1177,19 @@
                             class="w-full text-xs border border-white/10 rounded-xl p-3 bg-deepblue-950 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
+                        <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Empresa / Marca</label>
+                        <input type="text" id="quote-company" placeholder="Ej: Alimentos Vitales S.A.S."
+                            class="w-full text-xs border border-white/10 rounded-xl p-3 bg-deepblue-950 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
                         <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Correo
                             Corporativo</label>
                         <input type="email" id="quote-email" placeholder="ejemplo@empresa.com"
+                            class="w-full text-xs border border-white/10 rounded-xl p-3 bg-deepblue-950 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Teléfono / WhatsApp</label>
+                        <input type="tel" id="quote-phone" placeholder="Ej: +57 300 000 0000"
                             class="w-full text-xs border border-white/10 rounded-xl p-3 bg-deepblue-950 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
@@ -1190,18 +1222,55 @@
                         placeholder="Describa cómo desea el sabor (Ej: sabor moka-avellana endulzado con estevia, color morado derivado de remolacha...)"
                         class="w-full text-xs border border-white/10 rounded-xl p-3 bg-deepblue-950 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none custom-scrollbar"></textarea>
                 </div>
+
+                <div class="flex items-start gap-2 text-[10px] text-gray-400 bg-deepblue-950/80 border border-white/5 rounded-xl p-3">
+                    <i data-lucide="info" class="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5"></i>
+                    <p>Tu solicitud llega directamente al equipo de I+D de NutraSyn Lab
+                        (<span class="text-emerald-300">operaciones@synergia-360.com</span>). Un asesor técnico te
+                        contacta en un plazo de 24 horas hábiles. Puedes descargar el PDF con tus fórmulas seleccionadas
+                        para tu registro.</p>
+                </div>
+            </div>
+
+            <!-- Success Panel (post-envío) -->
+            <div id="sample-success" class="hidden p-8 flex-1 flex flex-col items-center justify-center text-center space-y-4">
+                <div class="w-16 h-16 bg-emerald-500/15 rounded-2xl flex items-center justify-center text-emerald-400">
+                    <i data-lucide="check-circle" class="w-8 h-8"></i>
+                </div>
+                <h4 class="font-heading text-xl font-bold text-white">¡Solicitud enviada!</h4>
+                <p class="text-xs text-gray-400 max-w-sm">Recibimos tu solicitud de muestras. El equipo de I+D de NutraSyn
+                    Lab revisará las fórmulas y te contactará al correo indicado dentro de 24 horas hábiles.</p>
+                <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    <button onclick="downloadSelectedSamplesPDF()" id="success-pdf-btn"
+                        class="btn-uiverse btn-white px-4 py-2.5 rounded-xl text-xs font-semibold gap-1.5">
+                        <i data-lucide="file-down" class="w-4 h-4"></i> Descargar PDF de mi selección
+                    </button>
+                    <a id="success-wa-btn" href="#" target="_blank" rel="noopener noreferrer"
+                        class="btn-uiverse btn-emerald px-4 py-2.5 rounded-xl text-xs font-bold gap-1.5">
+                        <i data-lucide="message-circle" class="w-4 h-4"></i> Enviar copia por WhatsApp
+                    </a>
+                </div>
+                <button onclick="resetSampleModal()" class="text-[11px] text-gray-500 hover:text-emerald-400 transition-colors pt-2">
+                    Hacer otra solicitud
+                </button>
             </div>
 
             <!-- Modal Actions Footer -->
-            <div class="p-4 bg-deepblue-950/80 border-t border-white/5 flex items-center justify-between">
+            <div id="sample-form-actions" class="p-4 bg-deepblue-950/80 border-t border-white/5 flex flex-wrap items-center justify-between gap-3">
                 <button onclick="toggleModal('sample-modal')"
                     class="btn-uiverse btn-white px-4 py-2.5 rounded-xl text-xs font-semibold">
                     Regresar
                 </button>
-                <button onclick="submitSampleRequest()"
-                    class="btn-uiverse btn-emerald px-6 py-2.5 rounded-xl text-xs font-bold shadow-glow">
-                    Generar Solicitud de Desarrollo
-                </button>
+                <div class="flex flex-wrap items-center gap-3">
+                    <button onclick="downloadSelectedSamplesPDF()"
+                        class="btn-uiverse btn-white px-4 py-2.5 rounded-xl text-xs font-semibold gap-1.5">
+                        <i data-lucide="file-down" class="w-4 h-4"></i> Descargar PDF de la selección
+                    </button>
+                    <button onclick="submitSampleRequest()"
+                        class="btn-uiverse btn-emerald px-6 py-2.5 rounded-xl text-xs font-bold shadow-glow">
+                        Enviar Solicitud de Desarrollo
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1570,6 +1639,9 @@
                                 <p class="text-xs text-gray-400 mt-1 leading-relaxed">${prod.desc}</p>
                             </div>
                             <div class="flex items-center space-x-2 shrink-0">
+                                <button onclick="downloadSingleFormulaPDF('${prod.id}')" class="btn-uiverse btn-white p-2 rounded-xl text-xs font-semibold" title="Descargar la ficha PDF de esta fórmula">
+                                    <i data-lucide="file-down" class="w-4 h-4"></i>
+                                </button>
                                 <button onclick="toggleSampleItem('${prod.id}')" class="btn-uiverse ${isSelected ? 'btn-emerald' : 'btn-white'} p-2 rounded-xl text-xs font-semibold" title="Añadir a muestras">
                                     <i data-lucide="${isSelected ? 'check-circle' : 'plus-circle'}" class="w-4 h-4"></i>
                                 </button>
@@ -1667,6 +1739,12 @@
                 badge.classList.add('hidden');
                 badgeMobile.classList.add('hidden');
             }
+
+            // Botón "PDF del maletín" del encabezado del buscador
+            const selectedBtn = document.getElementById('btn-download-selected');
+            const selectedCount = document.getElementById('selected-pdf-count');
+            if (selectedBtn) selectedBtn.classList.toggle('hidden', selectedSamples.length === 0);
+            if (selectedCount) selectedCount.textContent = selectedSamples.length;
         }
 
         // Toast Feedback System
@@ -1680,6 +1758,12 @@
             if (type === 'warning') {
                 colorBorder = 'border-yellow-500 bg-deepblue-950';
                 iconMarkup = '<i data-lucide="alert-triangle" class="w-4 h-4 text-yellow-400"></i>';
+            } else if (type === 'error') {
+                colorBorder = 'border-red-500 bg-deepblue-950';
+                iconMarkup = '<i data-lucide="x-circle" class="w-4 h-4 text-red-400"></i>';
+            } else if (type === 'info') {
+                colorBorder = 'border-blue-500 bg-deepblue-950';
+                iconMarkup = '<i data-lucide="loader" class="w-4 h-4 text-blue-400"></i>';
             }
 
             toast.className = `p-4 border-l-4 rounded-xl shadow-2xl flex items-start space-x-3 pointer-events-auto transition-all duration-300 transform translate-y-4 opacity-0 border border-white/5 ${colorBorder}`;
@@ -1712,6 +1796,9 @@
             modal.classList.toggle('hidden');
 
             if (modalId === 'sample-modal' && !modal.classList.contains('hidden')) {
+                // Al abrir, siempre mostramos el formulario (no el panel de éxito previo)
+                resetSampleModal();
+
                 // Populate selected list in form
                 const listContainer = document.getElementById('modal-selected-list');
 
@@ -1744,16 +1831,71 @@
             }
         }
 
-        // Submit B2B sample request
+        // Devuelve los productos actualmente en el maletín (en el orden en que se agregaron)
+        function getSelectedProducts() {
+            return selectedSamples
+                .map(id => productDatabase.find(p => p.id === id))
+                .filter(Boolean);
+        }
+
+        // Restaura la vista del modal al formulario (oculta el panel de éxito)
+        function resetSampleModal() {
+            const body = document.getElementById('sample-form-body');
+            const actions = document.getElementById('sample-form-actions');
+            const success = document.getElementById('sample-success');
+            if (body) body.style.display = '';
+            if (actions) actions.style.display = '';
+            if (success) success.style.display = 'none';
+        }
+
+        // Muestra el panel de confirmación dentro del modal
+        function showSampleSuccess(waHref) {
+            const body = document.getElementById('sample-form-body');
+            const actions = document.getElementById('sample-form-actions');
+            const success = document.getElementById('sample-success');
+            if (body) body.style.display = 'none';
+            if (actions) actions.style.display = 'none';
+            if (success) success.style.display = 'flex';
+            const wa = document.getElementById('success-wa-btn');
+            if (wa) wa.href = waHref;
+            lucide.createIcons();
+        }
+
+        // Arma el resumen de texto de la solicitud (para WhatsApp / correo)
+        function buildSampleSummaryText(data) {
+            const formulas = data.products
+                .map(p => `• ${p.name} [${p.id.toUpperCase()} · ${p.format}]`)
+                .join('\n');
+            return [
+                'SOLICITUD DE DESARROLLO DE MUESTRAS B2B — NutraSyn Lab',
+                '',
+                `Nombre: ${data.name}`,
+                `Empresa: ${data.company || 'No indicada'}`,
+                `Correo: ${data.email}`,
+                `Teléfono: ${data.phone || 'No indicado'}`,
+                `Volumen estimado: ${data.volume}`,
+                `Tipo de empaque: ${data.packaging}`,
+                '',
+                'Perfil sensorial requerido:',
+                data.specs || 'Ninguno especificado.',
+                '',
+                `Fórmulas seleccionadas (${data.products.length}):`,
+                formulas
+            ].join('\n');
+        }
+
+        // Submit B2B sample request — envío real vía Netlify Forms (AJAX a "/")
         function submitSampleRequest() {
             const name = document.getElementById('quote-name').value.trim();
+            const company = document.getElementById('quote-company').value.trim();
             const email = document.getElementById('quote-email').value.trim();
+            const phone = document.getElementById('quote-phone').value.trim();
             const volume = document.getElementById('quote-volume').value;
             const packaging = document.getElementById('quote-packaging').value;
             const specs = document.getElementById('quote-specs').value.trim();
 
             if (selectedSamples.length === 0) {
-                showToast("Fórmulas Vacías", "Debe agregar al menos 1 concepto para cotizar muestras.", "warning");
+                showToast("Fórmulas Vacías", "Debe agregar al menos 1 concepto para solicitar muestras.", "warning");
                 return;
             }
 
@@ -1762,42 +1904,44 @@
                 return;
             }
 
-            // Generate Mock PDF / Document string
-            const selectedText = selectedSamples.map(id => {
-                const p = productDatabase.find(x => x.id === id);
-                return `- ${p.name} [ID: ${p.id.toUpperCase()}, Formato: ${p.format}]`;
-            }).join('\n');
+            const products = getSelectedProducts();
+            const data = { name, company, email, phone, volume, packaging, specs, products };
+            const formulasText = products
+                .map(p => `${p.name} [${p.id.toUpperCase()} · ${p.format}]`)
+                .join('; ');
+            const summary = buildSampleSummaryText(data);
+            const waHref = 'https://wa.me/573142818326?text=' + encodeURIComponent(summary);
 
-            const docContent = `
-=========================================
-SOLICITUD DE DESARROLLO DE MUESTRAS B2B
-=========================================
-NutraSyn Lab Foodtech - Corporativo
+            // Payload para Netlify Forms
+            const params = new URLSearchParams();
+            params.append('form-name', 'solicitud-muestras-b2b');
+            params.append('nombre', name);
+            params.append('empresa', company);
+            params.append('email', email);
+            params.append('telefono', phone);
+            params.append('volumen-estimado', volume);
+            params.append('tipo-empaque', packaging);
+            params.append('perfil-sensorial', specs || 'Ninguno especificado.');
+            params.append('formulas-seleccionadas', formulasText);
 
-DATOS DEL CLIENTE:
-- Nombre: ${name}
-- Correo: ${email}
-- Volumen Estimado: ${volume}
-- Tipo Empaque: ${packaging}
+            showToast("Enviando Solicitud", "Registrando tu solicitud de muestras...", "info");
 
-ESPECIFICACIONES SENSORIALES:
-${specs ? specs : 'Ninguna especificada.'}
-
-FÓRMULAS SELECCIONADAS:
-${selectedText}
-=========================================
-            `;
-
-            console.log("Documento generado:\n", docContent);
-
-            // Success feedback
-            toggleModal('sample-modal');
-            showToast("Solicitud Enviada", "Se ha generado el documento de desarrollo en la consola. Un asesor técnico lo contactará.");
-
-            // Clean kit
-            selectedSamples = [];
-            updateSampleBadge();
-            searchCatalogue();
+            fetch('/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            })
+                .then((res) => {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    showSampleSuccess(waHref);
+                    showToast("Solicitud Enviada", "Tu solicitud llegó al equipo de I+D. Te contactarán en 24 h hábiles.");
+                })
+                .catch((error) => {
+                    console.error("Error al enviar la solicitud de muestras:", error);
+                    // Fallback: no perdemos la solicitud, la enviamos por WhatsApp
+                    showSampleSuccess(waHref);
+                    showToast("Envío por WhatsApp", "No pudimos registrar el formulario. Envía tu solicitud por WhatsApp con el botón de abajo.", "warning");
+                });
         }
 
         // ============================================================
@@ -2000,7 +2144,9 @@ ${selectedText}
             doc.setFontSize(10);
             doc.setTextColor(51, 65, 85);
             const bulletPoints = [
-                `• ${list.length} Fórmulas B2B documentadas en este catálogo con ficha técnica completa.`,
+                list.length === 1
+                    ? '• 1 Fórmula B2B documentada en este documento con ficha técnica completa.'
+                    : `• ${list.length} Fórmulas B2B documentadas en este documento con ficha técnica completa.`,
                 '• Formulación Clean Label disponible bajo pedido (Adaptabilidad según requerimiento de cliente).',
                 '• Formatos Solubles en Polvo: Doypack, Canister y Sachets Monodosis.',
                 '• Formatos Líquidos Bioactivos: Frascos PET, Goteros y Shots Concentrados.',
@@ -2220,6 +2366,36 @@ ${selectedText}
                 'Catálogo General NutraSyn Lab (65 Fórmulas B2B)',
                 'NutraSyn_Lab_Catalogo_General_65_Formulas.pdf',
                 productDatabase
+            );
+        }
+
+        // Descarga un PDF SOLO con las fórmulas que el usuario agregó a su maletín
+        function downloadSelectedSamplesPDF() {
+            const list = getSelectedProducts();
+            if (!list.length) {
+                showToast("Maletín Vacío", "Agrega al menos una fórmula a tu maletín para generar el PDF.", "warning");
+                return;
+            }
+            const plural = list.length === 1 ? 'Fórmula' : 'Fórmulas';
+            generateInfographicCatalogPDF(
+                `Selección de ${plural} B2B — Maletín de Muestras (${list.length})`,
+                `NutraSyn_Lab_Seleccion_Maletin_${list.length}_formulas.pdf`,
+                list
+            );
+        }
+
+        // Descarga un PDF con la ficha técnica de UNA sola fórmula
+        function downloadSingleFormulaPDF(id) {
+            const prod = productDatabase.find(p => p.id === id);
+            if (!prod) {
+                showToast("Error en PDF", "No se encontró la fórmula seleccionada.", "warning");
+                return;
+            }
+            const safeName = prod.name.replace(/[^\w]+/g, '_');
+            generateInfographicCatalogPDF(
+                `Ficha Técnica B2B — ${prod.name}`,
+                `NutraSyn_Lab_Ficha_${prod.id.toUpperCase()}_${safeName}.pdf`,
+                [prod]
             );
         }
 
