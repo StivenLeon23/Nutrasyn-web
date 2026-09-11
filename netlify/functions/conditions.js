@@ -59,8 +59,13 @@ export default async (req) => {
   if (req.method === "GET") {
     // null = la clave nunca se ha escrito (primera vez) -> se siembra.
     // [] = ya se escribió antes y alguien borró todo a propósito -> se respeta.
+    // Array sin "categoria" en ningún ítem = quedó de la versión anterior
+    // (lista plana sin pago/entrega, antes de este cambio) -> ya no sirve
+    // para nada porque el frontend actual solo filtra por categoría, así
+    // que se reemplaza por el catálogo nuevo.
     let items = await store.get("items", { type: "json" });
-    if (items === null) {
+    const isStaleFormat = Array.isArray(items) && items.length > 0 && !items.some((i) => i.categoria);
+    if (items === null || isStaleFormat) {
       const now = new Date().toISOString();
       items = DEFAULT_CONDITIONS.map((c, i) => ({
         code: `COND-${String(i + 1).padStart(4, "0")}`,
