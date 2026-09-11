@@ -955,8 +955,92 @@
             lucide.createIcons();
         }
 
+        // --- Logo para marca de agua del PDF ---
+        // Se rasteriza una sola vez (a partir del mismo SVG que usa el resto
+        // del sitio) y se reutiliza en cada PDF que se genere en esta sesión.
+        let cachedLogoDataUrl;
+        async function getLogoDataUrl() {
+            if (cachedLogoDataUrl !== undefined) return cachedLogoDataUrl;
+            try {
+                const res = await fetch('https://res.cloudinary.com/dj761bgxw/image/upload/v1777030919/svg_1_vfsoo4.svg');
+                const svgText = await res.text();
+                const blobUrl = URL.createObjectURL(new Blob([svgText], { type: 'image/svg+xml' }));
+                cachedLogoDataUrl = await new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        try {
+                            const scale = 3;
+                            const w = (img.naturalWidth || 550) * scale;
+                            const h = (img.naturalHeight || 129) * scale;
+                            const canvas = document.createElement('canvas');
+                            canvas.width = w; canvas.height = h;
+                            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                            resolve(canvas.toDataURL('image/png'));
+                        } catch (e) { resolve(null); }
+                    };
+                    img.onerror = () => resolve(null);
+                    img.src = blobUrl;
+                });
+                URL.revokeObjectURL(blobUrl);
+            } catch (e) {
+                cachedLogoDataUrl = null;
+            }
+            return cachedLogoDataUrl;
+        }
+
+        // Marca de agua tipo sello: el logo centrado, muy transparente y con
+        // una leve inclinación, sobre toda la página (se aplica al final,
+        // por encima de todo el contenido, como un sello real).
+        function drawWatermark(doc, logoDataUrl, pageW, pageH) {
+            if (!logoDataUrl) return;
+            const w = 130;
+            const h = w * (129 / 550);
+            doc.setGState(new doc.GState({ opacity: 0.06 }));
+            doc.addImage(logoDataUrl, 'PNG', (pageW - w) / 2, (pageH - h) / 2, w, h, undefined, undefined, 18);
+            doc.setGState(new doc.GState({ opacity: 1 }));
+        }
+
+        // Dibuja precio unitario, cantidad y subtotal como tres recuadros
+        // independientes (en vez de una sola franja de texto), con el
+        // subtotal resaltado como "resultado" de los otros dos. Devuelve el
+        // alto que ocupó, para que el llamador siga avanzando el cursor.
+        function drawPriceBoxes(doc, x, y, w, unitPrice, qty, subtotal) {
+            const gap = 4;
+            const boxW = (w - gap * 2) / 3;
+            const boxH = 18;
+
+            function box(bx, label, value, dark) {
+                if (dark) {
+                    doc.setFillColor(10, 37, 64);
+                    doc.roundedRect(bx, y, boxW, boxH, 2, 2, 'F');
+                } else {
+                    doc.setFillColor(240, 253, 250);
+                    doc.roundedRect(bx, y, boxW, boxH, 2, 2, 'F');
+                    doc.setDrawColor(0, 168, 150);
+                    doc.setLineWidth(0.35);
+                    doc.roundedRect(bx, y, boxW, boxH, 2, 2, 'S');
+                }
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(6.8);
+                if (dark) doc.setTextColor(150, 230, 214); else doc.setTextColor(0, 140, 125);
+                doc.text(label, bx + boxW / 2, y + 6.5, { align: 'center' });
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(11);
+                if (dark) doc.setTextColor(255, 255, 255); else doc.setTextColor(10, 37, 64);
+                const valueLines = doc.splitTextToSize(String(value), boxW - 6);
+                doc.text(valueLines[0], bx + boxW / 2, y + boxH - 5, { align: 'center' });
+            }
+
+            box(x, 'PRECIO UNITARIO', formatCOP(unitPrice), false);
+            box(x + boxW + gap, 'CANTIDAD', qty != null ? Number(qty).toLocaleString('es-CO') : 'No definida', false);
+            box(x + (boxW + gap) * 2, 'SUBTOTAL', formatCOP(subtotal), true);
+
+            return boxH;
+        }
+
         // --- PDF de cotización ---
-        function downloadQuotePDF() {
+        async function downloadQuotePDF() {
             const payload = buildQuotePayload();
             if (!payload.cliente.nombre) {
                 toast('Falta el cliente', 'Escribe el nombre del cliente antes de generar el PDF.', 'warning');
@@ -966,6 +1050,9 @@
                 toast('Sin fórmulas', 'Agrega al menos una fórmula antes de generar el PDF.', 'warning');
                 return;
             }
+
+            toast('Generando PDF', 'Preparando el documento...', 'info');
+            const logoDataUrl = await getLogoDataUrl();
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -1045,7 +1132,7 @@
                 const insumosLines = insumosText ? doc.splitTextToSize(`Insumos: ${insumosText}`, pageW - marginX * 2 - 4) : [];
 
                 const blockHeight = 6 + (presentacion ? 5 : 0) + mezclaLines.length * 4.2 + 2
-                    + (insumosLines.length ? insumosLines.length * 4.2 + 2 : 0) + 13;
+                    + (insumosLines.length ? insumosLines.length * 4.2 + 2 : 0) + 25;
                 ensureSpace(blockHeight);
 
                 // Título grande de la fórmula/producto terminado
@@ -1074,17 +1161,8 @@
                     y += insumosLines.length * 4.2 + 2;
                 }
 
-                // Precio unitario | Cantidad | Subtotal, todos juntos en una franja
-                doc.setFillColor(240, 253, 250);
-                doc.rect(marginX, y, pageW - marginX * 2, 9, 'F');
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(8);
-                doc.setTextColor(0, 140, 125);
-                doc.text(`Precio unitario: ${formatCOP(f.precioUnitario)}`, marginX + 3, y + 6);
-                doc.text(`Cantidad: ${f.cantidad ?? 'No definida'}`, marginX + 80, y + 6);
-                doc.setTextColor(10, 37, 64);
-                doc.text(`Subtotal: ${formatCOP(subtotal)}`, marginX + 130, y + 6);
-                y += 13;
+                // Precio unitario | Cantidad | Subtotal, cada uno en su propio recuadro
+                y += drawPriceBoxes(doc, marginX, y, pageW - marginX * 2, f.precioUnitario, f.cantidad, subtotal) + 7;
             });
 
             // Total (suma de subtotales)
@@ -1177,6 +1255,14 @@
             }
 
             drawFooter();
+
+            // Sello de marca de agua sobre todas las páginas, al final, para
+            // que quede por encima de todo el contenido (como un sello real).
+            const totalPages = doc.internal.getNumberOfPages();
+            for (let p = 1; p <= totalPages; p++) {
+                doc.setPage(p);
+                drawWatermark(doc, logoDataUrl, pageW, pageH);
+            }
 
             const safeName = (payload.cliente.nombre || 'cliente').replace(/[^\w]+/g, '_');
             const filenameFolio = currentQuoteId ? folioLabel.replace(/[^\w-]+/g, '_') : 'borrador';
