@@ -588,18 +588,41 @@
                 box.innerHTML = '<p class="text-[11px] text-gray-500 p-2">Sin resultados. Usa "Nuevo insumo" para crearlo.</p>';
             } else {
                 box.innerHTML = matches.map(i => `
-                    <button onclick="addInsumoToQuote('${i.code}')" class="w-full text-left p-2.5 rounded-lg hover:bg-white/5 flex items-center justify-between gap-2 transition-colors">
-                        <span class="text-[11px]">
-                            <span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded uppercase font-mono">${escapeHtml(i.code)}</span>
-                            <span class="font-bold text-white ml-1">${escapeHtml(i.name)}</span>
-                            <span class="text-gray-500"> · ${escapeHtml(typeLabel(i.type))}</span>
-                        </span>
-                        <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
-                    </button>
+                    <div class="w-full flex items-center gap-1.5 p-2 rounded-lg hover:bg-white/5 transition-colors">
+                        <button onclick="addInsumoToQuote('${i.code}')" class="flex-1 min-w-0 text-left flex items-center gap-1.5">
+                            <span class="text-[11px] truncate">
+                                <span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded uppercase font-mono">${escapeHtml(i.code)}</span>
+                                <span class="font-bold text-white ml-1">${escapeHtml(i.name)}</span>
+                                <span class="text-gray-500"> · ${escapeHtml(typeLabel(i.type))}</span>
+                            </span>
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-emerald-400 shrink-0 ml-auto"></i>
+                        </button>
+                        <button onclick="deleteInsumoFromCatalog('${i.code}')" title="Eliminar del catálogo" class="text-gray-500 hover:text-red-400 shrink-0 p-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
                 `).join('');
             }
             box.classList.remove('hidden');
             lucide.createIcons();
+        }
+
+        // Elimina un insumo del catálogo reutilizable (no de una fórmula en
+        // particular). Las cotizaciones ya guardadas no se ven afectadas
+        // porque cada una guarda su propia copia de código/tipo/nombre.
+        async function deleteInsumoFromCatalog(code) {
+            const item = packagingCache.find(i => i.code === code);
+            if (!item) return;
+            if (!confirm(`¿Eliminar "${item.name}" (${item.code}) del catálogo de insumos?\n\nNo afecta cotizaciones ya guardadas.`)) return;
+            try {
+                const data = await apiFetch('/api/packaging?code=' + encodeURIComponent(code), { method: 'DELETE' });
+                packagingCache = data.items || [];
+                renderInsumoTypeOptions();
+                renderInsumoSearchResults();
+                toast('Insumo eliminado', `${code} se quitó del catálogo.`);
+            } catch (err) {
+                toast('Error al eliminar', err.message, 'error');
+            }
         }
 
         // Los insumos son propios de cada fórmula (producto terminado): se
@@ -663,14 +686,36 @@
             ).slice(0, 25);
             box.innerHTML = matches.length
                 ? matches.map(c => `
-                    <button onclick="addConditionToQuote('${c.code}')" class="w-full text-left p-2.5 rounded-lg hover:bg-white/5 flex items-start justify-between gap-2 transition-colors">
-                        <span class="text-[11px] text-gray-300">${escapeHtml(c.texto)}</span>
-                        <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5"></i>
-                    </button>
+                    <div class="w-full flex items-start gap-1.5 p-2 rounded-lg hover:bg-white/5 transition-colors">
+                        <button onclick="addConditionToQuote('${c.code}')" class="flex-1 min-w-0 text-left flex items-start justify-between gap-2">
+                            <span class="text-[11px] text-gray-300">${escapeHtml(c.texto)}</span>
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5"></i>
+                        </button>
+                        <button onclick="deleteConditionFromCatalog('${c.code}')" title="Eliminar del catálogo" class="text-gray-500 hover:text-red-400 shrink-0 p-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
                 `).join('')
                 : '<p class="text-[11px] text-gray-500 p-2">Sin resultados. Usa "Nueva condición" para crearla.</p>';
             box.classList.remove('hidden');
             lucide.createIcons();
+        }
+
+        // Elimina una condición del catálogo reutilizable (no de la
+        // cotización actual). Las cotizaciones ya guardadas guardan su
+        // propia copia del texto, así que no se ven afectadas.
+        async function deleteConditionFromCatalog(code) {
+            const item = conditionsCache.find(c => c.code === code);
+            if (!item) return;
+            if (!confirm(`¿Eliminar la condición ${item.code} del catálogo?\n\n"${item.texto}"\n\nNo afecta cotizaciones ya guardadas.`)) return;
+            try {
+                const data = await apiFetch('/api/conditions?code=' + encodeURIComponent(code), { method: 'DELETE' });
+                conditionsCache = data.items || [];
+                renderConditionSearchResults();
+                toast('Condición eliminada', `${code} se quitó del catálogo.`);
+            } catch (err) {
+                toast('Error al eliminar', err.message, 'error');
+            }
         }
 
         function addConditionToQuote(code) {

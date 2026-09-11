@@ -7,9 +7,12 @@
 // en Netlify Blobs — no hace falta configurar ninguna base de datos externa,
 // Netlify inyecta el contexto necesario automáticamente al desplegar.
 //
-// GET  /api/packaging       -> { items: [...] }
-// POST /api/packaging       -> crea un insumo nuevo, asigna código único, { item, items }
-// PUT  /api/packaging       -> actualiza nombre/notas de un insumo existente por "code"
+// GET    /api/packaging               -> { items: [...] }
+// POST   /api/packaging               -> crea un insumo nuevo, asigna código único, { item, items }
+// PUT    /api/packaging               -> actualiza nombre/notas de un insumo existente por "code"
+// DELETE /api/packaging?code=ENV-0001 -> elimina un insumo del catálogo, { items }
+//   (no afecta cotizaciones ya guardadas: cada una guarda su propia copia
+//   del código/tipo/nombre del insumo en el momento en que se agregó)
 
 import { getStore } from "@netlify/blobs";
 import { verifySessionToken, requireCollaborator, bearerToken } from "./lib/session.js";
@@ -84,6 +87,21 @@ export default async (req) => {
         };
       }),
     );
+
+    if (!found) return jsonResponse(404, { error: "Insumo no encontrado." });
+    return jsonResponse(200, { items });
+  }
+
+  if (req.method === "DELETE") {
+    const code = new URL(req.url).searchParams.get("code");
+    if (!code) return jsonResponse(400, { error: "El código del insumo es obligatorio." });
+
+    let found = false;
+    const items = await readModifyWrite(store, "items", [], (list) => {
+      const next = list.filter((item) => item.code !== code);
+      found = next.length !== list.length;
+      return next;
+    });
 
     if (!found) return jsonResponse(404, { error: "Insumo no encontrado." });
     return jsonResponse(200, { items });

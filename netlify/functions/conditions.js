@@ -10,8 +10,9 @@
 //
 // Solo colaboradores (ver netlify/functions/lib/session.js).
 //
-// GET  /api/conditions   -> { items: [{code, texto, createdBy, createdAt}] }
-// POST /api/conditions   -> crea una condición nueva, { item, items }
+// GET    /api/conditions                -> { items: [{code, texto, createdBy, createdAt}] }
+// POST   /api/conditions                -> crea una condición nueva, { item, items }
+// DELETE /api/conditions?code=COND-0001 -> elimina una condición del catálogo, { items }
 
 import { getStore } from "@netlify/blobs";
 import { verifySessionToken, requireCollaborator, bearerToken } from "./lib/session.js";
@@ -54,6 +55,21 @@ export default async (req) => {
     });
 
     return jsonResponse(201, { item: created, items });
+  }
+
+  if (req.method === "DELETE") {
+    const code = new URL(req.url).searchParams.get("code");
+    if (!code) return jsonResponse(400, { error: "El código de la condición es obligatorio." });
+
+    let found = false;
+    const items = await readModifyWrite(store, "items", [], (list) => {
+      const next = list.filter((item) => item.code !== code);
+      found = next.length !== list.length;
+      return next;
+    });
+
+    if (!found) return jsonResponse(404, { error: "Condición no encontrada." });
+    return jsonResponse(200, { items });
   }
 
   return jsonResponse(405, { error: "Método no soportado." });
