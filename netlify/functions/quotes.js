@@ -38,9 +38,12 @@ async function authenticate(req) {
 }
 
 // El consecutivo no arranca en 1: se continúa la numeración que ya
-// llevaba el negocio antes de este sistema, así que la primera
-// cotización que se guarde aquí queda como COT-<año>-6203.
-const FOLIO_START = 6203;
+// llevaba el negocio antes de este sistema. FOLIO_START se resta 1 por
+// cada cotización de prueba que ya exista en el índice y se quiera
+// conservar (sin borrarla), para que la SIGUIENTE cotización que se
+// guarde sea la 6203 — hoy hay 1 cotización de prueba guardada, por eso
+// queda en 6202 (6202 + esa 1 ya existente = 6203 para la próxima).
+const FOLIO_START = 6202;
 
 function genFolio(existingCount) {
   const year = new Date().getFullYear();
