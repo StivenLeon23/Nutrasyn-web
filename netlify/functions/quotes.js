@@ -26,6 +26,13 @@
 // GET  /api/quotes/:id     -> { quote: {...} }                    (detalle)
 // POST /api/quotes         -> crea una cotización nueva, { quote }
 // PUT  /api/quotes/:id     -> actualiza una cotización existente, { quote }
+//
+// El listado es compartido entre TODOS los colaboradores (no hay noción de
+// "mis cotizaciones" vs. "las de otro") y el consecutivo del folio también
+// es global, no por persona. El folio se asigna dentro del read-modify-write
+// del índice para minimizar (no eliminar del todo, ver comentario junto a
+// FOLIO_START) la ventana en la que dos guardados casi simultáneos de
+// distintos colaboradores podrían chocar en el mismo número.
 
 import { randomUUID } from "node:crypto";
 import { getStore } from "@netlify/blobs";
@@ -134,12 +141,33 @@ export default async (req) => {
       return jsonResponse(400, { error: "Agrega al menos el nombre del cliente o una fórmula antes de guardar." });
     }
 
-    const index = (await store.get("index", { type: "json" })) || [];
     const newId = randomUUID();
     const now = new Date().toISOString();
+
+    // El folio se asigna DENTRO del propio read-modify-write del índice
+    // (no antes, con una lectura aparte) para que dos colaboradores
+    // guardando casi al mismo tiempo tengan la ventana de choque más
+    // angosta posible: solo la de esta única lectura+escritura, en vez de
+    // la de toda la solicitud completa.
+    let assignedFolio;
+    await readModifyWrite(store, "index", [], (list) => {
+      assignedFolio = genFolio(list.length);
+      const summary = {
+        id: newId,
+        folio: assignedFolio,
+        cliente,
+        totalEstimado: computeTotal(formulas),
+        formulaCount: formulas.length,
+        createdAt: now,
+        updatedAt: now,
+        updatedBy: session.user,
+      };
+      return [summary, ...list];
+    });
+
     const quote = {
       id: newId,
-      folio: genFolio(index.length),
+      folio: assignedFolio,
       cliente,
       formulas,
       formaPago: normalizeConditionChoice(body.formaPago),
@@ -151,9 +179,7 @@ export default async (req) => {
       createdAt: now,
       updatedAt: now,
     };
-
     await store.setJSON(`quote-${newId}`, quote);
-    await readModifyWrite(store, "index", [], (list) => [quoteSummary(quote), ...list]);
 
     return jsonResponse(201, { quote });
   }
