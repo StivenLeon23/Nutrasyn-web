@@ -93,7 +93,7 @@
 
             <div class="space-y-1">
                 <h1 class="text-2xl lg:text-3xl font-extrabold text-white">Constructor de Cotizaciones</h1>
-                <p class="text-xs text-gray-400">Arma una cotización con fórmulas del catálogo, insumos/empaques reutilizables, datos del cliente y precio de venta.</p>
+                <p class="text-xs text-gray-400">Arma una cotización con fórmulas del catálogo, insumos/empaques reutilizables, datos del cliente, cantidad de producto terminado y precio de venta. Puedes guardar como borrador aunque falten datos.</p>
             </div>
 
             <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
@@ -195,9 +195,19 @@
                     <!-- Precio y Observaciones -->
                     <div class="card p-6 space-y-4">
                         <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-emerald-400"></i> Precio y Observaciones</h3>
-                        <div>
-                            <label class="field-label">Precio de venta al cliente (COP)</label>
-                            <input type="number" id="precio-venta" min="0" step="1" class="field-input" placeholder="Ej: 8500000">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="field-label">Precio de venta por unidad (COP)</label>
+                                <input type="number" id="precio-venta" min="0" step="1" oninput="updateTotalPreview()" class="field-input" placeholder="Ej: 8500">
+                            </div>
+                            <div>
+                                <label class="field-label">Cantidad de producto terminado</label>
+                                <input type="number" id="cantidad-producto" min="0" step="1" oninput="updateTotalPreview()" class="field-input" placeholder="Ej: 1000">
+                            </div>
+                        </div>
+                        <div class="p-4 bg-emerald-950/30 border border-emerald-500/20 rounded-xl flex items-center justify-between">
+                            <span class="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">Precio total (unidad × cantidad)</span>
+                            <span id="precio-total-preview" class="text-sm font-extrabold text-white">No definido</span>
                         </div>
                         <div>
                             <label class="field-label">Observaciones</label>
@@ -446,21 +456,21 @@
             lucide.createIcons();
         }
 
+        // Los insumos de una cotización son la lista de empaque que lleva UNA
+        // unidad de producto terminado (como la lista de ingredientes: sin
+        // cantidad por ítem). Lo que sí tiene cantidad es el producto
+        // terminado completo — ver "Cantidad de producto terminado" más abajo.
         function addInsumoToQuote(code) {
             const item = packagingCache.find(i => i.code === code);
             if (!item) return;
-            const existing = quoteInsumos.find(i => i.code === code);
-            if (existing) { existing.qty += 1; } else { quoteInsumos.push({ code: item.code, type: item.type, name: item.name, qty: 1 }); }
+            if (quoteInsumos.some(i => i.code === code)) {
+                toast('Ya agregado', 'Ese insumo ya está en la cotización.', 'warning');
+                return;
+            }
+            quoteInsumos.push({ code: item.code, type: item.type, name: item.name });
             document.getElementById('insumo-search').value = '';
             document.getElementById('insumo-search-results').classList.add('hidden');
             renderInsumosList();
-        }
-
-        function updateInsumoQty(code, qty) {
-            const item = quoteInsumos.find(i => i.code === code);
-            if (!item) return;
-            const n = parseInt(qty, 10);
-            item.qty = Number.isFinite(n) && n > 0 ? n : 1;
         }
 
         function removeInsumo(code) {
@@ -483,10 +493,7 @@
                             <span class="text-[10px] text-gray-500">${escapeHtml(typeLabel(i.type))}</span>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 shrink-0">
-                        <input type="number" min="1" value="${i.qty}" onchange="updateInsumoQty('${i.code}', this.value)" class="field-input w-16 text-center !p-1.5">
-                        <button onclick="removeInsumo('${i.code}')" class="text-gray-500 hover:text-red-400"><i data-lucide="trash" class="w-4 h-4"></i></button>
-                    </div>
+                    <button onclick="removeInsumo('${i.code}')" class="text-gray-500 hover:text-red-400 shrink-0"><i data-lucide="trash" class="w-4 h-4"></i></button>
                 </div>
             `).join('');
             lucide.createIcons();
@@ -505,6 +512,15 @@
             }
         }
 
+        function updateTotalPreview() {
+            const unit = parseFloat(document.getElementById('precio-venta').value);
+            const qty = parseFloat(document.getElementById('cantidad-producto').value);
+            const el = document.getElementById('precio-total-preview');
+            el.textContent = (Number.isFinite(unit) && Number.isFinite(qty) && unit > 0 && qty > 0)
+                ? formatCOP(unit * qty)
+                : 'No definido';
+        }
+
         function newQuote() {
             currentQuoteId = null;
             quoteFormulas = [];
@@ -513,7 +529,9 @@
             document.getElementById('cliente-nit').value = '';
             document.getElementById('cliente-telefono').value = '';
             document.getElementById('precio-venta').value = '';
+            document.getElementById('cantidad-producto').value = '';
             document.getElementById('observaciones').value = '';
+            updateTotalPreview();
             renderFormulasList();
             renderInsumosList();
             setBuilderMode(null);
@@ -525,24 +543,26 @@
             const nit = document.getElementById('cliente-nit').value.trim();
             const telefono = document.getElementById('cliente-telefono').value.trim();
             const precioRaw = document.getElementById('precio-venta').value;
+            const cantidadRaw = document.getElementById('cantidad-producto').value;
             const observaciones = document.getElementById('observaciones').value.trim();
             return {
                 cliente: { nombre, nit, telefono },
                 formulas: quoteFormulas,
                 insumos: quoteInsumos,
                 precioVenta: precioRaw === '' ? null : Number(precioRaw),
+                cantidadProducto: cantidadRaw === '' ? null : Number(cantidadRaw),
                 observaciones,
             };
         }
 
+        // Se puede guardar como borrador con datos incompletos — solo se pide
+        // que haya *algo* (cliente o al menos una fórmula) para no guardar un
+        // registro totalmente vacío. La cotización queda marcada "Borrador"
+        // en el listado hasta que tenga cliente + al menos una fórmula.
         async function saveQuote() {
             const payload = buildQuotePayload();
-            if (!payload.cliente.nombre) {
-                toast('Falta el cliente', 'Escribe el nombre del cliente antes de guardar.', 'warning');
-                return;
-            }
-            if (!quoteFormulas.length) {
-                toast('Sin fórmulas', 'Agrega al menos una fórmula a la cotización.', 'warning');
+            if (!payload.cliente.nombre && !quoteFormulas.length) {
+                toast('Cotización vacía', 'Agrega al menos el nombre del cliente o una fórmula antes de guardar.', 'warning');
                 return;
             }
             try {
@@ -553,7 +573,7 @@
                 } else {
                     data = await apiFetch('/api/quotes', { method: 'POST', body: JSON.stringify(payload) });
                     currentQuoteId = data.quote.id;
-                    toast('Cotización creada', data.quote.folio);
+                    toast('Cotización guardada', data.quote.folio + (isDraftQuote(data.quote) ? ' (borrador)' : ''));
                 }
                 setBuilderMode(data.quote.folio);
                 await loadQuotesList();
@@ -571,9 +591,11 @@
                 document.getElementById('cliente-nit').value = q.cliente?.nit || '';
                 document.getElementById('cliente-telefono').value = q.cliente?.telefono || '';
                 document.getElementById('precio-venta').value = q.precioVenta ?? '';
+                document.getElementById('cantidad-producto').value = q.cantidadProducto ?? '';
                 document.getElementById('observaciones').value = q.observaciones || '';
                 quoteFormulas = q.formulas || [];
                 quoteInsumos = q.insumos || [];
+                updateTotalPreview();
                 renderFormulasList();
                 renderInsumosList();
                 setBuilderMode(q.folio);
@@ -596,6 +618,15 @@
             }
         }
 
+        // Una cotización queda como "Borrador" mientras le falte cliente o
+        // fórmulas — sirve tanto para el resumen del listado (formulaCount)
+        // como para la cotización completa ya cargada (formulas).
+        function isDraftQuote(q) {
+            const hasClient = Boolean(q.cliente?.nombre);
+            const formulaCount = q.formulaCount ?? (Array.isArray(q.formulas) ? q.formulas.length : 0);
+            return !hasClient || formulaCount === 0;
+        }
+
         function renderQuotesList() {
             const q = (document.getElementById('quotes-search').value || '').trim().toLowerCase();
             const box = document.getElementById('quotes-list');
@@ -610,9 +641,11 @@
                 <button onclick="editQuote('${item.id}')" class="w-full text-left p-3 bg-deepblue-950/60 border border-white/5 hover:border-emerald-500/40 rounded-xl transition-colors">
                     <div class="flex items-center justify-between gap-2 mb-1">
                         <span class="text-xs font-bold text-white">${escapeHtml(item.folio)}</span>
-                        <span class="text-[10px] font-bold text-emerald-300">${formatCOP(item.precioVenta)}</span>
+                        ${isDraftQuote(item)
+                            ? '<span class="text-[9px] font-bold text-amber-300 bg-amber-950/50 border border-amber-500/30 px-1.5 py-0.5 rounded uppercase">Borrador</span>'
+                            : `<span class="text-[10px] font-bold text-emerald-300">${formatCOP(item.precioVenta)}</span>`}
                     </div>
-                    <p class="text-[11px] text-gray-400 truncate">${escapeHtml(item.cliente?.nombre || 'Sin nombre')}</p>
+                    <p class="text-[11px] text-gray-400 truncate">${escapeHtml(item.cliente?.nombre || 'Sin nombre de cliente')}</p>
                     <p class="text-[9px] text-gray-600 mt-1">Actualizado ${new Date(item.updatedAt).toLocaleString('es-CO')} por ${escapeHtml(item.updatedBy || '—')}</p>
                 </button>
             `).join('');
@@ -731,26 +764,34 @@
                     doc.text(i.code, marginX, y);
                     doc.setFont('helvetica', 'normal');
                     doc.setTextColor(90, 100, 115);
-                    doc.text(`${i.name} (${typeLabel(i.type)}) — Cantidad: ${i.qty}`, marginX + 22, y);
+                    doc.text(`${i.name} (${typeLabel(i.type)})`, marginX + 22, y);
                     y += 5.2;
                 });
             }
 
-            // Precio de venta
+            // Precio: unitario × cantidad de producto terminado = total
+            const unitPrice = payload.precioVenta;
+            const qtyProduct = payload.cantidadProducto;
+            const totalPrice = (unitPrice && qtyProduct) ? unitPrice * qtyProduct : null;
+
             y += 5;
-            ensureSpace(20);
+            ensureSpace(30);
             doc.setFillColor(240, 253, 250);
-            doc.rect(marginX, y, pageW - marginX * 2, 16, 'F');
+            doc.rect(marginX, y, pageW - marginX * 2, 26, 'F');
             doc.setDrawColor(0, 168, 150);
-            doc.rect(marginX, y, pageW - marginX * 2, 16, 'S');
+            doc.rect(marginX, y, pageW - marginX * 2, 26, 'S');
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8.5);
+            doc.setTextColor(0, 140, 125);
+            doc.text(`Precio unitario: ${formatCOP(unitPrice)}`, marginX + 5, y + 7);
+            doc.text(`Cantidad de producto terminado: ${qtyProduct ?? 'No definida'}`, marginX + 5, y + 13.5);
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(9);
-            doc.setTextColor(0, 140, 125);
-            doc.text('PRECIO DE VENTA AL CLIENTE', marginX + 5, y + 6.5);
+            doc.text('PRECIO TOTAL', marginX + 5, y + 21);
             doc.setFontSize(13);
             doc.setTextColor(10, 37, 64);
-            doc.text(formatCOP(payload.precioVenta), marginX + 5, y + 13);
-            y += 24;
+            doc.text(formatCOP(totalPrice), marginX + 45, y + 21.5);
+            y += 34;
 
             // Observaciones
             if (payload.observaciones) {

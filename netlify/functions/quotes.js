@@ -3,6 +3,11 @@
 // en Netlify Blobs: cada cotización es un documento propio y además se
 // mantiene un índice liviano para listarlas sin tener que leerlas todas.
 //
+// Una cotización se puede guardar como borrador con datos incompletos (el
+// único requisito es traer nombre de cliente o al menos una fórmula, para
+// no guardar un registro totalmente vacío) — el frontend decide si algo
+// es "borrador" mirando si tiene cliente y formulaCount > 0.
+//
 // GET  /api/quotes         -> { quotes: [resumen...] }            (listado)
 // GET  /api/quotes/:id     -> { quote: {...} }                    (detalle)
 // POST /api/quotes         -> crea una cotización nueva, { quote }
@@ -23,12 +28,26 @@ function genFolio(existingCount) {
   return `COT-${year}-${String(existingCount + 1).padStart(4, "0")}`;
 }
 
+function toNullableNumber(value) {
+  return value === "" || value == null ? null : Number(value);
+}
+
+function normalizeCliente(cliente) {
+  return {
+    nombre: String(cliente?.nombre || "").trim(),
+    nit: String(cliente?.nit || "").trim(),
+    telefono: String(cliente?.telefono || "").trim(),
+  };
+}
+
 function quoteSummary(quote) {
   return {
     id: quote.id,
     folio: quote.folio,
     cliente: quote.cliente,
     precioVenta: quote.precioVenta,
+    cantidadProducto: quote.cantidadProducto,
+    formulaCount: Array.isArray(quote.formulas) ? quote.formulas.length : 0,
     createdAt: quote.createdAt,
     updatedAt: quote.updatedAt,
     updatedBy: quote.updatedBy,
@@ -64,8 +83,13 @@ export default async (req) => {
     } catch {
       return jsonResponse(400, { error: "Cuerpo de la solicitud inválido." });
     }
-    if (!body.cliente || !body.cliente.nombre) {
-      return jsonResponse(400, { error: "El nombre del cliente es obligatorio." });
+
+    const cliente = normalizeCliente(body.cliente);
+    const formulas = Array.isArray(body.formulas) ? body.formulas : [];
+    // Se permite guardar como borrador incompleto: solo se exige que haya
+    // *algo* (cliente o una fórmula), para no crear registros vacíos.
+    if (!cliente.nombre && !formulas.length) {
+      return jsonResponse(400, { error: "Agrega al menos el nombre del cliente o una fórmula antes de guardar." });
     }
 
     const index = (await store.get("index", { type: "json" })) || [];
@@ -74,14 +98,11 @@ export default async (req) => {
     const quote = {
       id: newId,
       folio: genFolio(index.length),
-      cliente: {
-        nombre: String(body.cliente.nombre || "").trim(),
-        nit: String(body.cliente.nit || "").trim(),
-        telefono: String(body.cliente.telefono || "").trim(),
-      },
-      formulas: Array.isArray(body.formulas) ? body.formulas : [],
+      cliente,
+      formulas,
       insumos: Array.isArray(body.insumos) ? body.insumos : [],
-      precioVenta: body.precioVenta === "" || body.precioVenta == null ? null : Number(body.precioVenta),
+      precioVenta: toNullableNumber(body.precioVenta),
+      cantidadProducto: toNullableNumber(body.cantidadProducto),
       observaciones: String(body.observaciones || "").trim(),
       createdBy: session.user,
       updatedBy: session.user,
@@ -109,21 +130,11 @@ export default async (req) => {
     const now = new Date().toISOString();
     const updated = {
       ...existing,
-      cliente: body.cliente
-        ? {
-            nombre: String(body.cliente.nombre || "").trim(),
-            nit: String(body.cliente.nit || "").trim(),
-            telefono: String(body.cliente.telefono || "").trim(),
-          }
-        : existing.cliente,
+      cliente: body.cliente ? normalizeCliente(body.cliente) : existing.cliente,
       formulas: Array.isArray(body.formulas) ? body.formulas : existing.formulas,
       insumos: Array.isArray(body.insumos) ? body.insumos : existing.insumos,
-      precioVenta:
-        body.precioVenta === undefined
-          ? existing.precioVenta
-          : body.precioVenta === "" || body.precioVenta == null
-            ? null
-            : Number(body.precioVenta),
+      precioVenta: body.precioVenta === undefined ? existing.precioVenta : toNullableNumber(body.precioVenta),
+      cantidadProducto: body.cantidadProducto === undefined ? existing.cantidadProducto : toNullableNumber(body.cantidadProducto),
       observaciones: body.observaciones !== undefined ? String(body.observaciones).trim() : existing.observaciones,
       updatedBy: session.user,
       updatedAt: now,
