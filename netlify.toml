@@ -1,3 +1,9 @@
+# Las APIs de Cotizaciones (netlify/functions/) son funciones Node normales,
+# no edge functions — necesitan la dependencia @netlify/blobs de package.json,
+# que solo el bundler de Functions resuelve.
+[build]
+  functions = "netlify/functions"
+
 [[edge_functions]]
   path = "/portafolio.html"
   function = "portal-auth"
@@ -7,4 +13,14 @@
 # ahí — esa ruta se quedaba sin proteger si no se declara aparte.
 [[edge_functions]]
   path = "/portafolio"
+  function = "portal-auth"
+
+# Módulo de Cotizaciones (solo colaboradores) — protegido con el mismo
+# gate de usuario/clave que el portafolio, ver netlify/edge-functions/portal-auth.js.
+[[edge_functions]]
+  path = "/cotizaciones.html"
+  function = "portal-auth"
+
+[[edge_functions]]
+  path = "/cotizaciones"
   function = "portal-auth"

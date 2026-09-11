@@ -1,0 +1,9 @@
+{
+  "name": "nutrasyn-web",
+  "private": true,
+  "type": "module",
+  "description": "Sitio estático de NutraSyn Lab. Las únicas dependencias de Node son para las Netlify Functions del módulo de Cotizaciones (netlify/functions/); el resto del sitio es HTML/CSS/JS plano servido tal cual.",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotizaciones B2B | NutraSyn Lab</title>
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <link rel="icon" type="image/svg+xml"
+        href="https://res.cloudinary.com/dj761bgxw/image/upload/v1777037267/svg_1_-cropped_p9sqmo.svg" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&family=Manrope:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="js/product-database.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Manrope', 'sans-serif'], heading: ['Lexend', 'sans-serif'] },
+                    colors: {
+                        deepblue: { DEFAULT: '#0A2540', 50: '#f0f4f8', 100: '#d9e2ec', 200: '#bcccdc', 300: '#9fb3c8', 400: '#829ab1', 500: '#627d98', 600: '#486581', 700: '#334e68', 800: '#243b53', 900: '#0A2540', 950: '#061727' },
+                        emerald: { DEFAULT: '#00A896', 50: '#f0fdfa', 100: '#ccfbf1', 200: '#99f6e4', 300: '#5eead4', 400: '#2dd4bf', 500: '#00A896', 600: '#008c7d', 700: '#007064', 800: '#00574e', 900: '#00403a' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #061727; font-family: 'Manrope', sans-serif; }
+        h1, h2, h3, h4, .font-heading { font-family: 'Lexend', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(10, 37, 64, 0.5); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #00A896; border-radius: 4px; }
+        .field-input {
+            width: 100%; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem;
+            padding: 0.65rem 0.85rem; background: #0A2540; color: #fff; outline: none;
+        }
+        .field-input:focus { box-shadow: 0 0 0 1px #00A896; border-color: #00A896; }
+        .field-label { display:block; font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; letter-spacing: .05em; }
+        .btn-primary { background: #00A896; color: #fff; font-weight: 700; border-radius: 0.75rem; padding: 0.65rem 1.25rem; font-size: 0.75rem; transition: background .2s; }
+        .btn-primary:hover { background: #008c7d; }
+        .btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; font-weight: 600; border-radius: 0.75rem; padding: 0.65rem 1.25rem; font-size: 0.75rem; transition: all .2s; }
+        .btn-secondary:hover { border-color: #00A896; color: #fff; }
+        .card { background: rgba(10, 37, 64, 0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 1.5rem; }
+    </style>
+</head>
+
+<body class="text-gray-300 antialiased min-h-screen">
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[150] flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- Bloqueo de acceso: se decide en JS según window.__PORTAL_SESSION__ -->
+    <div id="access-denied" class="hidden min-h-screen items-center justify-center p-6">
+        <div class="card max-w-md w-full p-8 text-center space-y-4">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-red-500/10 text-red-400 flex items-center justify-center">
+                <i data-lucide="lock" class="w-7 h-7"></i>
+            </div>
+            <h1 class="text-lg font-bold text-white">Acceso restringido</h1>
+            <p id="access-denied-message" class="text-xs text-gray-400 leading-relaxed"></p>
+            <a href="/portafolio.html" class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Volver al portafolio
+            </a>
+        </div>
+    </div>
+
+    <div id="app-root" class="hidden">
+        <!-- Nav -->
+        <nav class="border-b border-white/5 bg-deepblue-900/90 backdrop-blur-md">
+            <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
+                <a href="/portafolio.html" class="flex items-center gap-3">
+                    <img src="https://res.cloudinary.com/dj761bgxw/image/upload/v1777030919/svg_1_vfsoo4.svg"
+                        alt="NutraSyn Lab" class="h-9 w-auto object-contain brightness-0 invert">
+                    <span class="hidden sm:inline text-xs font-bold text-gray-400 border-l border-white/10 pl-3">Cotizaciones B2B</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span id="session-user-badge" class="text-[10px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/20 px-2.5 py-1 rounded-lg"></span>
+                    <a href="/portafolio.html" class="btn-secondary flex items-center gap-1.5">
+                        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Portafolio
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-[1600px] w-full mx-auto p-4 lg:p-8 flex flex-col space-y-8">
+
+            <div class="space-y-1">
+                <h1 class="text-2xl lg:text-3xl font-extrabold text-white">Constructor de Cotizaciones</h1>
+                <p class="text-xs text-gray-400">Arma una cotización con fórmulas del catálogo, insumos/empaques reutilizables, datos del cliente y precio de venta.</p>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+
+                <!-- BUILDER -->
+                <div class="xl:col-span-8 flex flex-col space-y-6">
+
+                    <div class="card p-6 flex items-center justify-between flex-wrap gap-3">
+                        <div>
+                            <span id="builder-mode-badge" class="text-[10px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/20 px-2.5 py-1 rounded-lg uppercase tracking-wider">Nueva cotización</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="newQuote()" class="btn-secondary flex items-center gap-1.5">
+                                <i data-lucide="file-plus" class="w-3.5 h-3.5"></i> Nueva
+                            </button>
+                            <button onclick="downloadQuotePDF()" class="btn-secondary flex items-center gap-1.5">
+                                <i data-lucide="file-down" class="w-3.5 h-3.5"></i> PDF
+                            </button>
+                            <button id="save-quote-btn" onclick="saveQuote()" class="btn-primary flex items-center gap-1.5">
+                                <i data-lucide="save" class="w-3.5 h-3.5"></i> <span>Guardar Cotización</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Cliente -->
+                    <div class="card p-6 space-y-4">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="user" class="w-4 h-4 text-emerald-400"></i> Datos del Cliente</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="field-label">Nombre / Razón social</label>
+                                <input type="text" id="cliente-nombre" class="field-input" placeholder="Ej: Alimentos Vitales S.A.S.">
+                            </div>
+                            <div>
+                                <label class="field-label">NIT</label>
+                                <input type="text" id="cliente-nit" class="field-input" placeholder="Ej: 900.123.456-7">
+                            </div>
+                            <div>
+                                <label class="field-label">Teléfono</label>
+                                <input type="tel" id="cliente-telefono" class="field-input" placeholder="Ej: +57 300 000 0000">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fórmulas -->
+                    <div class="card p-6 space-y-4">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="beaker" class="w-4 h-4 text-emerald-400"></i> Fórmulas de la Cotización</h3>
+                        <div class="relative">
+                            <input type="text" id="formula-search" oninput="renderFormulaSearchResults()"
+                                placeholder="Buscar fórmula por nombre o ingrediente..." class="field-input pl-9">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-gray-500 absolute left-3 top-3"></i>
+                        </div>
+                        <div id="formula-search-results" class="hidden max-h-52 overflow-y-auto custom-scrollbar space-y-1.5 border border-white/5 rounded-xl p-2 bg-deepblue-950/60"></div>
+
+                        <div id="quote-formulas-list" class="space-y-2">
+                            <p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Aún no hay fórmulas agregadas.</p>
+                        </div>
+                    </div>
+
+                    <!-- Insumos / Empaques -->
+                    <div class="card p-6 space-y-4">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="package" class="w-4 h-4 text-emerald-400"></i> Insumos y Empaques</h3>
+                        <div class="relative">
+                            <input type="text" id="insumo-search" oninput="renderInsumoSearchResults()"
+                                placeholder="Buscar por código o nombre (envase, tapa, copa, caja, divisor...)" class="field-input pl-9">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-gray-500 absolute left-3 top-3"></i>
+                        </div>
+                        <div id="insumo-search-results" class="hidden max-h-52 overflow-y-auto custom-scrollbar space-y-1.5 border border-white/5 rounded-xl p-2 bg-deepblue-950/60"></div>
+
+                        <button onclick="toggleNewInsumoForm()" class="btn-secondary flex items-center gap-1.5 text-[11px]">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Nuevo insumo (código único)
+                        </button>
+
+                        <div id="new-insumo-form" class="hidden grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-deepblue-950/60 border border-white/5 rounded-xl">
+                            <div>
+                                <label class="field-label">Tipo</label>
+                                <select id="insumo-type" class="field-input">
+                                    <option value="envase">Envase</option>
+                                    <option value="tapa">Tapa</option>
+                                    <option value="copa">Copa</option>
+                                    <option value="caja">Caja</option>
+                                    <option value="divisor">Divisor</option>
+                                    <option value="insumo">Insumo</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="field-label">Nombre</label>
+                                <input type="text" id="insumo-name" class="field-input" placeholder="Ej: Envase PET 500ml transparente">
+                            </div>
+                            <div>
+                                <label class="field-label">Notas (opcional)</label>
+                                <input type="text" id="insumo-notes" class="field-input" placeholder="Proveedor, color...">
+                            </div>
+                            <div class="md:col-span-4">
+                                <button onclick="submitNewInsumo()" class="btn-primary">Guardar y agregar a la cotización</button>
+                            </div>
+                        </div>
+
+                        <div id="quote-insumos-list" class="space-y-2">
+                            <p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Aún no hay insumos agregados.</p>
+                        </div>
+                    </div>
+
+                    <!-- Precio y Observaciones -->
+                    <div class="card p-6 space-y-4">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-emerald-400"></i> Precio y Observaciones</h3>
+                        <div>
+                            <label class="field-label">Precio de venta al cliente (COP)</label>
+                            <input type="number" id="precio-venta" min="0" step="1" class="field-input" placeholder="Ej: 8500000">
+                        </div>
+                        <div>
+                            <label class="field-label">Observaciones</label>
+                            <textarea id="observaciones" rows="4" class="field-input" placeholder="Condiciones comerciales, tiempos de entrega, notas internas..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SAVED QUOTES -->
+                <div class="xl:col-span-4 flex flex-col space-y-4">
+                    <div class="card p-6 space-y-4 xl:sticky xl:top-6">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="list" class="w-4 h-4 text-emerald-400"></i> Cotizaciones Guardadas</h3>
+                        <input type="text" id="quotes-search" oninput="renderQuotesList()" placeholder="Buscar por folio o cliente..." class="field-input">
+                        <div id="quotes-list" class="space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar pr-1">
+                            <p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const session = window.__PORTAL_SESSION__;
+        let currentQuoteId = null;
+        let quoteFormulas = [];
+        let quoteInsumos = [];
+        let packagingCache = [];
+        let quotesCache = [];
+
+        const TYPE_LABELS = { envase: 'Envase', tapa: 'Tapa', copa: 'Copa', caja: 'Caja', divisor: 'Divisor', insumo: 'Insumo', otro: 'Otro' };
+
+        // Nombres de insumos, clientes y observaciones son texto libre que un
+        // colaborador escribe y luego se guarda y se le muestra a otros
+        // colaboradores — sin escapar, un nombre malicioso quedaría como XSS
+        // persistente cada vez que se renderiza la lista. Todo texto libre
+        // que se inserta con innerHTML pasa por aquí primero.
+        function escapeHtml(str) {
+            return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
+        // --- Guardia de acceso ---
+        function denyAccess(message) {
+            document.getElementById('access-denied-message').textContent = message;
+            document.getElementById('access-denied').classList.remove('hidden');
+            document.getElementById('access-denied').classList.add('flex');
+            lucide.createIcons();
+        }
+
+        if (!session) {
+            denyAccess('No se detectó una sesión activa. Vuelve a iniciar sesión desde el portafolio e intenta de nuevo.');
+        } else if (session.role !== 'colaborador') {
+            denyAccess('Este módulo es exclusivo para colaboradores de NutraSyn Lab. Si necesitas acceso, pide a un administrador que actualice tu usuario en la variable PORTAL_USERS con el rol "colaborador".');
+        } else if (!session.token) {
+            denyAccess('Tu usuario tiene permiso de colaborador, pero el servidor no tiene configurada la variable PORTAL_TOKEN_SECRET, así que no es posible conectar con la API de Cotizaciones. Pide a un administrador que la configure en Netlify (Site configuration → Environment variables) y vuelve a intentar.');
+        } else {
+            document.getElementById('app-root').classList.remove('hidden');
+            document.getElementById('session-user-badge').textContent = session.user + ' · colaborador';
+            lucide.createIcons();
+            initApp();
+        }
+
+        // --- Toasts ---
+        function toast(title, message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            let colorBorder = 'border-emerald-500';
+            if (type === 'warning') colorBorder = 'border-yellow-500';
+            if (type === 'error') colorBorder = 'border-red-500';
+            el.className = `p-4 border-l-4 ${colorBorder} bg-deepblue-950 border border-white/5 rounded-xl shadow-2xl flex items-start space-x-3 pointer-events-auto transition-all duration-300 transform translate-y-4 opacity-0 max-w-xs`;
+            el.innerHTML = `<div><h5 class="text-xs font-bold text-white">${title}</h5><p class="text-[10px] text-gray-400 mt-0.5">${message || ''}</p></div>`;
+            container.appendChild(el);
+            setTimeout(() => el.classList.remove('translate-y-4', 'opacity-0'), 50);
+            setTimeout(() => { el.classList.add('opacity-0'); setTimeout(() => el.remove(), 300); }, 3500);
+        }
+
+        // --- API ---
+        async function apiFetch(path, opts = {}) {
+            const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+            headers['Authorization'] = 'Bearer ' + session.token;
+            const res = await fetch(path, Object.assign({}, opts, { headers }));
+            let data = null;
+            try { data = await res.json(); } catch (e) { /* respuesta sin cuerpo JSON */ }
+            if (!res.ok) throw new Error((data && data.error) || ('Error HTTP ' + res.status));
+            return data;
+        }
+
+        function formatCOP(value) {
+            if (value === null || value === undefined || value === '') return 'No definido';
+            return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value);
+        }
+
+        function mezclaLabel(prod) {
+            const prefix = prod.format === 'Líquido' ? 'Mezcla líquida con: ' : 'Mezcla en polvo con: ';
+            return prefix + prod.ingredients;
+        }
+
+        // --- Fórmulas ---
+        function renderFormulaSearchResults() {
+            const q = document.getElementById('formula-search').value.trim().toLowerCase();
+            const box = document.getElementById('formula-search-results');
+            if (!q) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+            const matches = window.productDatabase.filter(p =>
+                p.name.toLowerCase().includes(q) || p.ingredients.toLowerCase().includes(q)
+            ).slice(0, 25);
+            if (!matches.length) {
+                box.innerHTML = '<p class="text-[11px] text-gray-500 p-2">Sin resultados.</p>';
+            } else {
+                box.innerHTML = matches.map(p => `
+                    <button onclick="addFormulaToQuote('${p.id}')" class="w-full text-left p-2.5 rounded-lg hover:bg-white/5 flex items-center justify-between gap-2 transition-colors">
+                        <span class="text-[11px]">
+                            <span class="font-bold text-white">${escapeHtml(p.name)}</span>
+                            <span class="text-gray-500"> · ${escapeHtml(p.format)} · ${p.id.toUpperCase()}</span>
+                        </span>
+                        <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
+                    </button>
+                `).join('');
+            }
+            box.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function addFormulaToQuote(productId) {
+            const prod = window.productDatabase.find(p => p.id === productId);
+            if (!prod) return;
+            if (quoteFormulas.some(f => f.productId === productId)) {
+                toast('Ya agregada', 'Esa fórmula ya está en la cotización.', 'warning');
+                return;
+            }
+            quoteFormulas.push({ productId: prod.id, name: prod.name, format: prod.format, ingredients: prod.ingredients });
+            document.getElementById('formula-search').value = '';
+            document.getElementById('formula-search-results').classList.add('hidden');
+            renderFormulasList();
+        }
+
+        function removeFormula(productId) {
+            quoteFormulas = quoteFormulas.filter(f => f.productId !== productId);
+            renderFormulasList();
+        }
+
+        function renderFormulasList() {
+            const box = document.getElementById('quote-formulas-list');
+            if (!quoteFormulas.length) {
+                box.innerHTML = '<p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Aún no hay fórmulas agregadas.</p>';
+                return;
+            }
+            box.innerHTML = quoteFormulas.map(f => `
+                <div class="p-3 bg-deepblue-950/60 border border-white/5 rounded-xl flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                            <span class="text-xs font-bold text-white">${escapeHtml(f.name)}</span>
+                            <span class="text-[9px] font-mono text-gray-500">${f.productId.toUpperCase()}</span>
+                        </div>
+                        <p class="text-[11px] text-gray-400 leading-relaxed">${escapeHtml(mezclaLabel(f))}</p>
+                    </div>
+                    <button onclick="removeFormula('${f.productId}')" class="text-gray-500 hover:text-red-400 shrink-0">
+                        <i data-lucide="trash" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // --- Insumos / Empaques ---
+        async function loadPackagingCatalog() {
+            try {
+                const data = await apiFetch('/api/packaging');
+                packagingCache = data.items || [];
+            } catch (err) {
+                toast('Error al cargar insumos', err.message, 'error');
+            }
+        }
+
+        function toggleNewInsumoForm() {
+            document.getElementById('new-insumo-form').classList.toggle('hidden');
+        }
+
+        async function submitNewInsumo() {
+            const type = document.getElementById('insumo-type').value;
+            const name = document.getElementById('insumo-name').value.trim();
+            const notas = document.getElementById('insumo-notes').value.trim();
+            if (!name) { toast('Falta el nombre', 'Escribe un nombre para el insumo.', 'warning'); return; }
+            try {
+                const data = await apiFetch('/api/packaging', { method: 'POST', body: JSON.stringify({ type, name, notas }) });
+                packagingCache.push(data.item);
+                addInsumoToQuote(data.item.code);
+                document.getElementById('insumo-name').value = '';
+                document.getElementById('insumo-notes').value = '';
+                document.getElementById('new-insumo-form').classList.add('hidden');
+                toast('Insumo creado', `${data.item.code} — ${data.item.name}. Ya quedó guardado para reutilizarlo en otras cotizaciones.`);
+            } catch (err) {
+                toast('Error al crear el insumo', err.message, 'error');
+            }
+        }
+
+        function renderInsumoSearchResults() {
+            const q = document.getElementById('insumo-search').value.trim().toLowerCase();
+            const box = document.getElementById('insumo-search-results');
+            if (!q) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+            const matches = packagingCache.filter(i =>
+                i.code.toLowerCase().includes(q) || i.name.toLowerCase().includes(q)
+            ).slice(0, 25);
+            if (!matches.length) {
+                box.innerHTML = '<p class="text-[11px] text-gray-500 p-2">Sin resultados. Usa "Nuevo insumo" para crearlo.</p>';
+            } else {
+                box.innerHTML = matches.map(i => `
+                    <button onclick="addInsumoToQuote('${i.code}')" class="w-full text-left p-2.5 rounded-lg hover:bg-white/5 flex items-center justify-between gap-2 transition-colors">
+                        <span class="text-[11px]">
+                            <span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded uppercase font-mono">${escapeHtml(i.code)}</span>
+                            <span class="font-bold text-white ml-1">${escapeHtml(i.name)}</span>
+                            <span class="text-gray-500"> · ${escapeHtml(TYPE_LABELS[i.type] || i.type)}</span>
+                        </span>
+                        <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
+                    </button>
+                `).join('');
+            }
+            box.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function addInsumoToQuote(code) {
+            const item = packagingCache.find(i => i.code === code);
+            if (!item) return;
+            const existing = quoteInsumos.find(i => i.code === code);
+            if (existing) { existing.qty += 1; } else { quoteInsumos.push({ code: item.code, type: item.type, name: item.name, qty: 1 }); }
+            document.getElementById('insumo-search').value = '';
+            document.getElementById('insumo-search-results').classList.add('hidden');
+            renderInsumosList();
+        }
+
+        function updateInsumoQty(code, qty) {
+            const item = quoteInsumos.find(i => i.code === code);
+            if (!item) return;
+            const n = parseInt(qty, 10);
+            item.qty = Number.isFinite(n) && n > 0 ? n : 1;
+        }
+
+        function removeInsumo(code) {
+            quoteInsumos = quoteInsumos.filter(i => i.code !== code);
+            renderInsumosList();
+        }
+
+        function renderInsumosList() {
+            const box = document.getElementById('quote-insumos-list');
+            if (!quoteInsumos.length) {
+                box.innerHTML = '<p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Aún no hay insumos agregados.</p>';
+                return;
+            }
+            box.innerHTML = quoteInsumos.map(i => `
+                <div class="p-3 bg-deepblue-950/60 border border-white/5 rounded-xl flex items-center justify-between gap-3">
+                    <div class="min-w-0 flex items-center gap-2">
+                        <span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded uppercase font-mono shrink-0">${escapeHtml(i.code)}</span>
+                        <div class="min-w-0">
+                            <span class="text-xs font-bold text-white block truncate">${escapeHtml(i.name)}</span>
+                            <span class="text-[10px] text-gray-500">${escapeHtml(TYPE_LABELS[i.type] || i.type)}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <input type="number" min="1" value="${i.qty}" onchange="updateInsumoQty('${i.code}', this.value)" class="field-input w-16 text-center !p-1.5">
+                        <button onclick="removeInsumo('${i.code}')" class="text-gray-500 hover:text-red-400"><i data-lucide="trash" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // --- Guardar / Cargar cotizaciones ---
+        function setBuilderMode(folio) {
+            const badge = document.getElementById('builder-mode-badge');
+            const saveBtn = document.getElementById('save-quote-btn');
+            if (folio) {
+                badge.textContent = 'Editando ' + folio;
+                saveBtn.querySelector('span').textContent = 'Actualizar Cotización';
+            } else {
+                badge.textContent = 'Nueva cotización';
+                saveBtn.querySelector('span').textContent = 'Guardar Cotización';
+            }
+        }
+
+        function newQuote() {
+            currentQuoteId = null;
+            quoteFormulas = [];
+            quoteInsumos = [];
+            document.getElementById('cliente-nombre').value = '';
+            document.getElementById('cliente-nit').value = '';
+            document.getElementById('cliente-telefono').value = '';
+            document.getElementById('precio-venta').value = '';
+            document.getElementById('observaciones').value = '';
+            renderFormulasList();
+            renderInsumosList();
+            setBuilderMode(null);
+            toast('Cotización nueva', 'Lienzo limpio para armar otra cotización.');
+        }
+
+        function buildQuotePayload() {
+            const nombre = document.getElementById('cliente-nombre').value.trim();
+            const nit = document.getElementById('cliente-nit').value.trim();
+            const telefono = document.getElementById('cliente-telefono').value.trim();
+            const precioRaw = document.getElementById('precio-venta').value;
+            const observaciones = document.getElementById('observaciones').value.trim();
+            return {
+                cliente: { nombre, nit, telefono },
+                formulas: quoteFormulas,
+                insumos: quoteInsumos,
+                precioVenta: precioRaw === '' ? null : Number(precioRaw),
+                observaciones,
+            };
+        }
+
+        async function saveQuote() {
+            const payload = buildQuotePayload();
+            if (!payload.cliente.nombre) {
+                toast('Falta el cliente', 'Escribe el nombre del cliente antes de guardar.', 'warning');
+                return;
+            }
+            if (!quoteFormulas.length) {
+                toast('Sin fórmulas', 'Agrega al menos una fórmula a la cotización.', 'warning');
+                return;
+            }
+            try {
+                let data;
+                if (currentQuoteId) {
+                    data = await apiFetch('/api/quotes/' + currentQuoteId, { method: 'PUT', body: JSON.stringify(payload) });
+                    toast('Cotización actualizada', data.quote.folio);
+                } else {
+                    data = await apiFetch('/api/quotes', { method: 'POST', body: JSON.stringify(payload) });
+                    currentQuoteId = data.quote.id;
+                    toast('Cotización creada', data.quote.folio);
+                }
+                setBuilderMode(data.quote.folio);
+                await loadQuotesList();
+            } catch (err) {
+                toast('Error al guardar', err.message, 'error');
+            }
+        }
+
+        async function editQuote(id) {
+            try {
+                const data = await apiFetch('/api/quotes/' + id);
+                const q = data.quote;
+                currentQuoteId = q.id;
+                document.getElementById('cliente-nombre').value = q.cliente?.nombre || '';
+                document.getElementById('cliente-nit').value = q.cliente?.nit || '';
+                document.getElementById('cliente-telefono').value = q.cliente?.telefono || '';
+                document.getElementById('precio-venta').value = q.precioVenta ?? '';
+                document.getElementById('observaciones').value = q.observaciones || '';
+                quoteFormulas = q.formulas || [];
+                quoteInsumos = q.insumos || [];
+                renderFormulasList();
+                renderInsumosList();
+                setBuilderMode(q.folio);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                toast('Cotización cargada', q.folio + ' lista para editar.');
+            } catch (err) {
+                toast('Error al cargar', err.message, 'error');
+            }
+        }
+
+        async function loadQuotesList() {
+            try {
+                const data = await apiFetch('/api/quotes');
+                quotesCache = data.quotes || [];
+                renderQuotesList();
+            } catch (err) {
+                toast('Error al cargar cotizaciones', err.message, 'error');
+                document.getElementById('quotes-list').innerHTML =
+                    '<p class="text-[11px] text-red-400 border border-dashed border-red-500/30 rounded-xl p-4 text-center">No se pudo cargar el listado.</p>';
+            }
+        }
+
+        function renderQuotesList() {
+            const q = (document.getElementById('quotes-search').value || '').trim().toLowerCase();
+            const box = document.getElementById('quotes-list');
+            const filtered = !q ? quotesCache : quotesCache.filter(item =>
+                item.folio.toLowerCase().includes(q) || (item.cliente?.nombre || '').toLowerCase().includes(q)
+            );
+            if (!filtered.length) {
+                box.innerHTML = '<p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">No hay cotizaciones guardadas.</p>';
+                return;
+            }
+            box.innerHTML = filtered.map(item => `
+                <button onclick="editQuote('${item.id}')" class="w-full text-left p-3 bg-deepblue-950/60 border border-white/5 hover:border-emerald-500/40 rounded-xl transition-colors">
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                        <span class="text-xs font-bold text-white">${escapeHtml(item.folio)}</span>
+                        <span class="text-[10px] font-bold text-emerald-300">${formatCOP(item.precioVenta)}</span>
+                    </div>
+                    <p class="text-[11px] text-gray-400 truncate">${escapeHtml(item.cliente?.nombre || 'Sin nombre')}</p>
+                    <p class="text-[9px] text-gray-600 mt-1">Actualizado ${new Date(item.updatedAt).toLocaleString('es-CO')} por ${escapeHtml(item.updatedBy || '—')}</p>
+                </button>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // --- PDF de cotización ---
+        function downloadQuotePDF() {
+            const payload = buildQuotePayload();
+            if (!payload.cliente.nombre) {
+                toast('Falta el cliente', 'Escribe el nombre del cliente antes de generar el PDF.', 'warning');
+                return;
+            }
+            if (!quoteFormulas.length) {
+                toast('Sin fórmulas', 'Agrega al menos una fórmula antes de generar el PDF.', 'warning');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const pageW = 210, pageH = 297, marginX = 15;
+            let y = 20;
+
+            function ensureSpace(needed) {
+                if (y + needed > pageH - 20) {
+                    drawFooter();
+                    doc.addPage();
+                    y = 20;
+                }
+            }
+            function drawFooter() {
+                doc.setFontSize(7.5);
+                doc.setTextColor(148, 163, 184);
+                doc.text('NutraSyn Lab | operaciones@synergia-360.com | +57 314 281 8326 | www.nutrasynlab.co', marginX, pageH - 10);
+            }
+
+            // Header
+            doc.setFillColor(10, 37, 64);
+            doc.rect(0, 0, pageW, 30, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.setTextColor(255, 255, 255);
+            doc.text('NutraSyn Lab', marginX, 15);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.setTextColor(0, 168, 150);
+            doc.text('Cotización Comercial B2B', marginX, 22);
+            const folioLabel = currentQuoteId ? (document.getElementById('builder-mode-badge').textContent.replace('Editando ', '')) : 'Borrador (sin guardar)';
+            doc.setFontSize(9);
+            doc.setTextColor(226, 232, 240);
+            doc.text(folioLabel, pageW - marginX, 15, { align: 'right' });
+            doc.setFontSize(8);
+            doc.setTextColor(148, 163, 184);
+            doc.text(new Date().toLocaleDateString('es-CO'), pageW - marginX, 22, { align: 'right' });
+
+            y = 40;
+
+            // Cliente
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10.5);
+            doc.setTextColor(10, 37, 64);
+            doc.text('Cliente', marginX, y);
+            y += 6;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.setTextColor(51, 65, 85);
+            doc.text(`Nombre: ${payload.cliente.nombre}`, marginX, y); y += 5.5;
+            doc.text(`NIT: ${payload.cliente.nit || 'No indicado'}`, marginX, y); y += 5.5;
+            doc.text(`Teléfono: ${payload.cliente.telefono || 'No indicado'}`, marginX, y); y += 9;
+
+            // Fórmulas
+            ensureSpace(15);
+            doc.setDrawColor(0, 168, 150);
+            doc.setLineWidth(0.6);
+            doc.line(marginX, y, pageW - marginX, y);
+            y += 7;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10.5);
+            doc.setTextColor(10, 37, 64);
+            doc.text(`Fórmulas cotizadas (${quoteFormulas.length})`, marginX, y);
+            y += 6.5;
+
+            quoteFormulas.forEach((f, idx) => {
+                const bodyLines = doc.splitTextToSize(mezclaLabel(f), pageW - marginX * 2 - 4);
+                ensureSpace(8 + bodyLines.length * 4.2);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(9);
+                doc.setTextColor(15, 23, 42);
+                doc.text(`${idx + 1}. ${f.name}`, marginX, y);
+                y += 4.6;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8.3);
+                doc.setTextColor(90, 100, 115);
+                doc.text(bodyLines, marginX + 3, y);
+                y += bodyLines.length * 4.2 + 3;
+            });
+
+            // Insumos
+            if (quoteInsumos.length) {
+                y += 3;
+                ensureSpace(15);
+                doc.setDrawColor(0, 168, 150);
+                doc.line(marginX, y, pageW - marginX, y);
+                y += 7;
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10.5);
+                doc.setTextColor(10, 37, 64);
+                doc.text('Insumos y Empaques', marginX, y);
+                y += 6.5;
+
+                doc.setFontSize(8.3);
+                quoteInsumos.forEach(i => {
+                    ensureSpace(6);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(15, 23, 42);
+                    doc.text(i.code, marginX, y);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(90, 100, 115);
+                    doc.text(`${i.name} (${TYPE_LABELS[i.type] || i.type}) — Cantidad: ${i.qty}`, marginX + 22, y);
+                    y += 5.2;
+                });
+            }
+
+            // Precio de venta
+            y += 5;
+            ensureSpace(20);
+            doc.setFillColor(240, 253, 250);
+            doc.rect(marginX, y, pageW - marginX * 2, 16, 'F');
+            doc.setDrawColor(0, 168, 150);
+            doc.rect(marginX, y, pageW - marginX * 2, 16, 'S');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(0, 140, 125);
+            doc.text('PRECIO DE VENTA AL CLIENTE', marginX + 5, y + 6.5);
+            doc.setFontSize(13);
+            doc.setTextColor(10, 37, 64);
+            doc.text(formatCOP(payload.precioVenta), marginX + 5, y + 13);
+            y += 24;
+
+            // Observaciones
+            if (payload.observaciones) {
+                ensureSpace(15);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10.5);
+                doc.setTextColor(10, 37, 64);
+                doc.text('Observaciones', marginX, y);
+                y += 6;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(51, 65, 85);
+                const obsLines = doc.splitTextToSize(payload.observaciones, pageW - marginX * 2);
+                ensureSpace(obsLines.length * 4.6);
+                doc.text(obsLines, marginX, y);
+                y += obsLines.length * 4.6;
+            }
+
+            drawFooter();
+
+            const safeName = (payload.cliente.nombre || 'cliente').replace(/[^\w]+/g, '_');
+            const filenameFolio = currentQuoteId ? folioLabel.replace(/[^\w-]+/g, '_') : 'borrador';
+            doc.save(`NutraSyn_Cotizacion_${filenameFolio}_${safeName}.pdf`);
+            toast('PDF generado', 'La cotización se descargó correctamente.');
+        }
+
+        // --- Init ---
+        function initApp() {
+            renderFormulasList();
+            renderInsumosList();
+            loadPackagingCatalog();
+            loadQuotesList();
+        }
+    </script>
+</body>
+
+</html>

@@ -1,6 +1,7 @@
-// Netlify Edge Function: protege /portafolio.html a nivel de servidor.
+// Netlify Edge Function: protege /portafolio.html, /cotizaciones.html (y sus
+// alias sin extensión) a nivel de servidor.
 //
-// Diseño SIN estado (sin cookies, sin sesión): cada GET a /portafolio.html
+// Diseño SIN estado (sin cookies, sin sesión): cada GET a estas páginas
 // devuelve siempre el formulario de usuario + clave, sin excepción — aunque
 // sea la misma persona que ya entró antes, aunque tenga la pestaña abierta,
 // aunque recargue. El contenido real (con las fórmulas) solo se entrega
@@ -13,19 +14,41 @@
 // (fácil y seguro de cachear tal cual), y las respuestas POST no se
 // cachean nunca por defecto en ninguna CDN.
 //
+// TOKEN DE SESIÓN PARA LAS APIS (cotizaciones / insumos) — NO es una cookie:
+// al validar el login, esta función firma un token corto {usuario, rol,
+// expiración} y lo embebe en el propio HTML de respuesta como
+// `window.__PORTAL_SESSION__`. Vive solo en memoria de esa pestaña. El
+// frontend lo reenvía como header "Authorization: Bearer <token>" en cada
+// llamada a /api/quotes y /api/packaging, y esos endpoints (Netlify
+// Functions) lo verifican con el mismo secreto. Así ni clientes ni
+// colaboradores necesitan volver a autenticarse para usar la API mientras
+// dura la página, sin tener que introducir cookies/sesiones de servidor.
+//
 // Configuración en Netlify (Site configuration -> Environment variables):
 //
 //   PORTAL_USERS  (recomendado) — una cuenta por colaborador, formato:
-//     usuario1:clave1,usuario2:clave2,usuario3:clave3
-//     (sin comas ni dos puntos dentro de usuarios/claves)
+//     usuario1:clave1:colaborador,usuario2:clave2:cliente,usuario3:clave3
+//     El tercer campo (rol) es opcional: "colaborador" o "cliente".
+//     Si se omite, el usuario queda como "cliente" (privilegio mínimo por
+//     defecto). Solo el rol "colaborador" puede usar el módulo de
+//     Cotizaciones. (sin comas ni dos puntos dentro de usuarios/claves)
 //
 //   PORTAL_PASSWORD (alternativa simple) — si no defines PORTAL_USERS,
 //     se acepta cualquier nombre de usuario (no vacío) junto con esta
-//     clave única compartida.
+//     clave única compartida. Como no distingue personas, todas las
+//     cuentas en este modo quedan como "cliente" (sin acceso a
+//     Cotizaciones); para dar acceso de colaborador hace falta PORTAL_USERS.
 //
-// Para dar de alta/baja o rotar la clave de un colaborador: editar
-// PORTAL_USERS (o PORTAL_PASSWORD) y volver a desplegar. No hay que
-// tocar código.
+//   PORTAL_TOKEN_SECRET (requerida para Cotizaciones) — cadena aleatoria
+//     larga usada para firmar los tokens de sesión de las APIs. Sin ella,
+//     el portal sigue funcionando igual que antes, pero el módulo de
+//     Cotizaciones no puede autenticar llamadas a la API.
+//
+// Para dar de alta/baja, rotar la clave o cambiar el rol de un
+// colaborador: editar PORTAL_USERS (o PORTAL_PASSWORD) y volver a
+// desplegar. No hay que tocar código.
+
+import { createSessionToken } from "./lib/session.js";
 
 const NO_STORE = "private, no-store, no-cache, must-revalidate";
 
@@ -37,14 +60,25 @@ function getAuthConfig() {
     .map(entry => entry.trim())
     .filter(Boolean)
     .map(entry => {
-      const idx = entry.indexOf(":");
-      if (idx === -1) return null;
-      return { user: entry.slice(0, idx).trim(), pass: entry.slice(idx + 1).trim() };
+      const parts = entry.split(":").map(p => p.trim());
+      if (parts.length < 2 || parts.length > 3) return null;
+      const [user, pass, roleRaw] = parts;
+      if (!user || !pass) return null;
+      // Privilegio mínimo por defecto: cualquier valor que no sea
+      // exactamente "colaborador" queda como "cliente".
+      const role = roleRaw === "colaborador" ? "colaborador" : "cliente";
+      return { user, pass, role };
     })
     .filter(Boolean);
 
   if (accounts.length > 0) {
-    return { matches: (u, p) => accounts.some(a => a.user === u && a.pass === p) };
+    return {
+      matches: (u, p) => accounts.some(a => a.user === u && a.pass === p),
+      roleFor: (u, p) => {
+        const account = accounts.find(a => a.user === u && a.pass === p);
+        return account ? account.role : "cliente";
+      },
+    };
   }
 
   // Alternativa simple: una sola clave compartida, cualquier usuario no vacío.
@@ -52,6 +86,8 @@ function getAuthConfig() {
   return {
     // Sin PORTAL_USERS ni PORTAL_PASSWORD configuradas -> nadie entra (fail-closed).
     matches: (u, p) => Boolean(singlePassword) && Boolean(u) && p === singlePassword,
+    // El modo de clave compartida no distingue personas: nunca da rol de colaborador.
+    roleFor: () => "cliente",
   };
 }
 
@@ -129,6 +165,33 @@ export default async (request, context) => {
       const realResponse = await context.next(originRequest);
       const headers = new Headers(realResponse.headers);
       headers.set("Cache-Control", NO_STORE);
+
+      const role = config.roleFor(submittedUser, submittedPass);
+      const tokenSecret = Deno.env.get("PORTAL_TOKEN_SECRET") || "";
+      // Si no se configuró PORTAL_TOKEN_SECRET, el portal sigue funcionando
+      // igual que siempre; solo queda sin "token" (null), así el frontend
+      // puede detectarlo y avisar que falta configurar esa variable en vez
+      // de fallar en silencio al llamar a la API de Cotizaciones.
+      const token = tokenSecret ? await createSessionToken(tokenSecret, submittedUser, role) : null;
+
+      const contentType = headers.get("content-type") || "";
+      if (contentType.includes("text/html")) {
+        const html = await realResponse.text();
+        // Se escapa "<" (-> \u003c) por si el usuario configurado en
+        // PORTAL_USERS llegara a incluir "</script>": evita que rompa la
+        // etiqueta <script> al insertarse en el HTML.
+        const sessionScript =
+          `<script>window.__PORTAL_SESSION__=${JSON.stringify({ user: submittedUser, role, token }).replace(/</g, "\\u003c")};</script>`;
+        const injected = html.includes("</head>")
+          ? html.replace("</head>", sessionScript + "</head>")
+          : html + sessionScript;
+        // El body cambió de tamaño: si dejamos el Content-Length original
+        // (copiado de realResponse.headers), el navegador podría truncar
+        // la respuesta. Lo quitamos y dejamos que el runtime lo recalcule.
+        headers.delete("Content-Length");
+        return new Response(injected, { status: realResponse.status, headers });
+      }
+
       return new Response(realResponse.body, { status: realResponse.status, headers });
     }
 
