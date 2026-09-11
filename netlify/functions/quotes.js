@@ -12,6 +12,11 @@
 // cada fórmula — no se valida a fondo esa forma en el servidor, se guarda
 // tal cual la arma el frontend.
 //
+// formaPago y tiempoEntrega son una sola opción cada uno (snapshot
+// {code, texto} tomado de /api/conditions, o null) — el resto de
+// condiciones estándar de la cotización se generan como texto fijo en el
+// PDF, no se guardan aquí.
+//
 // Una cotización se puede guardar como borrador con datos incompletos (el
 // único requisito es traer nombre de cliente o al menos una fórmula, para
 // no guardar un registro totalmente vacío) — el frontend decide si algo
@@ -43,6 +48,14 @@ function normalizeCliente(cliente) {
     nit: String(cliente?.nit || "").trim(),
     telefono: String(cliente?.telefono || "").trim(),
   };
+}
+
+// Forma de pago y tiempo de entrega son selección única (no una lista),
+// tomadas del catálogo de /api/conditions y guardadas como snapshot
+// {code, texto} — o null si no se eligió ninguna.
+function normalizeConditionChoice(value) {
+  if (!value || !value.texto) return null;
+  return { code: value.code || null, texto: String(value.texto).trim() };
 }
 
 // Suma precioUnitario × cantidad de las fórmulas que tengan ambos valores.
@@ -121,7 +134,8 @@ export default async (req) => {
       folio: genFolio(index.length),
       cliente,
       formulas,
-      condiciones: Array.isArray(body.condiciones) ? body.condiciones : [],
+      formaPago: normalizeConditionChoice(body.formaPago),
+      tiempoEntrega: normalizeConditionChoice(body.tiempoEntrega),
       observaciones: String(body.observaciones || "").trim(),
       elaboradoPor: String(body.elaboradoPor || "").trim(),
       createdBy: session.user,
@@ -152,7 +166,8 @@ export default async (req) => {
       ...existing,
       cliente: body.cliente ? normalizeCliente(body.cliente) : existing.cliente,
       formulas: Array.isArray(body.formulas) ? body.formulas : existing.formulas,
-      condiciones: Array.isArray(body.condiciones) ? body.condiciones : existing.condiciones,
+      formaPago: body.formaPago !== undefined ? normalizeConditionChoice(body.formaPago) : existing.formaPago,
+      tiempoEntrega: body.tiempoEntrega !== undefined ? normalizeConditionChoice(body.tiempoEntrega) : existing.tiempoEntrega,
       observaciones: body.observaciones !== undefined ? String(body.observaciones).trim() : existing.observaciones,
       elaboradoPor: body.elaboradoPor !== undefined ? String(body.elaboradoPor).trim() : existing.elaboradoPor,
       updatedBy: session.user,

@@ -159,29 +159,44 @@
                     </div>
 
                     <!-- Condiciones Comerciales -->
-                    <div class="card p-6 space-y-4">
-                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="file-check" class="w-4 h-4 text-emerald-400"></i> Condiciones Comerciales</h3>
-                        <div class="relative">
-                            <input type="text" id="condicion-search" oninput="renderConditionSearchResults()"
-                                placeholder="Buscar condición guardada (forma de pago, validez, entrega...)" class="field-input pl-9">
-                            <i data-lucide="search" class="w-3.5 h-3.5 text-gray-500 absolute left-3 top-3"></i>
+                    <div class="card p-6 space-y-5">
+                        <div>
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="file-check" class="w-4 h-4 text-emerald-400"></i> Condiciones Comerciales</h3>
+                            <p class="text-[10px] text-gray-500 mt-1">Forma de pago y tiempo de entrega son lo único que cambia por cotización — el resto de condiciones estándar (IVA, validez, cambios de especificación, etc.) se agregan solas en el PDF.</p>
                         </div>
-                        <div id="condicion-search-results" class="hidden max-h-52 overflow-y-auto custom-scrollbar space-y-1.5 border border-white/5 rounded-xl p-2 bg-deepblue-950/60"></div>
 
-                        <button onclick="toggleNewConditionForm()" class="btn-secondary flex items-center gap-1.5 text-[11px]">
-                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Nueva condición (código único)
-                        </button>
-
-                        <div id="new-condition-form" class="hidden space-y-3 p-4 bg-deepblue-950/60 border border-white/5 rounded-xl">
-                            <div>
-                                <label class="field-label">Texto de la condición</label>
-                                <textarea id="condicion-texto" rows="2" class="field-input" placeholder="Ej: Validez de la cotización: 15 días."></textarea>
+                        <!-- Forma de pago -->
+                        <div class="space-y-2">
+                            <label class="field-label">Forma de pago</label>
+                            <select id="forma-pago-select" onchange="updateConditionChoice('pago', this.value)" class="field-input"><option value="">Cargando...</option></select>
+                            <div class="flex items-center justify-between">
+                                <button onclick="toggleNewConditionForm('pago')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                                    <i data-lucide="plus" class="w-3 h-3"></i> Nueva forma de pago
+                                </button>
+                                <button onclick="toggleManageConditions('pago')" class="text-[10px] text-gray-500 hover:text-gray-300">Gestionar opciones</button>
                             </div>
-                            <button onclick="submitNewCondition()" class="btn-primary">Guardar y agregar a la cotización</button>
+                            <div id="new-condition-form-pago" class="hidden space-y-2 p-3 bg-deepblue-950/60 border border-white/5 rounded-xl">
+                                <textarea id="condicion-texto-pago" rows="2" class="field-input" placeholder="Ej: Crédito a 45 días"></textarea>
+                                <button onclick="submitNewCondition('pago')" class="btn-primary text-[11px]">Guardar y seleccionar</button>
+                            </div>
+                            <div id="manage-conditions-pago" class="hidden space-y-1.5"></div>
                         </div>
 
-                        <div id="quote-conditions-list" class="space-y-2">
-                            <p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Sin condiciones agregadas.</p>
+                        <!-- Tiempo de entrega -->
+                        <div class="space-y-2 pt-2 border-t border-white/5">
+                            <label class="field-label">Tiempo de entrega</label>
+                            <select id="tiempo-entrega-select" onchange="updateConditionChoice('entrega', this.value)" class="field-input"><option value="">Cargando...</option></select>
+                            <div class="flex items-center justify-between">
+                                <button onclick="toggleNewConditionForm('entrega')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                                    <i data-lucide="plus" class="w-3 h-3"></i> Nueva condición de entrega
+                                </button>
+                                <button onclick="toggleManageConditions('entrega')" class="text-[10px] text-gray-500 hover:text-gray-300">Gestionar opciones</button>
+                            </div>
+                            <div id="new-condition-form-entrega" class="hidden space-y-2 p-3 bg-deepblue-950/60 border border-white/5 rounded-xl">
+                                <textarea id="condicion-texto-entrega" rows="2" class="field-input" placeholder="Ej: 10 días hábiles después de confirmado el pedido"></textarea>
+                                <button onclick="submitNewCondition('entrega')" class="btn-primary text-[11px]">Guardar y seleccionar</button>
+                            </div>
+                            <div id="manage-conditions-entrega" class="hidden space-y-1.5"></div>
                         </div>
                     </div>
 
@@ -218,13 +233,28 @@
         const session = window.__PORTAL_SESSION__;
         let currentQuoteId = null;
         let quoteFormulas = [];     // cada fórmula lleva sus propios insumos, presentación y precio
-        let quoteConditions = [];
+        let quoteFormaPago = null;     // {code, texto} | null — selección única
+        let quoteTiempoEntrega = null; // {code, texto} | null — selección única
         let packagingCache = [];
         let conditionsCache = [];
         let quotesCache = [];
         let activeInsumoFormulaId = null; // qué fórmula tiene abierto el selector de insumos
 
         const TYPE_LABELS = { envase: 'Envase', tapa: 'Tapa', copa: 'Copa', caja: 'Caja', divisor: 'Divisor', insumo: 'Insumo', otro: 'Otro' };
+
+        // Condiciones estándar que van en TODAS las cotizaciones (a diferencia
+        // de forma de pago / tiempo de entrega, que sí varían y se eligen del
+        // catálogo). Van fijas en el PDF, no son seleccionables.
+        const FIXED_CONDITIONS = [
+            'Los precios cotizados no incluyen IVA, salvo que se indique lo contrario.',
+            'Validez de esta cotización: 15 días calendario a partir de la fecha de emisión.',
+            'El cliente debe suministrar las especificaciones finales de etiquetado, empaque y arte aprobado antes de iniciar producción.',
+            'Cualquier cambio en las especificaciones, cantidades o insumos de esta cotización genera una nueva propuesta comercial.',
+            'La orden de compra se puede dar por cerrada con una diferencia de hasta el 10% (por encima o por debajo) de la cantidad solicitada, por variaciones normales del proceso de producción.',
+            'Los insumos y empaques cotizados están sujetos a disponibilidad del proveedor al momento de confirmar la orden de compra.',
+            'Esta cotización no constituye una reserva de inventario ni de capacidad de producción hasta su aprobación formal (orden de compra y/o confirmación por correo electrónico).',
+        ];
+        const CLOSING_NOTE = 'Gracias por la confianza depositada en NutraSyn Lab. Quedamos atentos a sus comentarios.';
 
         // Nombres de insumos, clientes y observaciones son texto libre que un
         // colaborador escribe y luego se guarda y se le muestra a otros
@@ -648,107 +678,101 @@
             renderFormulasList();
         }
 
-        // --- Condiciones Comerciales (catálogo reutilizable, igual que insumos) ---
+        // --- Condiciones Comerciales ---
+        // Forma de pago y tiempo de entrega son selección única por
+        // categoría ("pago"/"entrega"), tomada de un catálogo reutilizable
+        // (/api/conditions). El resto de condiciones estándar de la
+        // cotización se generan como texto fijo en el PDF — ver
+        // FIXED_CONDITIONS más abajo, no viven en este catálogo.
+        const SELECT_ID_BY_CATEGORY = { pago: 'forma-pago-select', entrega: 'tiempo-entrega-select' };
+        const CATEGORY_LABELS = { pago: 'forma de pago', entrega: 'tiempo de entrega' };
+
         async function loadConditionsCatalog() {
             try {
                 const data = await apiFetch('/api/conditions');
                 conditionsCache = data.items || [];
+                renderConditionSelect('pago');
+                renderConditionSelect('entrega');
             } catch (err) {
                 toast('Error al cargar condiciones', err.message, 'error');
             }
         }
 
-        function toggleNewConditionForm() {
-            document.getElementById('new-condition-form').classList.toggle('hidden');
+        function renderConditionSelect(categoria) {
+            const select = document.getElementById(SELECT_ID_BY_CATEGORY[categoria]);
+            const current = categoria === 'pago' ? quoteFormaPago : quoteTiempoEntrega;
+            const options = conditionsCache.filter(c => c.categoria === categoria);
+            select.innerHTML = '<option value="">Sin especificar</option>' +
+                options.map(c => `<option value="${escapeHtml(c.code)}" ${current && current.code === c.code ? 'selected' : ''}>${escapeHtml(c.texto)}</option>`).join('');
         }
 
-        async function submitNewCondition() {
-            const texto = document.getElementById('condicion-texto').value.trim();
+        function updateConditionChoice(categoria, code) {
+            const item = conditionsCache.find(c => c.code === code);
+            const value = item ? { code: item.code, texto: item.texto } : null;
+            if (categoria === 'pago') quoteFormaPago = value; else quoteTiempoEntrega = value;
+        }
+
+        function toggleNewConditionForm(categoria) {
+            document.getElementById('new-condition-form-' + categoria).classList.toggle('hidden');
+        }
+
+        async function submitNewCondition(categoria) {
+            const textarea = document.getElementById('condicion-texto-' + categoria);
+            const texto = textarea.value.trim();
             if (!texto) { toast('Falta el texto', 'Escribe el texto de la condición.', 'warning'); return; }
             try {
-                const data = await apiFetch('/api/conditions', { method: 'POST', body: JSON.stringify({ texto }) });
+                const data = await apiFetch('/api/conditions', { method: 'POST', body: JSON.stringify({ texto, categoria }) });
                 conditionsCache.push(data.item);
-                addConditionToQuote(data.item.code);
-                document.getElementById('condicion-texto').value = '';
-                document.getElementById('new-condition-form').classList.add('hidden');
-                toast('Condición creada', `${data.item.code} guardada para reutilizarla en otras cotizaciones.`);
+                if (categoria === 'pago') quoteFormaPago = { code: data.item.code, texto: data.item.texto };
+                else quoteTiempoEntrega = { code: data.item.code, texto: data.item.texto };
+                renderConditionSelect(categoria);
+                textarea.value = '';
+                document.getElementById('new-condition-form-' + categoria).classList.add('hidden');
+                toast('Opción creada', `Se guardó y se seleccionó para esta cotización.`);
             } catch (err) {
                 toast('Error al crear la condición', err.message, 'error');
             }
         }
 
-        function renderConditionSearchResults() {
-            const q = document.getElementById('condicion-search').value.trim().toLowerCase();
-            const box = document.getElementById('condicion-search-results');
-            if (!q) { box.classList.add('hidden'); box.innerHTML = ''; return; }
-            const matches = conditionsCache.filter(c =>
-                c.texto.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
-            ).slice(0, 25);
-            box.innerHTML = matches.length
-                ? matches.map(c => `
-                    <div class="w-full flex items-start gap-1.5 p-2 rounded-lg hover:bg-white/5 transition-colors">
-                        <button onclick="addConditionToQuote('${c.code}')" class="flex-1 min-w-0 text-left flex items-start justify-between gap-2">
-                            <span class="text-[11px] text-gray-300">${escapeHtml(c.texto)}</span>
-                            <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5"></i>
-                        </button>
-                        <button onclick="deleteConditionFromCatalog('${c.code}')" title="Eliminar del catálogo" class="text-gray-500 hover:text-red-400 shrink-0 p-1">
-                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                        </button>
+        function toggleManageConditions(categoria) {
+            const box = document.getElementById('manage-conditions-' + categoria);
+            const willShow = box.classList.contains('hidden');
+            if (willShow) renderManageConditionsList(categoria);
+            box.classList.toggle('hidden');
+        }
+
+        function renderManageConditionsList(categoria) {
+            const box = document.getElementById('manage-conditions-' + categoria);
+            const options = conditionsCache.filter(c => c.categoria === categoria);
+            box.innerHTML = options.length
+                ? options.map(c => `
+                    <div class="flex items-center justify-between gap-2 p-2 bg-deepblue-900/40 rounded-lg">
+                        <span class="text-[10px] text-gray-300">${escapeHtml(c.texto)}</span>
+                        <button onclick="deleteConditionFromCatalog('${c.code}','${categoria}')" title="Eliminar del catálogo" class="text-gray-500 hover:text-red-400 shrink-0"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                     </div>
                 `).join('')
-                : '<p class="text-[11px] text-gray-500 p-2">Sin resultados. Usa "Nueva condición" para crearla.</p>';
-            box.classList.remove('hidden');
+                : '<p class="text-[10px] text-gray-500">Sin opciones guardadas.</p>';
             lucide.createIcons();
         }
 
-        // Elimina una condición del catálogo reutilizable (no de la
-        // cotización actual). Las cotizaciones ya guardadas guardan su
-        // propia copia del texto, así que no se ven afectadas.
-        async function deleteConditionFromCatalog(code) {
+        // Elimina una opción del catálogo reutilizable (no solo de esta
+        // cotización). Las cotizaciones ya guardadas guardan su propia
+        // copia del texto, así que no se ven afectadas.
+        async function deleteConditionFromCatalog(code, categoria) {
             const item = conditionsCache.find(c => c.code === code);
             if (!item) return;
-            if (!confirm(`¿Eliminar la condición ${item.code} del catálogo?\n\n"${item.texto}"\n\nNo afecta cotizaciones ya guardadas.`)) return;
+            if (!confirm(`¿Eliminar esta opción de ${CATEGORY_LABELS[categoria]} del catálogo?\n\n"${item.texto}"\n\nNo afecta cotizaciones ya guardadas.`)) return;
             try {
                 const data = await apiFetch('/api/conditions?code=' + encodeURIComponent(code), { method: 'DELETE' });
                 conditionsCache = data.items || [];
-                renderConditionSearchResults();
-                toast('Condición eliminada', `${code} se quitó del catálogo.`);
+                if (quoteFormaPago?.code === code) quoteFormaPago = null;
+                if (quoteTiempoEntrega?.code === code) quoteTiempoEntrega = null;
+                renderConditionSelect(categoria);
+                renderManageConditionsList(categoria);
+                toast('Opción eliminada', `${code} se quitó del catálogo.`);
             } catch (err) {
                 toast('Error al eliminar', err.message, 'error');
             }
-        }
-
-        function addConditionToQuote(code) {
-            const item = conditionsCache.find(c => c.code === code);
-            if (!item) return;
-            if (quoteConditions.some(c => c.code === code)) {
-                toast('Ya agregada', 'Esa condición ya está en la cotización.', 'warning');
-                return;
-            }
-            quoteConditions.push({ code: item.code, texto: item.texto });
-            document.getElementById('condicion-search').value = '';
-            document.getElementById('condicion-search-results').classList.add('hidden');
-            renderConditionsList();
-        }
-
-        function removeCondition(code) {
-            quoteConditions = quoteConditions.filter(c => c.code !== code);
-            renderConditionsList();
-        }
-
-        function renderConditionsList() {
-            const box = document.getElementById('quote-conditions-list');
-            if (!quoteConditions.length) {
-                box.innerHTML = '<p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Sin condiciones agregadas.</p>';
-                return;
-            }
-            box.innerHTML = quoteConditions.map(c => `
-                <div class="p-3 bg-deepblue-950/60 border border-white/5 rounded-xl flex items-start justify-between gap-3">
-                    <p class="text-[11px] text-gray-300 leading-relaxed">${escapeHtml(c.texto)}</p>
-                    <button onclick="removeCondition('${c.code}')" class="text-gray-500 hover:text-red-400 shrink-0"><i data-lucide="trash" class="w-4 h-4"></i></button>
-                </div>
-            `).join('');
-            lucide.createIcons();
         }
 
         // --- Guardar / Cargar cotizaciones ---
@@ -767,7 +791,8 @@
         function newQuote() {
             currentQuoteId = null;
             quoteFormulas = [];
-            quoteConditions = [];
+            quoteFormaPago = null;
+            quoteTiempoEntrega = null;
             activeInsumoFormulaId = null;
             document.getElementById('cliente-nombre').value = '';
             document.getElementById('cliente-nit').value = '';
@@ -775,7 +800,8 @@
             document.getElementById('observaciones').value = '';
             document.getElementById('elaborado-por').value = session.user;
             renderFormulasList();
-            renderConditionsList();
+            renderConditionSelect('pago');
+            renderConditionSelect('entrega');
             setBuilderMode(null);
             toast('Cotización nueva', 'Lienzo limpio para armar otra cotización.');
         }
@@ -789,7 +815,8 @@
             return {
                 cliente: { nombre, nit, telefono },
                 formulas: quoteFormulas,
-                condiciones: quoteConditions,
+                formaPago: quoteFormaPago,
+                tiempoEntrega: quoteTiempoEntrega,
                 observaciones,
                 elaboradoPor,
             };
@@ -839,10 +866,12 @@
                 insumos: (Array.isArray(f.insumos) ? f.insumos : []).map(i => ({ ...i })),
                 precioUnitario: f.precioUnitario ?? null, cantidad: f.cantidad ?? null,
             }));
-            quoteConditions = (q.condiciones || []).map(c => ({ ...c }));
+            quoteFormaPago = q.formaPago ? { ...q.formaPago } : null;
+            quoteTiempoEntrega = q.tiempoEntrega ? { ...q.tiempoEntrega } : null;
             activeInsumoFormulaId = null;
             renderFormulasList();
-            renderConditionsList();
+            renderConditionSelect('pago');
+            renderConditionSelect('entrega');
         }
 
         async function editQuote(id) {
@@ -1070,29 +1099,55 @@
             doc.text(formatCOP(hasAnyPricing ? quoteTotal : null), pageW - marginX - 5, y + 9.5, { align: 'right' });
             y += 22;
 
-            // Condiciones comerciales (catálogo seleccionado)
-            if (quoteConditions.length) {
-                ensureSpace(15);
-                doc.setDrawColor(0, 168, 150);
-                doc.line(marginX, y, pageW - marginX, y);
-                y += 7;
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(10.5);
-                doc.setTextColor(10, 37, 64);
-                doc.text('Condiciones Comerciales', marginX, y);
-                y += 6.5;
+            // Condiciones comerciales: forma de pago / tiempo de entrega
+            // elegidas para esta cotización, más las condiciones estándar
+            // fijas (ver FIXED_CONDITIONS) que aplican siempre.
+            ensureSpace(15);
+            doc.setDrawColor(0, 168, 150);
+            doc.line(marginX, y, pageW - marginX, y);
+            y += 7;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10.5);
+            doc.setTextColor(10, 37, 64);
+            doc.text('Condiciones Comerciales', marginX, y);
+            y += 6.5;
 
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(8.3);
-                doc.setTextColor(51, 65, 85);
-                quoteConditions.forEach(c => {
-                    const lines = doc.splitTextToSize(`• ${c.texto}`, pageW - marginX * 2 - 2);
-                    ensureSpace(lines.length * 4.2 + 1.5);
-                    doc.text(lines, marginX, y);
-                    y += lines.length * 4.2 + 1.5;
-                });
-                y += 3;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8.5);
+            doc.setTextColor(51, 65, 85);
+            if (payload.formaPago) {
+                const lines = doc.splitTextToSize(`Forma de pago: ${payload.formaPago.texto}`, pageW - marginX * 2 - 2);
+                ensureSpace(lines.length * 4.2 + 1.5);
+                doc.setFont('helvetica', 'bold');
+                doc.text(lines, marginX, y);
+                y += lines.length * 4.2 + 1.5;
             }
+            if (payload.tiempoEntrega) {
+                const lines = doc.splitTextToSize(`Tiempo de entrega: ${payload.tiempoEntrega.texto}`, pageW - marginX * 2 - 2);
+                ensureSpace(lines.length * 4.2 + 1.5);
+                doc.setFont('helvetica', 'bold');
+                doc.text(lines, marginX, y);
+                y += lines.length * 4.2 + 1.5;
+            }
+            y += 1;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8.3);
+            doc.setTextColor(51, 65, 85);
+            FIXED_CONDITIONS.forEach(texto => {
+                const lines = doc.splitTextToSize(`• ${texto}`, pageW - marginX * 2 - 2);
+                ensureSpace(lines.length * 4.2 + 1.5);
+                doc.text(lines, marginX, y);
+                y += lines.length * 4.2 + 1.5;
+            });
+            y += 5;
+
+            const thanksLines = doc.splitTextToSize(CLOSING_NOTE, pageW - marginX * 2);
+            ensureSpace(thanksLines.length * 4.2 + 3);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(90, 100, 115);
+            doc.text(thanksLines, marginX, y);
+            y += thanksLines.length * 4.2 + 5;
 
             // Observaciones
             if (payload.observaciones) {
@@ -1133,7 +1188,6 @@
         function initApp() {
             document.getElementById('elaborado-por').value = session.user;
             renderFormulasList();
-            renderConditionsList();
             loadPackagingCatalog();
             loadConditionsCatalog();
             loadQuotesList();

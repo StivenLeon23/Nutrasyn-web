@@ -1,23 +1,23 @@
-// Catálogo reutilizable de condiciones comerciales (forma de pago, validez
-// de la cotización, tiempos de entrega, disclaimers, etc.) — funciona igual
-// que el catálogo de insumos: un colaborador escribe el texto una vez, se
-// guarda con un código único, y se puede volver a agregar en cualquier
-// cotización futura en vez de retiparlo.
+// Catálogo reutilizable de opciones de "forma de pago" y "tiempo de
+// entrega" para el módulo de Cotizaciones — son las únicas condiciones
+// comerciales que realmente varían de una cotización a otra, por eso se
+// eligen de una lista desplegable (una sola por categoría). El resto de
+// condiciones estándar (IVA, validez, cambios de especificación, etc.) NO
+// vive en este catálogo: se escriben una sola vez como texto fijo en el
+// PDF (ver FIXED_CONDITIONS en cotizaciones.html) porque deberían aparecer
+// igual en cualquier cotización.
 //
 // El catálogo se siembra la primera vez que se pide (ver DEFAULT_CONDITIONS)
-// con condiciones genéricas comunes de pago, entrega y validez — son
-// plantillas de partida, NO datos reales del negocio (no incluyen cuentas
-// bancarias ni cifras específicas de NutraSyn): un colaborador debe
-// revisarlas, editarlas (borrar y volver a crear) o completarlas con los
-// datos reales desde la interfaz. Si en algún momento se borran todas, no
-// se vuelven a sembrar automáticamente — se respeta que el catálogo se
-// dejó vacío a propósito.
+// con opciones comunes de pago y entrega — son plantillas de partida, un
+// colaborador puede agregar más o borrar las que no apliquen desde la
+// interfaz. Si en algún momento se borran todas, no se vuelven a sembrar
+// (se respeta que se dejó vacío a propósito).
 //
 // Solo colaboradores (ver netlify/functions/lib/session.js).
 //
-// GET    /api/conditions                -> { items: [{code, texto, createdBy, createdAt}] }
-// POST   /api/conditions                -> crea una condición nueva, { item, items }
-// DELETE /api/conditions?code=COND-0001 -> elimina una condición del catálogo, { items }
+// GET    /api/conditions                -> { items: [{code, texto, categoria, createdBy, createdAt}] }
+// POST   /api/conditions {texto, categoria: "pago"|"entrega"} -> crea una opción, { item, items }
+// DELETE /api/conditions?code=COND-0001 -> elimina una opción del catálogo, { items }
 
 import { getStore } from "@netlify/blobs";
 import { verifySessionToken, requireCollaborator, bearerToken } from "./lib/session.js";
@@ -28,20 +28,24 @@ async function authenticate(req) {
   return verifySessionToken(secret, bearerToken(req));
 }
 
-// Plantillas genéricas comunes en cotizaciones B2B de manufactura de
-// alimentos/bebidas. Deliberadamente sin cifras ni datos bancarios reales.
+const VALID_CATEGORIES = ["pago", "entrega"];
+
+// Plantillas comunes del mercado B2B de manufactura de alimentos/bebidas.
+// Deliberadamente sin cifras ni cuentas bancarias reales del negocio.
 const DEFAULT_CONDITIONS = [
-  "Forma de pago: 50% de anticipo para iniciar producción y 50% contra aviso de entrega.",
-  "Forma de pago: Contado, contra entrega.",
-  "Validez de esta cotización: 15 días calendario a partir de la fecha de emisión.",
-  "Los precios cotizados no incluyen IVA, salvo que se indique lo contrario.",
-  "Tiempo de entrega: a convenir según disponibilidad de materias primas e insumos, contado a partir de la aprobación de la orden de compra y confirmación del anticipo.",
-  "El cliente debe suministrar las especificaciones finales de etiquetado, empaque y arte aprobado antes de iniciar producción.",
-  "Cualquier cambio en las especificaciones, cantidades o insumos de esta cotización genera una nueva propuesta comercial.",
-  "La orden de compra se puede dar por cerrada con una diferencia de hasta el 10% (por encima o por debajo) de la cantidad solicitada, por variaciones normales del proceso de producción.",
-  "Los insumos y empaques cotizados están sujetos a disponibilidad del proveedor al momento de confirmar la orden de compra.",
-  "Esta cotización no constituye una reserva de inventario ni de capacidad de producción hasta su aprobación formal (orden de compra y/o confirmación por correo electrónico).",
-  "Gracias por la confianza depositada en NutraSyn Lab. Quedamos atentos a sus comentarios.",
+  { categoria: "pago", texto: "50% anticipo - 50% contra entrega" },
+  { categoria: "pago", texto: "De contado" },
+  { categoria: "pago", texto: "60% anticipo - 40% contra entrega" },
+  { categoria: "pago", texto: "30% anticipo - saldo contra entrega" },
+  { categoria: "pago", texto: "Contra entrega (100%)" },
+  { categoria: "pago", texto: "Crédito a 30 días" },
+  { categoria: "pago", texto: "Crédito a 60 días" },
+  { categoria: "pago", texto: "Crédito a 90 días" },
+  { categoria: "entrega", texto: "15 días hábiles después de aprobado el arte y confirmado el anticipo." },
+  { categoria: "entrega", texto: "Tiempo de entrega: a convenir según disponibilidad de materias primas e insumos, contado a partir de la aprobación de la orden de compra y confirmación del anticipo." },
+  { categoria: "entrega", texto: "8 días hábiles después de aprobado el arte y confirmado el anticipo." },
+  { categoria: "entrega", texto: "20 días hábiles después de aprobado el arte y confirmado el anticipo." },
+  { categoria: "entrega", texto: "30 días hábiles después de aprobado el arte y confirmado el anticipo, para pedidos de gran volumen." },
 ];
 
 export default async (req) => {
@@ -58,9 +62,10 @@ export default async (req) => {
     let items = await store.get("items", { type: "json" });
     if (items === null) {
       const now = new Date().toISOString();
-      items = DEFAULT_CONDITIONS.map((texto, i) => ({
+      items = DEFAULT_CONDITIONS.map((c, i) => ({
         code: `COND-${String(i + 1).padStart(4, "0")}`,
-        texto,
+        texto: c.texto,
+        categoria: c.categoria,
         createdBy: "sistema",
         createdAt: now,
       }));
@@ -77,13 +82,17 @@ export default async (req) => {
       return jsonResponse(400, { error: "Cuerpo de la solicitud inválido." });
     }
     const texto = (body.texto || "").toString().trim();
+    const categoria = (body.categoria || "").toString().trim().toLowerCase();
     if (!texto) return jsonResponse(400, { error: "El texto de la condición es obligatorio." });
+    if (!VALID_CATEGORIES.includes(categoria)) {
+      return jsonResponse(400, { error: 'La categoría debe ser "pago" o "entrega".' });
+    }
 
     let created = null;
     const items = await readModifyWrite(store, "items", [], (list) => {
       const code = nextSimpleCode(list, "COND");
       const now = new Date().toISOString();
-      created = { code, texto, createdBy: session.user, createdAt: now };
+      created = { code, texto, categoria, createdBy: session.user, createdAt: now };
       return [...list, created];
     });
 
