@@ -37,9 +37,14 @@ async function authenticate(req) {
   return verifySessionToken(secret, bearerToken(req));
 }
 
+// El consecutivo no arranca en 1: se continúa la numeración que ya
+// llevaba el negocio antes de este sistema, así que la primera
+// cotización que se guarde aquí queda como COT-<año>-6203.
+const FOLIO_START = 6203;
+
 function genFolio(existingCount) {
   const year = new Date().getFullYear();
-  return `COT-${year}-${String(existingCount + 1).padStart(4, "0")}`;
+  return `COT-${year}-${String(existingCount + FOLIO_START).padStart(4, "0")}`;
 }
 
 function normalizeCliente(cliente) {
