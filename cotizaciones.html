@@ -93,7 +93,7 @@
 
             <div class="space-y-1">
                 <h1 class="text-2xl lg:text-3xl font-extrabold text-white">Constructor de Cotizaciones</h1>
-                <p class="text-xs text-gray-400">Arma una cotización con fórmulas del catálogo, insumos/empaques reutilizables, datos del cliente, cantidad de producto terminado y precio de venta. Puedes guardar como borrador aunque falten datos.</p>
+                <p class="text-xs text-gray-400">Agrega fórmulas del catálogo; cada una es un producto terminado con su propia presentación, insumos, precio unitario y cantidad. Puedes guardar como borrador aunque falten datos.</p>
             </div>
 
             <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
@@ -140,6 +140,7 @@
                     <!-- Fórmulas -->
                     <div class="card p-6 space-y-4">
                         <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="beaker" class="w-4 h-4 text-emerald-400"></i> Fórmulas de la Cotización</h3>
+                        <p class="text-[10px] text-gray-500 -mt-2">Cada fórmula es un producto terminado: agrega su presentación, sus insumos y su precio por unidad.</p>
                         <div class="relative">
                             <input type="text" id="formula-search" oninput="renderFormulaSearchResults()"
                                 placeholder="Buscar fórmula por nombre o ingrediente..." class="field-input pl-9">
@@ -147,71 +148,53 @@
                         </div>
                         <div id="formula-search-results" class="hidden max-h-52 overflow-y-auto custom-scrollbar space-y-1.5 border border-white/5 rounded-xl p-2 bg-deepblue-950/60"></div>
 
-                        <div id="quote-formulas-list" class="space-y-2">
+                        <div id="quote-formulas-list" class="space-y-3">
                             <p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Aún no hay fórmulas agregadas.</p>
                         </div>
+
+                        <div class="p-4 bg-emerald-950/30 border border-emerald-500/20 rounded-xl flex items-center justify-between">
+                            <span class="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">Total (suma de subtotales)</span>
+                            <span id="quote-total-preview" class="text-base font-extrabold text-white">No definido</span>
+                        </div>
                     </div>
 
-                    <!-- Insumos / Empaques -->
+                    <!-- Condiciones Comerciales -->
                     <div class="card p-6 space-y-4">
-                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="package" class="w-4 h-4 text-emerald-400"></i> Insumos y Empaques</h3>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="file-check" class="w-4 h-4 text-emerald-400"></i> Condiciones Comerciales</h3>
                         <div class="relative">
-                            <input type="text" id="insumo-search" oninput="renderInsumoSearchResults()"
-                                placeholder="Buscar por código o nombre (envase, tapa, copa, caja, divisor...)" class="field-input pl-9">
+                            <input type="text" id="condicion-search" oninput="renderConditionSearchResults()"
+                                placeholder="Buscar condición guardada (forma de pago, validez, entrega...)" class="field-input pl-9">
                             <i data-lucide="search" class="w-3.5 h-3.5 text-gray-500 absolute left-3 top-3"></i>
                         </div>
-                        <div id="insumo-search-results" class="hidden max-h-52 overflow-y-auto custom-scrollbar space-y-1.5 border border-white/5 rounded-xl p-2 bg-deepblue-950/60"></div>
+                        <div id="condicion-search-results" class="hidden max-h-52 overflow-y-auto custom-scrollbar space-y-1.5 border border-white/5 rounded-xl p-2 bg-deepblue-950/60"></div>
 
-                        <button onclick="toggleNewInsumoForm()" class="btn-secondary flex items-center gap-1.5 text-[11px]">
-                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Nuevo insumo (código único)
+                        <button onclick="toggleNewConditionForm()" class="btn-secondary flex items-center gap-1.5 text-[11px]">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Nueva condición (código único)
                         </button>
 
-                        <div id="new-insumo-form" class="hidden grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-deepblue-950/60 border border-white/5 rounded-xl">
+                        <div id="new-condition-form" class="hidden space-y-3 p-4 bg-deepblue-950/60 border border-white/5 rounded-xl">
                             <div>
-                                <label class="field-label">Categoría</label>
-                                <input type="text" id="insumo-type" list="insumo-type-options" class="field-input"
-                                    placeholder="Envase, Tapa, Etiqueta..." value="Envase">
-                                <datalist id="insumo-type-options"></datalist>
-                                <p class="text-[9px] text-gray-500 mt-1">Elige una existente o escribe una categoría nueva — se guarda para reutilizarla.</p>
+                                <label class="field-label">Texto de la condición</label>
+                                <textarea id="condicion-texto" rows="2" class="field-input" placeholder="Ej: Validez de la cotización: 15 días."></textarea>
                             </div>
-                            <div class="md:col-span-2">
-                                <label class="field-label">Nombre</label>
-                                <input type="text" id="insumo-name" class="field-input" placeholder="Ej: Envase PET 500ml transparente">
-                            </div>
-                            <div>
-                                <label class="field-label">Notas (opcional)</label>
-                                <input type="text" id="insumo-notes" class="field-input" placeholder="Proveedor, color...">
-                            </div>
-                            <div class="md:col-span-4">
-                                <button onclick="submitNewInsumo()" class="btn-primary">Guardar y agregar a la cotización</button>
-                            </div>
+                            <button onclick="submitNewCondition()" class="btn-primary">Guardar y agregar a la cotización</button>
                         </div>
 
-                        <div id="quote-insumos-list" class="space-y-2">
-                            <p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Aún no hay insumos agregados.</p>
+                        <div id="quote-conditions-list" class="space-y-2">
+                            <p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Sin condiciones agregadas.</p>
                         </div>
                     </div>
 
-                    <!-- Precio y Observaciones -->
+                    <!-- Observaciones y responsable -->
                     <div class="card p-6 space-y-4">
-                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-emerald-400"></i> Precio y Observaciones</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="field-label">Precio de venta por unidad (COP)</label>
-                                <input type="number" id="precio-venta" min="0" step="1" oninput="updateTotalPreview()" class="field-input" placeholder="Ej: 8500">
-                            </div>
-                            <div>
-                                <label class="field-label">Cantidad de producto terminado</label>
-                                <input type="number" id="cantidad-producto" min="0" step="1" oninput="updateTotalPreview()" class="field-input" placeholder="Ej: 1000">
-                            </div>
-                        </div>
-                        <div class="p-4 bg-emerald-950/30 border border-emerald-500/20 rounded-xl flex items-center justify-between">
-                            <span class="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">Precio total (unidad × cantidad)</span>
-                            <span id="precio-total-preview" class="text-sm font-extrabold text-white">No definido</span>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="pencil" class="w-4 h-4 text-emerald-400"></i> Observaciones</h3>
+                        <div>
+                            <label class="field-label">Observaciones internas</label>
+                            <textarea id="observaciones" rows="3" class="field-input" placeholder="Notas internas, contexto de la negociación..."></textarea>
                         </div>
                         <div>
-                            <label class="field-label">Observaciones</label>
-                            <textarea id="observaciones" rows="4" class="field-input" placeholder="Condiciones comerciales, tiempos de entrega, notas internas..."></textarea>
+                            <label class="field-label">Elaborado por</label>
+                            <input type="text" id="elaborado-por" class="field-input" placeholder="Nombre de quien hace la cotización">
                         </div>
                     </div>
                 </div>
@@ -234,10 +217,12 @@
     <script>
         const session = window.__PORTAL_SESSION__;
         let currentQuoteId = null;
-        let quoteFormulas = [];
-        let quoteInsumos = [];
+        let quoteFormulas = [];     // cada fórmula lleva sus propios insumos, presentación y precio
+        let quoteConditions = [];
         let packagingCache = [];
+        let conditionsCache = [];
         let quotesCache = [];
+        let activeInsumoFormulaId = null; // qué fórmula tiene abierto el selector de insumos
 
         const TYPE_LABELS = { envase: 'Envase', tapa: 'Tapa', copa: 'Copa', caja: 'Caja', divisor: 'Divisor', insumo: 'Insumo', otro: 'Otro' };
 
@@ -340,7 +325,11 @@
                 toast('Ya agregada', 'Esa fórmula ya está en la cotización.', 'warning');
                 return;
             }
-            quoteFormulas.push({ productId: prod.id, name: prod.name, format: prod.format, ingredients: prod.ingredients });
+            quoteFormulas.push({
+                productId: prod.id, name: prod.name, format: prod.format, ingredients: prod.ingredients,
+                presentacionTipo: '', presentacionTamano: '',
+                insumos: [], precioUnitario: null, cantidad: null,
+            });
             document.getElementById('formula-search').value = '';
             document.getElementById('formula-search-results').classList.add('hidden');
             renderFormulasList();
@@ -348,29 +337,183 @@
 
         function removeFormula(productId) {
             quoteFormulas = quoteFormulas.filter(f => f.productId !== productId);
+            if (activeInsumoFormulaId === productId) activeInsumoFormulaId = null;
             renderFormulasList();
+        }
+
+        // Cambios de texto libre (presentación) — onchange, no oninput, para no
+        // perder el foco del campo al re-renderizar la lista completa.
+        function updateFormulaText(productId, field, value) {
+            const f = quoteFormulas.find(x => x.productId === productId);
+            if (f) f[field] = value.trim();
+        }
+
+        function formulaSubtotal(f) {
+            const unit = Number(f.precioUnitario);
+            const qty = Number(f.cantidad);
+            if (f.precioUnitario == null || f.cantidad == null || !Number.isFinite(unit) || !Number.isFinite(qty)) return null;
+            return unit * qty;
+        }
+
+        // Precio/cantidad por fórmula: actualiza solo el subtotal de esa fila y
+        // el total general por DOM directo (evita re-renderizar toda la lista
+        // y perder el foco mientras se escribe).
+        function updateFormulaPricing(productId, field, rawValue) {
+            const f = quoteFormulas.find(x => x.productId === productId);
+            if (!f) return;
+            const n = rawValue === '' ? null : Number(rawValue);
+            f[field] = (n === null || Number.isNaN(n)) ? null : n;
+            const subtotalEl = document.getElementById('formula-subtotal-' + productId);
+            if (subtotalEl) subtotalEl.textContent = formatCOP(formulaSubtotal(f));
+            updateQuoteTotalDisplay();
+        }
+
+        function computeQuoteTotal() {
+            const subtotals = quoteFormulas.map(formulaSubtotal).filter(s => s != null);
+            return subtotals.length ? subtotals.reduce((a, b) => a + b, 0) : null;
+        }
+
+        function updateQuoteTotalDisplay() {
+            const el = document.getElementById('quote-total-preview');
+            if (el) el.textContent = formatCOP(computeQuoteTotal());
+        }
+
+        function toggleInsumoPicker(productId) {
+            activeInsumoFormulaId = (activeInsumoFormulaId === productId) ? null : productId;
+            renderFormulasList();
+        }
+
+        function applyInsumosToAll(productId) {
+            const source = quoteFormulas.find(x => x.productId === productId);
+            if (!source) return;
+            quoteFormulas.forEach(f => { f.insumos = source.insumos.map(i => ({ ...i })); });
+            renderFormulasList();
+            toast('Insumos aplicados', 'Se copiaron los insumos de esta fórmula a todas las demás.');
+        }
+
+        // Selector de insumos embebido dentro de la fórmula activa. Reutiliza
+        // IDs fijos (insumo-search, new-insumo-form...) porque solo una
+        // fórmula puede tener el selector abierto a la vez.
+        function renderInsumoPickerHtml(f) {
+            const listHtml = f.insumos.length
+                ? f.insumos.map(i => `
+                    <div class="flex items-center justify-between gap-2 p-2 bg-deepblue-900/60 rounded-lg">
+                        <span class="text-[10px] text-gray-300"><span class="font-mono text-emerald-400">${escapeHtml(i.code)}</span> ${escapeHtml(i.name)}</span>
+                        <button onclick="removeInsumoFromFormula('${f.productId}','${i.code}')" class="text-gray-500 hover:text-red-400"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                `).join('')
+                : '<p class="text-[10px] text-gray-500">Sin insumos todavía.</p>';
+
+            return `
+                <div class="mt-2 p-3 bg-deepblue-900/40 border border-white/5 rounded-xl space-y-3">
+                    <div class="relative">
+                        <input type="text" id="insumo-search" oninput="renderInsumoSearchResults()"
+                            placeholder="Buscar por código o nombre..." class="field-input pl-9">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-gray-500 absolute left-3 top-3"></i>
+                    </div>
+                    <div id="insumo-search-results" class="hidden max-h-40 overflow-y-auto custom-scrollbar space-y-1.5 border border-white/5 rounded-xl p-2 bg-deepblue-950/60"></div>
+                    <button onclick="toggleNewInsumoForm()" class="btn-secondary flex items-center gap-1.5 text-[10px]">
+                        <i data-lucide="plus" class="w-3 h-3"></i> Nuevo insumo
+                    </button>
+                    <div id="new-insumo-form" class="hidden grid grid-cols-1 md:grid-cols-3 gap-2 p-3 bg-deepblue-950/60 border border-white/5 rounded-xl">
+                        <div>
+                            <label class="field-label">Categoría</label>
+                            <input type="text" id="insumo-type" list="insumo-type-options" class="field-input" placeholder="Envase, Tapa..." value="Envase">
+                            <datalist id="insumo-type-options"></datalist>
+                        </div>
+                        <div>
+                            <label class="field-label">Nombre</label>
+                            <input type="text" id="insumo-name" class="field-input" placeholder="Nombre del insumo">
+                        </div>
+                        <div>
+                            <label class="field-label">Notas</label>
+                            <input type="text" id="insumo-notes" class="field-input" placeholder="Opcional">
+                        </div>
+                        <div class="md:col-span-3">
+                            <button onclick="submitNewInsumo()" class="btn-primary text-[11px]">Guardar y agregar</button>
+                        </div>
+                    </div>
+                    <div class="space-y-1.5">${listHtml}</div>
+                    ${f.insumos.length ? `<button onclick="applyInsumosToAll('${f.productId}')" class="btn-secondary text-[10px] flex items-center gap-1.5"><i data-lucide="copy" class="w-3 h-3"></i> Usar estos insumos en todas las fórmulas</button>` : ''}
+                </div>
+            `;
         }
 
         function renderFormulasList() {
             const box = document.getElementById('quote-formulas-list');
             if (!quoteFormulas.length) {
                 box.innerHTML = '<p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Aún no hay fórmulas agregadas.</p>';
+                updateQuoteTotalDisplay();
                 return;
             }
-            box.innerHTML = quoteFormulas.map(f => `
-                <div class="p-3 bg-deepblue-950/60 border border-white/5 rounded-xl flex items-start justify-between gap-3">
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap mb-1">
-                            <span class="text-xs font-bold text-white">${escapeHtml(f.name)}</span>
-                            <span class="text-[9px] font-mono text-gray-500">${f.productId.toUpperCase()}</span>
+            box.innerHTML = quoteFormulas.map(f => {
+                const isActive = activeInsumoFormulaId === f.productId;
+                const insumosText = f.insumos.length
+                    ? f.insumos.map(i => `${i.name} (${i.code})`).join(', ')
+                    : 'Sin insumos asignados';
+                return `
+                <div class="p-4 bg-deepblue-950/60 border border-white/5 rounded-xl space-y-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap mb-1">
+                                <span class="text-base font-extrabold text-white">${escapeHtml(f.name)}</span>
+                                <span class="text-[9px] font-mono text-gray-500">${f.productId.toUpperCase()}</span>
+                            </div>
+                            <p class="text-[11px] text-gray-400 leading-relaxed">${escapeHtml(mezclaLabel(f))}</p>
                         </div>
-                        <p class="text-[11px] text-gray-400 leading-relaxed">${escapeHtml(mezclaLabel(f))}</p>
+                        <button onclick="removeFormula('${f.productId}')" class="text-gray-500 hover:text-red-400 shrink-0">
+                            <i data-lucide="trash" class="w-4 h-4"></i>
+                        </button>
                     </div>
-                    <button onclick="removeFormula('${f.productId}')" class="text-gray-500 hover:text-red-400 shrink-0">
-                        <i data-lucide="trash" class="w-4 h-4"></i>
-                    </button>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="field-label">Presentación</label>
+                            <input type="text" value="${escapeHtml(f.presentacionTipo)}"
+                                onchange="updateFormulaText('${f.productId}','presentacionTipo', this.value)"
+                                class="field-input" placeholder="Ej: Cápsula, Tarro, Doypack...">
+                        </div>
+                        <div>
+                            <label class="field-label">Contenido / Tamaño</label>
+                            <input type="text" value="${escapeHtml(f.presentacionTamano)}"
+                                onchange="updateFormulaText('${f.productId}','presentacionTamano', this.value)"
+                                class="field-input" placeholder="Ej: 500 gramos, 1.000 ml...">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <p class="text-[11px] text-gray-400"><span class="font-bold text-gray-300">Insumos:</span> ${escapeHtml(insumosText)}</p>
+                            <button onclick="toggleInsumoPicker('${f.productId}')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 shrink-0 whitespace-nowrap">
+                                ${isActive ? 'Cerrar' : 'Gestionar insumos'}
+                            </button>
+                        </div>
+                        ${isActive ? renderInsumoPickerHtml(f) : ''}
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3 pt-2 border-t border-white/5">
+                        <div>
+                            <label class="field-label">Precio unitario</label>
+                            <input type="number" min="0" step="1" value="${f.precioUnitario ?? ''}"
+                                onchange="updateFormulaPricing('${f.productId}','precioUnitario', this.value)"
+                                class="field-input" placeholder="COP">
+                        </div>
+                        <div>
+                            <label class="field-label">Cantidad</label>
+                            <input type="number" min="0" step="1" value="${f.cantidad ?? ''}"
+                                onchange="updateFormulaPricing('${f.productId}','cantidad', this.value)"
+                                class="field-input" placeholder="Unidades">
+                        </div>
+                        <div>
+                            <label class="field-label">Subtotal</label>
+                            <div id="formula-subtotal-${f.productId}" class="field-input flex items-center font-bold text-emerald-300">${formatCOP(formulaSubtotal(f))}</div>
+                        </div>
+                    </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
+            renderInsumoTypeOptions();
+            updateQuoteTotalDisplay();
             lucide.createIcons();
         }
 
@@ -390,7 +533,10 @@
         }
 
         function renderInsumoTypeOptions() {
+            // El <datalist> solo existe en el DOM cuando hay un selector de
+            // insumos abierto (ver renderInsumoPickerHtml) — si no, no hay nada que llenar.
             const datalist = document.getElementById('insumo-type-options');
+            if (!datalist) return;
             const customTypes = [...new Set(packagingCache.map(i => i.type))]
                 .filter(t => !DEFAULT_INSUMO_TYPES.some(d => d.toLowerCase() === t))
                 .map(t => capitalize(t));
@@ -456,44 +602,105 @@
             lucide.createIcons();
         }
 
-        // Los insumos de una cotización son la lista de empaque que lleva UNA
-        // unidad de producto terminado (como la lista de ingredientes: sin
-        // cantidad por ítem). Lo que sí tiene cantidad es el producto
-        // terminado completo — ver "Cantidad de producto terminado" más abajo.
+        // Los insumos son propios de cada fórmula (producto terminado): se
+        // agregan al selector abierto (activeInsumoFormulaId), no a la
+        // cotización en general. "Usar en todas las fórmulas" (ver
+        // applyInsumosToAll) es la forma de copiarlos a las demás.
         function addInsumoToQuote(code) {
             const item = packagingCache.find(i => i.code === code);
+            const f = quoteFormulas.find(x => x.productId === activeInsumoFormulaId);
+            if (!item || !f) return;
+            if (f.insumos.some(i => i.code === code)) {
+                toast('Ya agregado', 'Ese insumo ya está en esta fórmula.', 'warning');
+                return;
+            }
+            f.insumos.push({ code: item.code, type: item.type, name: item.name });
+            renderFormulasList();
+        }
+
+        function removeInsumoFromFormula(productId, code) {
+            const f = quoteFormulas.find(x => x.productId === productId);
+            if (!f) return;
+            f.insumos = f.insumos.filter(i => i.code !== code);
+            renderFormulasList();
+        }
+
+        // --- Condiciones Comerciales (catálogo reutilizable, igual que insumos) ---
+        async function loadConditionsCatalog() {
+            try {
+                const data = await apiFetch('/api/conditions');
+                conditionsCache = data.items || [];
+            } catch (err) {
+                toast('Error al cargar condiciones', err.message, 'error');
+            }
+        }
+
+        function toggleNewConditionForm() {
+            document.getElementById('new-condition-form').classList.toggle('hidden');
+        }
+
+        async function submitNewCondition() {
+            const texto = document.getElementById('condicion-texto').value.trim();
+            if (!texto) { toast('Falta el texto', 'Escribe el texto de la condición.', 'warning'); return; }
+            try {
+                const data = await apiFetch('/api/conditions', { method: 'POST', body: JSON.stringify({ texto }) });
+                conditionsCache.push(data.item);
+                addConditionToQuote(data.item.code);
+                document.getElementById('condicion-texto').value = '';
+                document.getElementById('new-condition-form').classList.add('hidden');
+                toast('Condición creada', `${data.item.code} guardada para reutilizarla en otras cotizaciones.`);
+            } catch (err) {
+                toast('Error al crear la condición', err.message, 'error');
+            }
+        }
+
+        function renderConditionSearchResults() {
+            const q = document.getElementById('condicion-search').value.trim().toLowerCase();
+            const box = document.getElementById('condicion-search-results');
+            if (!q) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+            const matches = conditionsCache.filter(c =>
+                c.texto.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
+            ).slice(0, 25);
+            box.innerHTML = matches.length
+                ? matches.map(c => `
+                    <button onclick="addConditionToQuote('${c.code}')" class="w-full text-left p-2.5 rounded-lg hover:bg-white/5 flex items-start justify-between gap-2 transition-colors">
+                        <span class="text-[11px] text-gray-300">${escapeHtml(c.texto)}</span>
+                        <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5"></i>
+                    </button>
+                `).join('')
+                : '<p class="text-[11px] text-gray-500 p-2">Sin resultados. Usa "Nueva condición" para crearla.</p>';
+            box.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function addConditionToQuote(code) {
+            const item = conditionsCache.find(c => c.code === code);
             if (!item) return;
-            if (quoteInsumos.some(i => i.code === code)) {
-                toast('Ya agregado', 'Ese insumo ya está en la cotización.', 'warning');
+            if (quoteConditions.some(c => c.code === code)) {
+                toast('Ya agregada', 'Esa condición ya está en la cotización.', 'warning');
                 return;
             }
-            quoteInsumos.push({ code: item.code, type: item.type, name: item.name });
-            document.getElementById('insumo-search').value = '';
-            document.getElementById('insumo-search-results').classList.add('hidden');
-            renderInsumosList();
+            quoteConditions.push({ code: item.code, texto: item.texto });
+            document.getElementById('condicion-search').value = '';
+            document.getElementById('condicion-search-results').classList.add('hidden');
+            renderConditionsList();
         }
 
-        function removeInsumo(code) {
-            quoteInsumos = quoteInsumos.filter(i => i.code !== code);
-            renderInsumosList();
+        function removeCondition(code) {
+            quoteConditions = quoteConditions.filter(c => c.code !== code);
+            renderConditionsList();
         }
 
-        function renderInsumosList() {
-            const box = document.getElementById('quote-insumos-list');
-            if (!quoteInsumos.length) {
-                box.innerHTML = '<p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Aún no hay insumos agregados.</p>';
+        function renderConditionsList() {
+            const box = document.getElementById('quote-conditions-list');
+            if (!quoteConditions.length) {
+                box.innerHTML = '<p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Sin condiciones agregadas.</p>';
                 return;
             }
-            box.innerHTML = quoteInsumos.map(i => `
-                <div class="p-3 bg-deepblue-950/60 border border-white/5 rounded-xl flex items-center justify-between gap-3">
-                    <div class="min-w-0 flex items-center gap-2">
-                        <span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded uppercase font-mono shrink-0">${escapeHtml(i.code)}</span>
-                        <div class="min-w-0">
-                            <span class="text-xs font-bold text-white block truncate">${escapeHtml(i.name)}</span>
-                            <span class="text-[10px] text-gray-500">${escapeHtml(typeLabel(i.type))}</span>
-                        </div>
-                    </div>
-                    <button onclick="removeInsumo('${i.code}')" class="text-gray-500 hover:text-red-400 shrink-0"><i data-lucide="trash" class="w-4 h-4"></i></button>
+            box.innerHTML = quoteConditions.map(c => `
+                <div class="p-3 bg-deepblue-950/60 border border-white/5 rounded-xl flex items-start justify-between gap-3">
+                    <p class="text-[11px] text-gray-300 leading-relaxed">${escapeHtml(c.texto)}</p>
+                    <button onclick="removeCondition('${c.code}')" class="text-gray-500 hover:text-red-400 shrink-0"><i data-lucide="trash" class="w-4 h-4"></i></button>
                 </div>
             `).join('');
             lucide.createIcons();
@@ -512,28 +719,18 @@
             }
         }
 
-        function updateTotalPreview() {
-            const unit = parseFloat(document.getElementById('precio-venta').value);
-            const qty = parseFloat(document.getElementById('cantidad-producto').value);
-            const el = document.getElementById('precio-total-preview');
-            el.textContent = (Number.isFinite(unit) && Number.isFinite(qty) && unit > 0 && qty > 0)
-                ? formatCOP(unit * qty)
-                : 'No definido';
-        }
-
         function newQuote() {
             currentQuoteId = null;
             quoteFormulas = [];
-            quoteInsumos = [];
+            quoteConditions = [];
+            activeInsumoFormulaId = null;
             document.getElementById('cliente-nombre').value = '';
             document.getElementById('cliente-nit').value = '';
             document.getElementById('cliente-telefono').value = '';
-            document.getElementById('precio-venta').value = '';
-            document.getElementById('cantidad-producto').value = '';
             document.getElementById('observaciones').value = '';
-            updateTotalPreview();
+            document.getElementById('elaborado-por').value = session.user;
             renderFormulasList();
-            renderInsumosList();
+            renderConditionsList();
             setBuilderMode(null);
             toast('Cotización nueva', 'Lienzo limpio para armar otra cotización.');
         }
@@ -542,16 +739,14 @@
             const nombre = document.getElementById('cliente-nombre').value.trim();
             const nit = document.getElementById('cliente-nit').value.trim();
             const telefono = document.getElementById('cliente-telefono').value.trim();
-            const precioRaw = document.getElementById('precio-venta').value;
-            const cantidadRaw = document.getElementById('cantidad-producto').value;
             const observaciones = document.getElementById('observaciones').value.trim();
+            const elaboradoPor = document.getElementById('elaborado-por').value.trim();
             return {
                 cliente: { nombre, nit, telefono },
                 formulas: quoteFormulas,
-                insumos: quoteInsumos,
-                precioVenta: precioRaw === '' ? null : Number(precioRaw),
-                cantidadProducto: cantidadRaw === '' ? null : Number(cantidadRaw),
+                condiciones: quoteConditions,
                 observaciones,
+                elaboradoPor,
             };
         }
 
@@ -590,14 +785,20 @@
                 document.getElementById('cliente-nombre').value = q.cliente?.nombre || '';
                 document.getElementById('cliente-nit').value = q.cliente?.nit || '';
                 document.getElementById('cliente-telefono').value = q.cliente?.telefono || '';
-                document.getElementById('precio-venta').value = q.precioVenta ?? '';
-                document.getElementById('cantidad-producto').value = q.cantidadProducto ?? '';
                 document.getElementById('observaciones').value = q.observaciones || '';
-                quoteFormulas = q.formulas || [];
-                quoteInsumos = q.insumos || [];
-                updateTotalPreview();
+                document.getElementById('elaborado-por').value = q.elaboradoPor || session.user;
+                // Se normaliza por si la cotización se guardó antes de agregar
+                // algún campo nuevo (presentación, insumos por fórmula, etc.)
+                quoteFormulas = (q.formulas || []).map(f => ({
+                    productId: f.productId, name: f.name, format: f.format, ingredients: f.ingredients,
+                    presentacionTipo: f.presentacionTipo || '', presentacionTamano: f.presentacionTamano || '',
+                    insumos: Array.isArray(f.insumos) ? f.insumos : [],
+                    precioUnitario: f.precioUnitario ?? null, cantidad: f.cantidad ?? null,
+                }));
+                quoteConditions = q.condiciones || [];
+                activeInsumoFormulaId = null;
                 renderFormulasList();
-                renderInsumosList();
+                renderConditionsList();
                 setBuilderMode(q.folio);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 toast('Cotización cargada', q.folio + ' lista para editar.');
@@ -643,7 +844,7 @@
                         <span class="text-xs font-bold text-white">${escapeHtml(item.folio)}</span>
                         ${isDraftQuote(item)
                             ? '<span class="text-[9px] font-bold text-amber-300 bg-amber-950/50 border border-amber-500/30 px-1.5 py-0.5 rounded uppercase">Borrador</span>'
-                            : `<span class="text-[10px] font-bold text-emerald-300">${formatCOP(item.precioVenta)}</span>`}
+                            : `<span class="text-[10px] font-bold text-emerald-300">${formatCOP(item.totalEstimado)}</span>`}
                     </div>
                     <p class="text-[11px] text-gray-400 truncate">${escapeHtml(item.cliente?.nombre || 'Sin nombre de cliente')}</p>
                     <p class="text-[9px] text-gray-600 mt-1">Actualizado ${new Date(item.updatedAt).toLocaleString('es-CO')} por ${escapeHtml(item.updatedBy || '—')}</p>
@@ -716,36 +917,88 @@
             doc.text(`NIT: ${payload.cliente.nit || 'No indicado'}`, marginX, y); y += 5.5;
             doc.text(`Teléfono: ${payload.cliente.telefono || 'No indicado'}`, marginX, y); y += 9;
 
-            // Fórmulas
-            ensureSpace(15);
+            // Productos cotizados: cada fórmula es un producto terminado con
+            // su propia presentación, insumos (listado por coma) y precio.
+            ensureSpace(12);
             doc.setDrawColor(0, 168, 150);
             doc.setLineWidth(0.6);
             doc.line(marginX, y, pageW - marginX, y);
             y += 7;
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(10.5);
+            doc.setFontSize(11);
             doc.setTextColor(10, 37, 64);
-            doc.text(`Fórmulas cotizadas (${quoteFormulas.length})`, marginX, y);
-            y += 6.5;
+            doc.text(`Productos Cotizados (${quoteFormulas.length})`, marginX, y);
+            y += 8;
+
+            let quoteTotal = 0;
+            let hasAnyPricing = false;
 
             quoteFormulas.forEach((f, idx) => {
-                const bodyLines = doc.splitTextToSize(mezclaLabel(f), pageW - marginX * 2 - 4);
-                ensureSpace(8 + bodyLines.length * 4.2);
+                const subtotal = formulaSubtotal(f);
+                if (subtotal != null) { quoteTotal += subtotal; hasAnyPricing = true; }
+
+                const presentacion = [f.presentacionTipo, f.presentacionTamano].filter(Boolean).join(' · ');
+                const mezclaLines = doc.splitTextToSize(mezclaLabel(f), pageW - marginX * 2 - 4);
+                const insumosText = f.insumos.length ? f.insumos.map(i => `${i.name} (${i.code})`).join(', ') : null;
+                const insumosLines = insumosText ? doc.splitTextToSize(`Insumos: ${insumosText}`, pageW - marginX * 2 - 4) : [];
+
+                const blockHeight = 6 + (presentacion ? 5 : 0) + mezclaLines.length * 4.2 + 2
+                    + (insumosLines.length ? insumosLines.length * 4.2 + 2 : 0) + 13;
+                ensureSpace(blockHeight);
+
+                // Título grande de la fórmula/producto terminado
                 doc.setFont('helvetica', 'bold');
-                doc.setFontSize(9);
-                doc.setTextColor(15, 23, 42);
+                doc.setFontSize(13);
+                doc.setTextColor(10, 37, 64);
                 doc.text(`${idx + 1}. ${f.name}`, marginX, y);
-                y += 4.6;
+                y += 6;
+
+                if (presentacion) {
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(8.5);
+                    doc.setTextColor(0, 140, 125);
+                    doc.text(`Presentación: ${presentacion}`, marginX, y);
+                    y += 5;
+                }
+
                 doc.setFont('helvetica', 'normal');
-                doc.setFontSize(8.3);
+                doc.setFontSize(8.5);
                 doc.setTextColor(90, 100, 115);
-                doc.text(bodyLines, marginX + 3, y);
-                y += bodyLines.length * 4.2 + 3;
+                doc.text(mezclaLines, marginX, y);
+                y += mezclaLines.length * 4.2 + 2;
+
+                if (insumosLines.length) {
+                    doc.text(insumosLines, marginX, y);
+                    y += insumosLines.length * 4.2 + 2;
+                }
+
+                // Precio unitario | Cantidad | Subtotal, todos juntos en una franja
+                doc.setFillColor(240, 253, 250);
+                doc.rect(marginX, y, pageW - marginX * 2, 9, 'F');
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8);
+                doc.setTextColor(0, 140, 125);
+                doc.text(`Precio unitario: ${formatCOP(f.precioUnitario)}`, marginX + 3, y + 6);
+                doc.text(`Cantidad: ${f.cantidad ?? 'No definida'}`, marginX + 80, y + 6);
+                doc.setTextColor(10, 37, 64);
+                doc.text(`Subtotal: ${formatCOP(subtotal)}`, marginX + 130, y + 6);
+                y += 13;
             });
 
-            // Insumos
-            if (quoteInsumos.length) {
-                y += 3;
+            // Total (suma de subtotales)
+            ensureSpace(18);
+            doc.setFillColor(10, 37, 64);
+            doc.rect(marginX, y, pageW - marginX * 2, 14, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.setTextColor(255, 255, 255);
+            doc.text('TOTAL', marginX + 5, y + 9);
+            doc.setFontSize(13);
+            doc.text(formatCOP(hasAnyPricing ? quoteTotal : null), pageW - marginX - 5, y + 9.5, { align: 'right' });
+            y += 22;
+
+            // Condiciones comerciales (catálogo seleccionado)
+            if (quoteConditions.length) {
                 ensureSpace(15);
                 doc.setDrawColor(0, 168, 150);
                 doc.line(marginX, y, pageW - marginX, y);
@@ -753,45 +1006,20 @@
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(10.5);
                 doc.setTextColor(10, 37, 64);
-                doc.text('Insumos y Empaques', marginX, y);
+                doc.text('Condiciones Comerciales', marginX, y);
                 y += 6.5;
 
+                doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8.3);
-                quoteInsumos.forEach(i => {
-                    ensureSpace(6);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(15, 23, 42);
-                    doc.text(i.code, marginX, y);
-                    doc.setFont('helvetica', 'normal');
-                    doc.setTextColor(90, 100, 115);
-                    doc.text(`${i.name} (${typeLabel(i.type)})`, marginX + 22, y);
-                    y += 5.2;
+                doc.setTextColor(51, 65, 85);
+                quoteConditions.forEach(c => {
+                    const lines = doc.splitTextToSize(`• ${c.texto}`, pageW - marginX * 2 - 2);
+                    ensureSpace(lines.length * 4.2 + 1.5);
+                    doc.text(lines, marginX, y);
+                    y += lines.length * 4.2 + 1.5;
                 });
+                y += 3;
             }
-
-            // Precio: unitario × cantidad de producto terminado = total
-            const unitPrice = payload.precioVenta;
-            const qtyProduct = payload.cantidadProducto;
-            const totalPrice = (unitPrice && qtyProduct) ? unitPrice * qtyProduct : null;
-
-            y += 5;
-            ensureSpace(30);
-            doc.setFillColor(240, 253, 250);
-            doc.rect(marginX, y, pageW - marginX * 2, 26, 'F');
-            doc.setDrawColor(0, 168, 150);
-            doc.rect(marginX, y, pageW - marginX * 2, 26, 'S');
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8.5);
-            doc.setTextColor(0, 140, 125);
-            doc.text(`Precio unitario: ${formatCOP(unitPrice)}`, marginX + 5, y + 7);
-            doc.text(`Cantidad de producto terminado: ${qtyProduct ?? 'No definida'}`, marginX + 5, y + 13.5);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(9);
-            doc.text('PRECIO TOTAL', marginX + 5, y + 21);
-            doc.setFontSize(13);
-            doc.setTextColor(10, 37, 64);
-            doc.text(formatCOP(totalPrice), marginX + 45, y + 21.5);
-            y += 34;
 
             // Observaciones
             if (payload.observaciones) {
@@ -807,7 +1035,17 @@
                 const obsLines = doc.splitTextToSize(payload.observaciones, pageW - marginX * 2);
                 ensureSpace(obsLines.length * 4.6);
                 doc.text(obsLines, marginX, y);
-                y += obsLines.length * 4.6;
+                y += obsLines.length * 4.6 + 6;
+            }
+
+            // Elaborado por
+            if (payload.elaboradoPor) {
+                ensureSpace(12);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(71, 85, 105);
+                doc.text(`Cotización elaborada por: ${payload.elaboradoPor}`, marginX, y);
+                y += 6;
             }
 
             drawFooter();
@@ -820,9 +1058,11 @@
 
         // --- Init ---
         function initApp() {
+            document.getElementById('elaborado-por').value = session.user;
             renderFormulasList();
-            renderInsumosList();
+            renderConditionsList();
             loadPackagingCatalog();
+            loadConditionsCatalog();
             loadQuotesList();
         }
     </script>

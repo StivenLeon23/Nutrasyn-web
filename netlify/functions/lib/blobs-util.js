@@ -43,6 +43,21 @@ export function nextPackagingCode(items, type) {
   return `${prefix}-${String(n).padStart(4, "0")}`;
 }
 
+// Siguiente código secuencial simple con un prefijo fijo, ej. "COND-0001".
+// A diferencia de los insumos, las condiciones comerciales no tienen
+// categorías, así que basta un solo contador.
+export function nextSimpleCode(items, prefix) {
+  const used = new Set(
+    items
+      .filter((i) => typeof i.code === "string" && i.code.startsWith(prefix + "-"))
+      .map((i) => parseInt(i.code.split("-")[1], 10))
+      .filter((n) => !Number.isNaN(n)),
+  );
+  let n = 1;
+  while (used.has(n)) n++;
+  return `${prefix}-${String(n).padStart(4, "0")}`;
+}
+
 // Lectura-modificación-escritura simple sobre una clave JSON del store.
 // No usa bloqueo optimista (etag): para el volumen de un equipo pequeño de
 // colaboradores editando ocasionalmente el catálogo, el riesgo de dos

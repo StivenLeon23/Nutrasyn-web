@@ -3,6 +3,15 @@
 // en Netlify Blobs: cada cotización es un documento propio y además se
 // mantiene un índice liviano para listarlas sin tener que leerlas todas.
 //
+// Cada fórmula dentro de "formulas" es un producto terminado independiente
+// con su propia presentación, sus propios insumos y su propio precio:
+//   { productId, name, format, ingredients,
+//     presentacionTipo, presentacionTamano,
+//     insumos: [{code, type, name}], precioUnitario, cantidad }
+// El total de la cotización es la suma de (precioUnitario × cantidad) de
+// cada fórmula — no se valida a fondo esa forma en el servidor, se guarda
+// tal cual la arma el frontend.
+//
 // Una cotización se puede guardar como borrador con datos incompletos (el
 // único requisito es traer nombre de cliente o al menos una fórmula, para
 // no guardar un registro totalmente vacío) — el frontend decide si algo
@@ -28,10 +37,6 @@ function genFolio(existingCount) {
   return `COT-${year}-${String(existingCount + 1).padStart(4, "0")}`;
 }
 
-function toNullableNumber(value) {
-  return value === "" || value == null ? null : Number(value);
-}
-
 function normalizeCliente(cliente) {
   return {
     nombre: String(cliente?.nombre || "").trim(),
@@ -40,13 +45,29 @@ function normalizeCliente(cliente) {
   };
 }
 
+// Suma precioUnitario × cantidad de las fórmulas que tengan ambos valores.
+// Si ninguna fórmula tiene precio todavía, se devuelve null (en vez de 0)
+// para distinguir "sin definir" de "total es cero".
+function computeTotal(formulas) {
+  let total = 0;
+  let hasAny = false;
+  for (const f of formulas || []) {
+    const unit = Number(f?.precioUnitario);
+    const qty = Number(f?.cantidad);
+    if (f?.precioUnitario != null && f?.cantidad != null && Number.isFinite(unit) && Number.isFinite(qty)) {
+      total += unit * qty;
+      hasAny = true;
+    }
+  }
+  return hasAny ? total : null;
+}
+
 function quoteSummary(quote) {
   return {
     id: quote.id,
     folio: quote.folio,
     cliente: quote.cliente,
-    precioVenta: quote.precioVenta,
-    cantidadProducto: quote.cantidadProducto,
+    totalEstimado: computeTotal(quote.formulas),
     formulaCount: Array.isArray(quote.formulas) ? quote.formulas.length : 0,
     createdAt: quote.createdAt,
     updatedAt: quote.updatedAt,
@@ -100,10 +121,9 @@ export default async (req) => {
       folio: genFolio(index.length),
       cliente,
       formulas,
-      insumos: Array.isArray(body.insumos) ? body.insumos : [],
-      precioVenta: toNullableNumber(body.precioVenta),
-      cantidadProducto: toNullableNumber(body.cantidadProducto),
+      condiciones: Array.isArray(body.condiciones) ? body.condiciones : [],
       observaciones: String(body.observaciones || "").trim(),
+      elaboradoPor: String(body.elaboradoPor || "").trim(),
       createdBy: session.user,
       updatedBy: session.user,
       createdAt: now,
@@ -132,10 +152,9 @@ export default async (req) => {
       ...existing,
       cliente: body.cliente ? normalizeCliente(body.cliente) : existing.cliente,
       formulas: Array.isArray(body.formulas) ? body.formulas : existing.formulas,
-      insumos: Array.isArray(body.insumos) ? body.insumos : existing.insumos,
-      precioVenta: body.precioVenta === undefined ? existing.precioVenta : toNullableNumber(body.precioVenta),
-      cantidadProducto: body.cantidadProducto === undefined ? existing.cantidadProducto : toNullableNumber(body.cantidadProducto),
+      condiciones: Array.isArray(body.condiciones) ? body.condiciones : existing.condiciones,
       observaciones: body.observaciones !== undefined ? String(body.observaciones).trim() : existing.observaciones,
+      elaboradoPor: body.elaboradoPor !== undefined ? String(body.elaboradoPor).trim() : existing.elaboradoPor,
       updatedBy: session.user,
       updatedAt: now,
     };
