@@ -867,6 +867,10 @@
                     </div>
                     <a href="#" class="shrink-0 text-emerald font-bold text-sm border-b-2 border-emerald pb-0.5 whitespace-nowrap">Portafolio
                         B2B</a>
+                    <a id="nav-cotizaciones-link" href="/cotizaciones.html"
+                        class="hidden shrink-0 items-center gap-1.5 text-gray-300 hover:text-emerald font-medium text-sm transition-colors whitespace-nowrap">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5 text-emerald-400"></i> Cotizaciones
+                    </a>
                 </div>
 
                 <!-- B2B Actions -->
@@ -875,9 +879,10 @@
                         class="hidden 2xl:inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-950/80 text-emerald-300 border border-emerald-500/20 whitespace-nowrap shrink-0">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2 animate-pulse shrink-0"></span> Catálogo B2B Activo
                     </span>
-                    <a id="nav-cotizaciones-link" href="/cotizaciones.html"
-                        class="hidden shrink-0 items-center gap-1.5 px-3 py-2.5 rounded-xl border border-white/10 bg-deepblue-950/50 hover:bg-deepblue-950 text-gray-300 hover:text-white text-xs font-semibold transition-all whitespace-nowrap">
-                        <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i> Cotizaciones
+                    <a id="nav-logout-link" href="/portafolio.html?logout=1"
+                        class="hidden shrink-0 p-2.5 rounded-xl border border-white/10 bg-deepblue-950/50 hover:bg-red-950/60 hover:border-red-500/40 text-gray-400 hover:text-red-300 items-center justify-center transition-all cursor-pointer"
+                        title="Cerrar sesión">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
                     </a>
                     <button onclick="toggleTheme()"
                         class="shrink-0 p-2.5 rounded-xl border border-white/10 bg-deepblue-950/50 hover:bg-deepblue-950 text-gray-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
@@ -941,6 +946,10 @@
                     class="btn-uiverse btn-emerald w-full px-3 py-3 text-sm font-medium rounded-lg mt-4 flex items-center justify-center gap-2">
                     <i data-lucide="beaker" class="w-4 h-4"></i> Maletín de Muestras
                 </button>
+                <a id="mobile-nav-logout-link" href="/portafolio.html?logout=1"
+                    class="hidden items-center justify-center gap-2 px-3 py-3 text-xs font-medium text-gray-500 hover:text-red-400 mt-2">
+                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Cerrar sesión
+                </a>
             </div>
         </div>
     </nav>
@@ -1364,12 +1373,21 @@
 
             // Mostrar el enlace al módulo de Cotizaciones solo para colaboradores.
             // window.__PORTAL_SESSION__ lo inyecta netlify/edge-functions/portal-auth.js
-            // en el <head> al iniciar sesión (nunca es una cookie: vive solo en esta pestaña).
+            // en el <head> al iniciar sesión (con token: también hay una cookie corta
+            // de 2h para no repetir el login entre esta página y Cotizaciones).
             if (window.__PORTAL_SESSION__ && window.__PORTAL_SESSION__.role === 'colaborador') {
                 const navLink = document.getElementById('nav-cotizaciones-link');
                 const mobileNavLink = document.getElementById('mobile-nav-cotizaciones-link');
                 if (navLink) { navLink.classList.remove('hidden'); navLink.classList.add('flex'); }
                 if (mobileNavLink) { mobileNavLink.classList.remove('hidden'); mobileNavLink.classList.add('flex'); }
+            }
+
+            // Mostrar "Cerrar sesión" cuando hay cookie de sesión activa (token presente).
+            if (window.__PORTAL_SESSION__ && window.__PORTAL_SESSION__.token) {
+                const logoutLink = document.getElementById('nav-logout-link');
+                const mobileLogoutLink = document.getElementById('mobile-nav-logout-link');
+                if (logoutLink) { logoutLink.classList.remove('hidden'); logoutLink.classList.add('flex'); }
+                if (mobileLogoutLink) { mobileLogoutLink.classList.remove('hidden'); mobileLogoutLink.classList.add('flex'); }
             }
 
             // Navbar Blur scroll listener

@@ -8,8 +8,10 @@
 // compartir directamente sin un paso de build, por eso están duplicadas.
 //
 // El token lo firma netlify/edge-functions/portal-auth.js al validar el
-// login y se recibe embebido en el HTML (nunca como cookie). El frontend lo
-// reenvía como "Authorization: Bearer <token>" en cada llamada a estas APIs.
+// login y se recibe embebido en el HTML (también se guarda como cookie
+// corta "portal_session" para no repetir el login entre páginas, pero
+// estas APIs nunca leen esa cookie). El frontend reenvía el token como
+// "Authorization: Bearer <token>" en cada llamada a estas APIs.
 
 import { webcrypto } from "node:crypto";
 

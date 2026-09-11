@@ -1,5 +1,9 @@
 // Utilidades compartidas para las APIs de Cotizaciones sobre Netlify Blobs.
 
+// Categorías conocidas con prefijo "bonito" fijo. No es una lista cerrada:
+// el frontend deja escribir cualquier categoría nueva (ej. "Etiqueta",
+// "Manga Termoencogible"...) y prefixForType() le deriva un prefijo de 3
+// letras automáticamente para que también tenga código único reutilizable.
 export const PREFIX_BY_TYPE = {
   envase: "ENV",
   tapa: "TAP",
@@ -11,7 +15,17 @@ export const PREFIX_BY_TYPE = {
 };
 
 export function prefixForType(type) {
-  return PREFIX_BY_TYPE[type] || "OTR";
+  const key = String(type || "").trim().toLowerCase();
+  if (PREFIX_BY_TYPE[key]) return PREFIX_BY_TYPE[key];
+
+  // Categoría nueva/no prevista: derivar un prefijo de 3 letras a partir
+  // del nombre (sin tildes ni símbolos), ej. "etiqueta" -> "ETI".
+  const clean = key
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // quita tildes
+    .replace(/[^a-z]/g, "")
+    .toUpperCase();
+  return clean ? (clean + "XXX").slice(0, 3) : "OTR";
 }
 
 // Genera el siguiente código único disponible para un tipo de insumo/empaque,

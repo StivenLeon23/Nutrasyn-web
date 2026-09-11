@@ -1,28 +1,27 @@
 // Netlify Edge Function: protege /portafolio.html, /cotizaciones.html (y sus
 // alias sin extensión) a nivel de servidor.
 //
-// Diseño SIN estado (sin cookies, sin sesión): cada GET a estas páginas
-// devuelve siempre el formulario de usuario + clave, sin excepción — aunque
-// sea la misma persona que ya entró antes, aunque tenga la pestaña abierta,
-// aunque recargue. El contenido real (con las fórmulas) solo se entrega
-// como respuesta directa al POST con las credenciales correctas, en esa
-// misma respuesta, y nunca se guarda para reutilizarse después.
+// SESIÓN CORTA POR COOKIE (2 horas): al validar el login, esta función firma
+// un token {usuario, rol, expiración} y lo guarda en una cookie HttpOnly +
+// Secure + SameSite=Strict ("portal_session", ver netlify/edge-functions/
+// lib/session.js) además de embebirlo en el HTML como window.__PORTAL_SESSION__.
+// Mientras esa cookie sea válida, un GET normal (navegar entre Portafolio y
+// Cotizaciones, recargar) entrega el contenido real directamente, sin volver
+// a pedir usuario/clave. Pasadas las 2 horas, o tras cerrar sesión
+// (?logout=1), vuelve a pedirlas.
 //
-// Esto también elimina cualquier riesgo de que la CDN de Netlify guarde en
-// caché una copia autenticada y se la sirva a otra persona: como no hay
-// cookie ni redirect, cada visita GET siempre recibe el mismo formulario
-// (fácil y seguro de cachear tal cual), y las respuestas POST no se
-// cachean nunca por defecto en ninguna CDN.
+// Esto es un cambio deliberado sobre el diseño original (que era
+// completamente sin cookies/sesión — decisión tomada explícitamente por el
+// dueño del sitio, sabiendo el trade-off). Lo que NO cambia es la razón por
+// la que se evitaban cookies: que la CDN de Netlify pudiera cachear una
+// respuesta autenticada y servírsela a otra persona. Por eso TODA respuesta
+// con contenido real —tenga cookie o no, venga de POST o de GET— sigue
+// marcada "Cache-Control: private, no-store, no-cache, must-revalidate".
 //
-// TOKEN DE SESIÓN PARA LAS APIS (cotizaciones / insumos) — NO es una cookie:
-// al validar el login, esta función firma un token corto {usuario, rol,
-// expiración} y lo embebe en el propio HTML de respuesta como
-// `window.__PORTAL_SESSION__`. Vive solo en memoria de esa pestaña. El
-// frontend lo reenvía como header "Authorization: Bearer <token>" en cada
-// llamada a /api/quotes y /api/packaging, y esos endpoints (Netlify
-// Functions) lo verifican con el mismo secreto. Así ni clientes ni
-// colaboradores necesitan volver a autenticarse para usar la API mientras
-// dura la página, sin tener que introducir cookies/sesiones de servidor.
+// TOKEN PARA LAS APIS (cotizaciones / insumos): el mismo token de la cookie
+// se reenvía como header "Authorization: Bearer <token>" en cada llamada a
+// /api/quotes y /api/packaging (netlify/functions/*.js lo verifican con el
+// mismo secreto, pero esos endpoints NUNCA leen la cookie directamente).
 //
 // Configuración en Netlify (Site configuration -> Environment variables):
 //
@@ -39,16 +38,22 @@
 //     cuentas en este modo quedan como "cliente" (sin acceso a
 //     Cotizaciones); para dar acceso de colaborador hace falta PORTAL_USERS.
 //
-//   PORTAL_TOKEN_SECRET (requerida para Cotizaciones) — cadena aleatoria
-//     larga usada para firmar los tokens de sesión de las APIs. Sin ella,
-//     el portal sigue funcionando igual que antes, pero el módulo de
-//     Cotizaciones no puede autenticar llamadas a la API.
+//   PORTAL_TOKEN_SECRET (requerida para Cotizaciones y para la cookie de
+//     sesión) — cadena aleatoria larga usada para firmar los tokens. Sin
+//     ella, el portal sigue pidiendo usuario/clave en cada visita (como
+//     antes) y el módulo de Cotizaciones no puede autenticar llamadas a la API.
 //
 // Para dar de alta/baja, rotar la clave o cambiar el rol de un
 // colaborador: editar PORTAL_USERS (o PORTAL_PASSWORD) y volver a
 // desplegar. No hay que tocar código.
 
-import { createSessionToken } from "./lib/session.js";
+import {
+  createSessionToken,
+  verifySessionToken,
+  readSessionCookie,
+  sessionCookieHeader,
+  clearSessionCookieHeader,
+} from "./lib/session.js";
 
 const NO_STORE = "private, no-store, no-cache, must-revalidate";
 
@@ -147,9 +152,40 @@ function loginPage({ error = false } = {}) {
 </html>`;
 }
 
+// Pide el contenido real al origen y le inyecta window.__PORTAL_SESSION__.
+// La usan tanto el login por POST como la re-entrada válida por cookie.
+async function buildAuthenticatedResponse(url, request, context, { user, role, token }, setCookie) {
+  const originRequest = new Request(url, { method: "GET", headers: request.headers });
+  const realResponse = await context.next(originRequest);
+  const headers = new Headers(realResponse.headers);
+  headers.set("Cache-Control", NO_STORE);
+  if (setCookie) headers.append("Set-Cookie", setCookie);
+
+  const contentType = headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) {
+    return new Response(realResponse.body, { status: realResponse.status, headers });
+  }
+
+  const html = await realResponse.text();
+  // Se escapa "<" (-> \u003c) por si el usuario configurado en PORTAL_USERS
+  // llegara a incluir "</script>": evita que rompa la etiqueta <script> al
+  // insertarse en el HTML.
+  const sessionScript =
+    `<script>window.__PORTAL_SESSION__=${JSON.stringify({ user, role, token }).replace(/</g, "\\u003c")};</script>`;
+  const injected = html.includes("</head>")
+    ? html.replace("</head>", sessionScript + "</head>")
+    : html + sessionScript;
+  // El body cambió de tamaño: si dejamos el Content-Length original (copiado
+  // de realResponse.headers), el navegador podría truncar la respuesta. Lo
+  // quitamos y dejamos que el runtime lo recalcule.
+  headers.delete("Content-Length");
+  return new Response(injected, { status: realResponse.status, headers });
+}
+
 export default async (request, context) => {
   const url = new URL(request.url);
   const config = getAuthConfig();
+  const tokenSecret = Deno.env.get("PORTAL_TOKEN_SECRET") || "";
 
   if (request.method === "POST") {
     const form = await request.formData();
@@ -157,42 +193,15 @@ export default async (request, context) => {
     const submittedPass = (form.get("password") || "").toString();
 
     if (config.matches(submittedUser, submittedPass)) {
-      // Clave correcta: pedimos el contenido real al origen con un GET propio
-      // (el POST original no se puede reenviar tal cual a un archivo estático)
-      // y lo devolvemos DIRECTAMENTE en esta respuesta. Sin cookie, sin
-      // redirect: no queda ningún rastro de sesión para la próxima visita.
-      const originRequest = new Request(url, { method: "GET", headers: request.headers });
-      const realResponse = await context.next(originRequest);
-      const headers = new Headers(realResponse.headers);
-      headers.set("Cache-Control", NO_STORE);
-
       const role = config.roleFor(submittedUser, submittedPass);
-      const tokenSecret = Deno.env.get("PORTAL_TOKEN_SECRET") || "";
       // Si no se configuró PORTAL_TOKEN_SECRET, el portal sigue funcionando
-      // igual que siempre; solo queda sin "token" (null), así el frontend
-      // puede detectarlo y avisar que falta configurar esa variable en vez
-      // de fallar en silencio al llamar a la API de Cotizaciones.
+      // igual que antes: sin token, sin cookie, pidiendo la clave en cada
+      // visita. Así el frontend puede avisar que falta configurar esa
+      // variable en vez de fallar en silencio al llamar a la API.
       const token = tokenSecret ? await createSessionToken(tokenSecret, submittedUser, role) : null;
+      const setCookie = token ? sessionCookieHeader(token) : null;
 
-      const contentType = headers.get("content-type") || "";
-      if (contentType.includes("text/html")) {
-        const html = await realResponse.text();
-        // Se escapa "<" (-> \u003c) por si el usuario configurado en
-        // PORTAL_USERS llegara a incluir "</script>": evita que rompa la
-        // etiqueta <script> al insertarse en el HTML.
-        const sessionScript =
-          `<script>window.__PORTAL_SESSION__=${JSON.stringify({ user: submittedUser, role, token }).replace(/</g, "\\u003c")};</script>`;
-        const injected = html.includes("</head>")
-          ? html.replace("</head>", sessionScript + "</head>")
-          : html + sessionScript;
-        // El body cambió de tamaño: si dejamos el Content-Length original
-        // (copiado de realResponse.headers), el navegador podría truncar
-        // la respuesta. Lo quitamos y dejamos que el runtime lo recalcule.
-        headers.delete("Content-Length");
-        return new Response(injected, { status: realResponse.status, headers });
-      }
-
-      return new Response(realResponse.body, { status: realResponse.status, headers });
+      return buildAuthenticatedResponse(url, request, context, { user: submittedUser, role, token }, setCookie);
     }
 
     return new Response(loginPage({ error: true }), {
@@ -201,7 +210,30 @@ export default async (request, context) => {
     });
   }
 
-  // Cualquier visita GET (nueva pestaña, recarga, lo que sea) siempre ve el login.
+  // Cerrar sesión: limpia la cookie y siempre muestra el login, aunque
+  // llegue con una cookie todavía válida.
+  if (url.searchParams.has("logout")) {
+    return new Response(loginPage({ error: false }), {
+      status: 401,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "X-Robots-Tag": "noindex, nofollow",
+        "Cache-Control": NO_STORE,
+        "Set-Cookie": clearSessionCookieHeader(),
+      },
+    });
+  }
+
+  // GET con cookie de sesión vigente: entra directo, sin pedir clave de nuevo.
+  if (tokenSecret) {
+    const cookieToken = readSessionCookie(request.headers.get("cookie"));
+    const session = await verifySessionToken(tokenSecret, cookieToken);
+    if (session) {
+      return buildAuthenticatedResponse(url, request, context, { user: session.user, role: session.role, token: cookieToken }, null);
+    }
+  }
+
+  // Cualquier otra visita GET (sin cookie o cookie vencida) ve el login.
   return new Response(loginPage({ error: false }), {
     status: 401,
     headers: { "content-type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex, nofollow", "Cache-Control": NO_STORE },

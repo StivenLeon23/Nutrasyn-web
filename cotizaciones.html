@@ -82,6 +82,9 @@
                     <a href="/portafolio.html" class="btn-secondary flex items-center gap-1.5">
                         <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Portafolio
                     </a>
+                    <a href="/cotizaciones.html?logout=1" class="btn-secondary flex items-center gap-1.5" title="Cerrar sesión">
+                        <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                    </a>
                 </div>
             </div>
         </nav>
@@ -165,16 +168,11 @@
 
                         <div id="new-insumo-form" class="hidden grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-deepblue-950/60 border border-white/5 rounded-xl">
                             <div>
-                                <label class="field-label">Tipo</label>
-                                <select id="insumo-type" class="field-input">
-                                    <option value="envase">Envase</option>
-                                    <option value="tapa">Tapa</option>
-                                    <option value="copa">Copa</option>
-                                    <option value="caja">Caja</option>
-                                    <option value="divisor">Divisor</option>
-                                    <option value="insumo">Insumo</option>
-                                    <option value="otro">Otro</option>
-                                </select>
+                                <label class="field-label">Categoría</label>
+                                <input type="text" id="insumo-type" list="insumo-type-options" class="field-input"
+                                    placeholder="Envase, Tapa, Etiqueta..." value="Envase">
+                                <datalist id="insumo-type-options"></datalist>
+                                <p class="text-[9px] text-gray-500 mt-1">Elige una existente o escribe una categoría nueva — se guarda para reutilizarla.</p>
                             </div>
                             <div class="md:col-span-2">
                                 <label class="field-label">Nombre</label>
@@ -367,10 +365,34 @@
         }
 
         // --- Insumos / Empaques ---
+        // Categorías por defecto que siempre se sugieren, además de cualquier
+        // categoría nueva que un colaborador haya escrito antes (se detecta a
+        // partir de los insumos ya guardados en packagingCache).
+        const DEFAULT_INSUMO_TYPES = ['Envase', 'Tapa', 'Copa', 'Caja', 'Divisor', 'Insumo', 'Otro'];
+
+        function capitalize(str) {
+            const s = String(str || '').trim();
+            return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+        }
+
+        function typeLabel(type) {
+            return TYPE_LABELS[type] || capitalize(type);
+        }
+
+        function renderInsumoTypeOptions() {
+            const datalist = document.getElementById('insumo-type-options');
+            const customTypes = [...new Set(packagingCache.map(i => i.type))]
+                .filter(t => !DEFAULT_INSUMO_TYPES.some(d => d.toLowerCase() === t))
+                .map(t => capitalize(t));
+            const allTypes = [...DEFAULT_INSUMO_TYPES, ...customTypes];
+            datalist.innerHTML = allTypes.map(t => `<option value="${escapeHtml(t)}"></option>`).join('');
+        }
+
         async function loadPackagingCatalog() {
             try {
                 const data = await apiFetch('/api/packaging');
                 packagingCache = data.items || [];
+                renderInsumoTypeOptions();
             } catch (err) {
                 toast('Error al cargar insumos', err.message, 'error');
             }
@@ -381,13 +403,14 @@
         }
 
         async function submitNewInsumo() {
-            const type = document.getElementById('insumo-type').value;
+            const type = document.getElementById('insumo-type').value.trim() || 'Otro';
             const name = document.getElementById('insumo-name').value.trim();
             const notas = document.getElementById('insumo-notes').value.trim();
             if (!name) { toast('Falta el nombre', 'Escribe un nombre para el insumo.', 'warning'); return; }
             try {
                 const data = await apiFetch('/api/packaging', { method: 'POST', body: JSON.stringify({ type, name, notas }) });
                 packagingCache.push(data.item);
+                renderInsumoTypeOptions();
                 addInsumoToQuote(data.item.code);
                 document.getElementById('insumo-name').value = '';
                 document.getElementById('insumo-notes').value = '';
@@ -413,7 +436,7 @@
                         <span class="text-[11px]">
                             <span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded uppercase font-mono">${escapeHtml(i.code)}</span>
                             <span class="font-bold text-white ml-1">${escapeHtml(i.name)}</span>
-                            <span class="text-gray-500"> · ${escapeHtml(TYPE_LABELS[i.type] || i.type)}</span>
+                            <span class="text-gray-500"> · ${escapeHtml(typeLabel(i.type))}</span>
                         </span>
                         <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
                     </button>
@@ -457,7 +480,7 @@
                         <span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded uppercase font-mono shrink-0">${escapeHtml(i.code)}</span>
                         <div class="min-w-0">
                             <span class="text-xs font-bold text-white block truncate">${escapeHtml(i.name)}</span>
-                            <span class="text-[10px] text-gray-500">${escapeHtml(TYPE_LABELS[i.type] || i.type)}</span>
+                            <span class="text-[10px] text-gray-500">${escapeHtml(typeLabel(i.type))}</span>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
@@ -708,7 +731,7 @@
                     doc.text(i.code, marginX, y);
                     doc.setFont('helvetica', 'normal');
                     doc.setTextColor(90, 100, 115);
-                    doc.text(`${i.name} (${TYPE_LABELS[i.type] || i.type}) — Cantidad: ${i.qty}`, marginX + 22, y);
+                    doc.text(`${i.name} (${typeLabel(i.type)}) — Cantidad: ${i.qty}`, marginX + 22, y);
                     y += 5.2;
                 });
             }
