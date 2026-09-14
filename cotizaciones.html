@@ -239,6 +239,8 @@
         let conditionsCache = [];
         let quotesCache = [];
         let activeInsumoFormulaId = null; // qué fórmula tiene abierto el selector de insumos
+        let activeIngredientFormulaId = null; // qué fórmula tiene abierto el editor de ingredientes
+        let ALL_INGREDIENTS = []; // sugerencias para el editor, se llena en initApp()
 
         const TYPE_LABELS = { envase: 'Envase', tapa: 'Tapa', copa: 'Copa', caja: 'Caja', divisor: 'Divisor', insumo: 'Insumo', otro: 'Otro' };
 
@@ -323,6 +325,93 @@
             return prefix + prod.ingredients;
         }
 
+        // --- Ingredientes por fórmula (variedades alternas) ---
+        // La fórmula del catálogo (window.productDatabase) NUNCA se toca —
+        // cada línea de la cotización ya es una COPIA (f.ingredients es un
+        // string propio, no una referencia al catálogo). Aquí solo se deja
+        // editar esa copia y se detecta cuándo ya no coincide con el
+        // original, para marcarla como "Variedad Alterna".
+        function ingredientsArray(f) {
+            return f.ingredients.split(',').map(s => s.trim()).filter(Boolean);
+        }
+
+        function isAlternateFormula(f) {
+            const original = window.productDatabase.find(p => p.id === f.productId);
+            if (!original) return false;
+            const a = ingredientsArray(f).map(s => s.toLowerCase()).sort();
+            const b = original.ingredients.split(',').map(s => s.trim().toLowerCase()).filter(Boolean).sort();
+            if (a.length !== b.length) return true;
+            return a.some((v, i) => v !== b[i]);
+        }
+
+        function computeAllIngredients() {
+            const set = new Set();
+            window.productDatabase.forEach(p => ingredientsArray(p).forEach(i => set.add(i)));
+            return [...set].sort((a, b) => a.localeCompare(b, 'es'));
+        }
+
+        function toggleIngredientEditor(productId) {
+            activeIngredientFormulaId = (activeIngredientFormulaId === productId) ? null : productId;
+            renderFormulasList();
+        }
+
+        function addIngredientToFormula(productId) {
+            const input = document.getElementById('ingredient-add-input');
+            const value = input.value.trim();
+            if (!value) return;
+            const f = quoteFormulas.find(x => x.productId === productId);
+            if (!f) return;
+            const list = ingredientsArray(f);
+            if (list.some(i => i.toLowerCase() === value.toLowerCase())) {
+                toast('Ya está', 'Ese ingrediente ya está en la mezcla.', 'warning');
+                return;
+            }
+            list.push(value);
+            f.ingredients = list.join(', ');
+            renderFormulasList();
+        }
+
+        function removeIngredientFromFormula(productId, encodedIngredient) {
+            const ingredient = decodeURIComponent(encodedIngredient);
+            const f = quoteFormulas.find(x => x.productId === productId);
+            if (!f) return;
+            f.ingredients = ingredientsArray(f).filter(i => i !== ingredient).join(', ');
+            renderFormulasList();
+        }
+
+        function resetIngredientsToOriginal(productId) {
+            const original = window.productDatabase.find(p => p.id === productId);
+            const f = quoteFormulas.find(x => x.productId === productId);
+            if (!original || !f) return;
+            f.ingredients = original.ingredients;
+            renderFormulasList();
+            toast('Ingredientes restaurados', 'Esta fórmula vuelve a coincidir con la variedad original.');
+        }
+
+        // Editor embebido dentro de la fórmula activa. Reutiliza IDs fijos
+        // (mismo patrón que el selector de insumos) porque solo una fórmula
+        // puede tener el editor abierto a la vez.
+        function renderIngredientEditorHtml(f) {
+            const chips = ingredientsArray(f).map(ing => `
+                <span class="inline-flex items-center gap-1.5 text-[10px] bg-deepblue-950 border border-white/10 text-gray-200 px-2.5 py-1 rounded-full">
+                    ${escapeHtml(ing)}
+                    <button onclick="removeIngredientFromFormula('${f.productId}','${encodeURIComponent(ing).replace(/'/g, '%27')}')" class="text-gray-500 hover:text-red-400"><i data-lucide="x" class="w-3 h-3"></i></button>
+                </span>
+            `).join('');
+
+            return `
+                <div class="mt-2 p-3 bg-deepblue-900/40 border border-white/5 rounded-xl space-y-3">
+                    <div class="flex flex-wrap gap-1.5">${chips || '<p class="text-[10px] text-gray-500">Sin ingredientes.</p>'}</div>
+                    <div class="flex gap-2">
+                        <input type="text" id="ingredient-add-input" list="ingredient-add-options" class="field-input flex-1" placeholder="Escribe o elige un ingrediente...">
+                        <button onclick="addIngredientToFormula('${f.productId}')" class="btn-primary text-[11px] px-3 shrink-0">Agregar</button>
+                    </div>
+                    <datalist id="ingredient-add-options">${ALL_INGREDIENTS.map(i => `<option value="${escapeHtml(i)}"></option>`).join('')}</datalist>
+                    ${isAlternateFormula(f) ? `<button onclick="resetIngredientsToOriginal('${f.productId}')" class="text-[10px] text-gray-500 hover:text-red-400 flex items-center gap-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> Restaurar ingredientes originales</button>` : ''}
+                </div>
+            `;
+        }
+
         // --- Fórmulas ---
         function renderFormulaSearchResults() {
             const q = document.getElementById('formula-search').value.trim().toLowerCase();
@@ -368,6 +457,7 @@
         function removeFormula(productId) {
             quoteFormulas = quoteFormulas.filter(f => f.productId !== productId);
             if (activeInsumoFormulaId === productId) activeInsumoFormulaId = null;
+            if (activeIngredientFormulaId === productId) activeIngredientFormulaId = null;
             renderFormulasList();
         }
 
@@ -478,6 +568,8 @@
             }
             box.innerHTML = quoteFormulas.map(f => {
                 const isActive = activeInsumoFormulaId === f.productId;
+                const isIngredientEditorActive = activeIngredientFormulaId === f.productId;
+                const isAlternate = isAlternateFormula(f);
                 const insumosText = f.insumos.length
                     ? f.insumos.map(i => `${i.name} (${i.code})`).join(', ')
                     : 'Sin insumos asignados';
@@ -488,12 +580,23 @@
                             <div class="flex items-center gap-2 flex-wrap mb-1">
                                 <span class="text-base font-extrabold text-white">${escapeHtml(f.name)}</span>
                                 <span class="text-[9px] font-mono text-gray-500">${f.productId.toUpperCase()}</span>
+                                ${isAlternate ? '<span class="text-[9px] font-bold text-amber-300 bg-amber-950/50 border border-amber-500/30 px-1.5 py-0.5 rounded uppercase">Variedad Alterna</span>' : ''}
                             </div>
                             <p class="text-[11px] text-gray-400 leading-relaxed">${escapeHtml(mezclaLabel(f))}</p>
                         </div>
                         <button onclick="removeFormula('${f.productId}')" class="text-gray-500 hover:text-red-400 shrink-0">
                             <i data-lucide="trash" class="w-4 h-4"></i>
                         </button>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <p class="text-[10px] text-gray-500">${isAlternate ? 'Ingredientes modificados respecto a la fórmula original — la fórmula original del catálogo no cambia.' : 'Puedes agregar o quitar ingredientes: se crea una variedad alterna solo para esta cotización.'}</p>
+                            <button onclick="toggleIngredientEditor('${f.productId}')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 shrink-0 whitespace-nowrap">
+                                ${isIngredientEditorActive ? 'Cerrar' : 'Editar ingredientes'}
+                            </button>
+                        </div>
+                        ${isIngredientEditorActive ? renderIngredientEditorHtml(f) : ''}
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -794,6 +897,7 @@
             quoteFormaPago = null;
             quoteTiempoEntrega = null;
             activeInsumoFormulaId = null;
+            activeIngredientFormulaId = null;
             document.getElementById('cliente-nombre').value = '';
             document.getElementById('cliente-nit').value = '';
             document.getElementById('cliente-telefono').value = '';
@@ -869,6 +973,7 @@
             quoteFormaPago = q.formaPago ? { ...q.formaPago } : null;
             quoteTiempoEntrega = q.tiempoEntrega ? { ...q.tiempoEntrega } : null;
             activeInsumoFormulaId = null;
+            activeIngredientFormulaId = null;
             renderFormulasList();
             renderConditionSelect('pago');
             renderConditionSelect('entrega');
@@ -1139,7 +1244,14 @@
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(13);
                 doc.setTextColor(10, 37, 64);
-                doc.text(`${idx + 1}. ${f.name}`, marginX, y);
+                const titleText = `${idx + 1}. ${f.name}`;
+                doc.text(titleText, marginX, y);
+                if (isAlternateFormula(f)) {
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(7);
+                    doc.setTextColor(180, 130, 10);
+                    doc.text('VARIEDAD ALTERNA', marginX + doc.getTextWidth(titleText) + 4, y - 0.5);
+                }
                 y += 6;
 
                 if (presentacion) {
@@ -1273,6 +1385,7 @@
         // --- Init ---
         function initApp() {
             document.getElementById('elaborado-por').value = session.user;
+            ALL_INGREDIENTS = computeAllIngredients();
             renderFormulasList();
             loadPackagingCatalog();
             loadConditionsCatalog();
