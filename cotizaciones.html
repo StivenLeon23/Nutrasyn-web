@@ -1244,14 +1244,7 @@
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(13);
                 doc.setTextColor(10, 37, 64);
-                const titleText = `${idx + 1}. ${f.name}`;
-                doc.text(titleText, marginX, y);
-                if (isAlternateFormula(f)) {
-                    doc.setFont('helvetica', 'bold');
-                    doc.setFontSize(7);
-                    doc.setTextColor(180, 130, 10);
-                    doc.text('VARIEDAD ALTERNA', marginX + doc.getTextWidth(titleText) + 4, y - 0.5);
-                }
+                doc.text(`${idx + 1}. ${f.name}`, marginX, y);
                 y += 6;
 
                 if (presentacion) {
