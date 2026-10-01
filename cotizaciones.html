@@ -373,9 +373,36 @@
             try {
                 const data = await apiFetch('/api/ingredients');
                 ingredientsCatalogCache = data.items || [];
+                renderFormulasList(); // por si ya había fórmulas en pantalla, ahora les cruza el código
             } catch (err) {
                 toast('Error al cargar ingredientes', err.message, 'error');
             }
+        }
+
+        // Quita tildes para comparar nombres sin que una diferencia de
+        // acentuación (p. ej. "Limón" vs. "Limon" del catálogo de costeo)
+        // cuente como un ingrediente distinto.
+        function normalizeForMatch(s) {
+            return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+        }
+
+        // Cruza un ingrediente (venga de una variedad original del catálogo
+        // de 65 fórmulas, o de una variedad alterna) con su código IN del
+        // catálogo de costeo, comparando por nombre ya limpio y sin tildes.
+        // Cuando el mismo ingrediente existe en versión polvo y líquida (dos
+        // códigos distintos, mismo nombre limpio — ver IN027/IN219 Cúrcuma),
+        // se prefiere la que coincide con el formato de la fórmula. Si el
+        // nombre no coincide exactamente con ninguno del catálogo (variantes
+        // de redacción, ej. "Vitamina B6" vs. "Vitamina B6 (Piridoxina)"),
+        // no se adivina: se deja sin código para no asociar mal un costeo.
+        function findIngredientCode(ingredientName, formatHint) {
+            const target = normalizeForMatch(cleanIngredientDisplay(ingredientName));
+            const candidates = ingredientsCatalogCache.filter(i => normalizeForMatch(cleanIngredientDisplay(i.nombre)) === target);
+            if (!candidates.length) return null;
+            if (candidates.length === 1) return candidates[0].code;
+            const wantsLiquid = formatHint === 'Líquido';
+            const preferred = candidates.find(c => /l[ií]quido/i.test(c.nombre) === wantsLiquid);
+            return (preferred || candidates[0]).code;
         }
 
         function toggleIngredientEditor(productId) {
@@ -486,12 +513,16 @@
         // (mismo patrón que el selector de insumos) porque solo una fórmula
         // puede tener el editor abierto a la vez.
         function renderIngredientEditorHtml(f) {
-            const chips = ingredientsArray(f).map(ing => `
+            const chips = ingredientsArray(f).map(ing => {
+                const code = findIngredientCode(ing, f.format);
+                return `
                 <span class="inline-flex items-center gap-1.5 text-[10px] bg-deepblue-950 border border-white/10 text-gray-200 px-2.5 py-1 rounded-full">
+                    ${code ? `<span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded uppercase font-mono">${escapeHtml(code)}</span>` : '<span class="text-[9px] text-amber-400" title="Sin código en el catálogo de ingredientes">Sin código</span>'}
                     ${escapeHtml(cleanIngredientDisplay(ing))}
                     <button onclick="removeIngredientFromFormula('${f.productId}','${encodeURIComponent(ing).replace(/'/g, '%27')}')" class="text-gray-500 hover:text-red-400"><i data-lucide="x" class="w-3 h-3"></i></button>
                 </span>
-            `).join('');
+            `;
+            }).join('');
 
             return `
                 <div class="mt-2 p-3 bg-deepblue-900/40 border border-white/5 rounded-xl space-y-3">
