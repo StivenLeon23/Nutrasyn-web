@@ -1415,7 +1415,7 @@
         function drawPriceBoxes(doc, x, y, w, unitPrice, qty, subtotal) {
             const gap = 4;
             const boxW = (w - gap * 2) / 3;
-            const boxH = 18;
+            const boxH = 14;
 
             function box(bx, label, value, dark) {
                 if (dark) {
@@ -1429,15 +1429,15 @@
                     doc.roundedRect(bx, y, boxW, boxH, 2, 2, 'S');
                 }
                 doc.setFont('helvetica', 'bold');
-                doc.setFontSize(6.8);
+                doc.setFontSize(6.5);
                 if (dark) doc.setTextColor(150, 230, 214); else doc.setTextColor(0, 140, 125);
-                doc.text(label, bx + boxW / 2, y + 6.5, { align: 'center' });
+                doc.text(label, bx + boxW / 2, y + 5, { align: 'center' });
 
                 doc.setFont('helvetica', 'bold');
-                doc.setFontSize(11);
+                doc.setFontSize(10);
                 if (dark) doc.setTextColor(255, 255, 255); else doc.setTextColor(10, 37, 64);
                 const valueLines = doc.splitTextToSize(String(value), boxW - 6);
-                doc.text(valueLines[0], bx + boxW / 2, y + boxH - 5, { align: 'center' });
+                doc.text(valueLines[0], bx + boxW / 2, y + boxH - 3.5, { align: 'center' });
             }
 
             box(x, 'PRECIO UNITARIO', formatCOP(unitPrice), false);
@@ -1456,11 +1456,11 @@
             const startY = y;
             escalas.forEach((e, i) => {
                 if (i > 0) y += 4;
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(7.5);
-                doc.setTextColor(100, 116, 139);
+                doc.setFont('times', 'bolditalic');
+                doc.setFontSize(8);
+                doc.setTextColor(0, 140, 125);
                 doc.text(`OPCIÓN ${i + 1}`, x, y + 3);
-                y += 5;
+                y += 4.5;
                 y += drawPriceBoxes(doc, x, y, w, e.precioUnitario, e.cantidad, escalaSubtotal(e));
             });
             return y - startY;
@@ -1557,13 +1557,22 @@
                 if (subtotal != null) { quoteTotal += subtotal; hasAnyPricing = true; }
 
                 const presentacion = [f.presentacionTipo, f.presentacionTamano].filter(Boolean).join(' · ');
-                const mezclaLines = doc.splitTextToSize(mezclaLabel(f), pageW - marginX * 2 - 4);
+                // splitTextToSize() mide el ancho de línea con la fuente
+                // ACTIVA en ese momento — si no se fija aquí la misma
+                // fuente/tamaño con la que luego se dibuja el texto (8.5pt
+                // normal), mide con la fuente que haya quedado puesta del
+                // título anterior (13pt bold, bastante más ancha) y corta
+                // las líneas mucho antes de lo necesario, dejando el bloque
+                // de texto angosto en vez de usar el ancho real de la página.
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8.5);
+                const mezclaLines = doc.splitTextToSize(mezclaLabel(f), pageW - marginX * 2);
                 const insumosText = f.insumos.length ? f.insumos.map(i => `${i.name} (${i.code})`).join(', ') : null;
-                const insumosLines = insumosText ? doc.splitTextToSize(`Insumos: ${insumosText}`, pageW - marginX * 2 - 4) : [];
+                const insumosLines = insumosText ? doc.splitTextToSize(`Insumos: ${insumosText}`, pageW - marginX * 2) : [];
                 // Con varias escalas, cada una ocupa su propio trío de
-                // recuadros (23mm: etiqueta + caja) más 4mm de separación
+                // recuadros (18.5mm: etiqueta + caja) más 4mm de separación
                 // entre escalas (ver drawEscalasTable), más el margen final.
-                const priceSectionHeight = singleEscala ? 25 : (23 * f.escalas.length + 4 * (f.escalas.length - 1)) + 9;
+                const priceSectionHeight = singleEscala ? 21 : (18.5 * f.escalas.length + 4 * (f.escalas.length - 1)) + 9;
 
                 const blockHeight = 6 + (presentacion ? 5 : 0) + mezclaLines.length * 4.2 + 2
                     + (insumosLines.length ? insumosLines.length * 4.2 + 2 : 0) + priceSectionHeight;
@@ -1598,6 +1607,7 @@
                 if (singleEscala) {
                     // Precio unitario | Cantidad | Subtotal, cada uno en su propio recuadro
                     y += drawPriceBoxes(doc, marginX, y, pageW - marginX * 2, f.escalas[0].precioUnitario, f.escalas[0].cantidad, subtotal) + 7;
+                    // (boxH=14 + 7 de margen = 21, igual al priceSectionHeight de arriba)
                 } else {
                     y += drawEscalasTable(doc, marginX, y, pageW - marginX * 2, f.escalas) + 2;
                     doc.setFont('helvetica', 'italic');
