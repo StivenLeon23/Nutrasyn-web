@@ -692,7 +692,7 @@
                 lineId: crypto.randomUUID(),
                 productId: prod.id, name: prod.name, format: prod.format, ingredients: prod.ingredients,
                 presentacionTipo: '', presentacionTamano: '',
-                insumos: [], precioUnitario: null, cantidad: null,
+                insumos: [], escalas: [{ cantidad: null, precioUnitario: null }],
             });
             document.getElementById('formula-search').value = '';
             document.getElementById('formula-search-results').classList.add('hidden');
@@ -716,28 +716,52 @@
             if (f) f[field] = value.trim();
         }
 
-        function formulaSubtotal(f) {
-            const unit = Number(f.precioUnitario);
-            const qty = Number(f.cantidad);
-            if (f.precioUnitario == null || f.cantidad == null || !Number.isFinite(unit) || !Number.isFinite(qty)) return null;
+        // Cada fórmula tiene una o varias "escalas" (cantidad + precio
+        // unitario). Con una sola escala es el caso normal de siempre; con
+        // varias, son opciones alternativas de cantidad para que el cliente
+        // elija una (ej. 100 / 500 / 1000 unidades, cada una a su precio) —
+        // por eso esas fórmulas NO se suman al Total general: sumarlas sería
+        // tratarlas como si el cliente fuera a comprar las tres cantidades
+        // juntas, no a elegir una.
+        function escalaSubtotal(escala) {
+            const unit = Number(escala?.precioUnitario);
+            const qty = Number(escala?.cantidad);
+            if (escala?.precioUnitario == null || escala?.cantidad == null || !Number.isFinite(unit) || !Number.isFinite(qty)) return null;
             return unit * qty;
         }
 
-        // Precio/cantidad por fórmula: actualiza solo el subtotal de esa fila y
-        // el total general por DOM directo (evita re-renderizar toda la lista
-        // y perder el foco mientras se escribe).
-        function updateFormulaPricing(lineId, field, rawValue) {
+        function addEscala(lineId) {
             const f = quoteFormulas.find(x => x.lineId === lineId);
             if (!f) return;
+            f.escalas.push({ cantidad: null, precioUnitario: null });
+            renderFormulasList();
+        }
+
+        function removeEscala(lineId, index) {
+            const f = quoteFormulas.find(x => x.lineId === lineId);
+            if (!f || f.escalas.length <= 1) return;
+            f.escalas.splice(index, 1);
+            renderFormulasList();
+        }
+
+        // Actualiza solo el subtotal de esa escala y el total general por DOM
+        // directo (evita re-renderizar toda la lista y perder el foco
+        // mientras se escribe).
+        function updateEscala(lineId, index, field, rawValue) {
+            const f = quoteFormulas.find(x => x.lineId === lineId);
+            if (!f || !f.escalas[index]) return;
             const n = rawValue === '' ? null : Number(rawValue);
-            f[field] = (n === null || Number.isNaN(n)) ? null : n;
-            const subtotalEl = document.getElementById('formula-subtotal-' + lineId);
-            if (subtotalEl) subtotalEl.textContent = formatCOP(formulaSubtotal(f));
+            f.escalas[index][field] = (n === null || Number.isNaN(n)) ? null : n;
+            const subtotalEl = document.getElementById(`escala-subtotal-${lineId}-${index}`);
+            if (subtotalEl) subtotalEl.textContent = formatCOP(escalaSubtotal(f.escalas[index]));
             updateQuoteTotalDisplay();
         }
 
         function computeQuoteTotal() {
-            const subtotals = quoteFormulas.map(formulaSubtotal).filter(s => s != null);
+            const subtotals = quoteFormulas
+                .filter(f => f.escalas.length === 1)
+                .map(f => escalaSubtotal(f.escalas[0]))
+                .filter(s => s != null);
             return subtotals.length ? subtotals.reduce((a, b) => a + b, 0) : null;
         }
 
@@ -872,23 +896,37 @@
                         ${isActive ? renderInsumoPickerHtml(f) : ''}
                     </div>
 
-                    <div class="grid grid-cols-3 gap-3 pt-2 border-t border-white/5">
-                        <div>
-                            <label class="field-label">Precio unitario</label>
-                            <input type="number" min="0" step="1" value="${f.precioUnitario ?? ''}"
-                                onchange="updateFormulaPricing('${f.lineId}','precioUnitario', this.value)"
-                                class="field-input" placeholder="COP">
+                    <div class="pt-2 border-t border-white/5 space-y-2">
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <label class="field-label !mb-0">Escalas de cantidad y precio</label>
+                            <button onclick="addEscala('${f.lineId}')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                                <i data-lucide="plus" class="w-3 h-3"></i> Agregar escala
+                            </button>
                         </div>
-                        <div>
-                            <label class="field-label">Cantidad</label>
-                            <input type="number" min="0" step="1" value="${f.cantidad ?? ''}"
-                                onchange="updateFormulaPricing('${f.lineId}','cantidad', this.value)"
-                                class="field-input" placeholder="Unidades">
-                        </div>
-                        <div>
-                            <label class="field-label">Subtotal</label>
-                            <div id="formula-subtotal-${f.lineId}" class="field-input flex items-center font-bold text-emerald-300">${formatCOP(formulaSubtotal(f))}</div>
-                        </div>
+                        ${f.escalas.map((e, idx) => `
+                            <div class="grid grid-cols-7 gap-2 items-end">
+                                <div class="col-span-2">
+                                    <label class="field-label">Cantidad</label>
+                                    <input type="number" min="0" step="1" value="${e.cantidad ?? ''}"
+                                        onchange="updateEscala('${f.lineId}', ${idx}, 'cantidad', this.value)"
+                                        class="field-input" placeholder="Unidades">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="field-label">Precio unitario</label>
+                                    <input type="number" min="0" step="1" value="${e.precioUnitario ?? ''}"
+                                        onchange="updateEscala('${f.lineId}', ${idx}, 'precioUnitario', this.value)"
+                                        class="field-input" placeholder="COP">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="field-label">Subtotal</label>
+                                    <div id="escala-subtotal-${f.lineId}-${idx}" class="field-input flex items-center font-bold text-emerald-300">${formatCOP(escalaSubtotal(e))}</div>
+                                </div>
+                                <div class="col-span-1 flex justify-center pb-2.5">
+                                    ${f.escalas.length > 1 ? `<button onclick="removeEscala('${f.lineId}', ${idx})" class="text-gray-500 hover:text-red-400"><i data-lucide="trash" class="w-4 h-4"></i></button>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                        ${f.escalas.length > 1 ? '<p class="text-[9px] text-amber-400">Varias escalas: son opciones de cantidad para que el cliente elija una, por eso esta fórmula no se suma al Total general.</p>' : ''}
                     </div>
                 </div>
             `;
@@ -1215,13 +1253,21 @@
             // lineId siempre se genera de nuevo al cargar (no se reutiliza el
             // guardado) — es solo para distinguir líneas dentro de esta
             // sesión del navegador, no necesita ser estable entre guardados.
-            quoteFormulas = (q.formulas || []).map(f => ({
-                lineId: crypto.randomUUID(),
-                productId: f.productId, name: f.name, format: f.format, ingredients: f.ingredients,
-                presentacionTipo: f.presentacionTipo || '', presentacionTamano: f.presentacionTamano || '',
-                insumos: (Array.isArray(f.insumos) ? f.insumos : []).map(i => ({ ...i })),
-                precioUnitario: f.precioUnitario ?? null, cantidad: f.cantidad ?? null,
-            }));
+            quoteFormulas = (q.formulas || []).map(f => {
+                // Compatibilidad con cotizaciones guardadas antes de las
+                // escalas (tenían precioUnitario/cantidad sueltos en vez de
+                // un arreglo "escalas").
+                const escalas = Array.isArray(f.escalas) && f.escalas.length
+                    ? f.escalas.map(e => ({ cantidad: e.cantidad ?? null, precioUnitario: e.precioUnitario ?? null }))
+                    : [{ cantidad: f.cantidad ?? null, precioUnitario: f.precioUnitario ?? null }];
+                return {
+                    lineId: crypto.randomUUID(),
+                    productId: f.productId, name: f.name, format: f.format, ingredients: f.ingredients,
+                    presentacionTipo: f.presentacionTipo || '', presentacionTamano: f.presentacionTamano || '',
+                    insumos: (Array.isArray(f.insumos) ? f.insumos : []).map(i => ({ ...i })),
+                    escalas,
+                };
+            });
             quoteFormaPago = q.formaPago ? { ...q.formaPago } : null;
             quoteTiempoEntrega = q.tiempoEntrega ? { ...q.tiempoEntrega } : null;
             activeInsumoFormulaId = null;
@@ -1396,6 +1442,40 @@
             return boxH;
         }
 
+        // Para fórmulas con varias escalas de cantidad (opciones para que el
+        // cliente elija una), se dibuja una tabla en vez de los 3 recuadros.
+        // Devuelve el alto que ocupó.
+        function drawEscalasTable(doc, x, y, w, escalas) {
+            const rowH = 7;
+            doc.setFillColor(10, 37, 64);
+            doc.rect(x, y, w, rowH, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7.5);
+            doc.setTextColor(255, 255, 255);
+            doc.text('CANTIDAD', x + 4, y + 4.8);
+            doc.text('PRECIO UNITARIO', x + w * 0.38, y + 4.8);
+            doc.text('SUBTOTAL', x + w * 0.72, y + 4.8);
+            let ry = y + rowH;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8.5);
+            escalas.forEach((e, i) => {
+                if (i % 2 === 0) {
+                    doc.setFillColor(240, 253, 250);
+                    doc.rect(x, ry, w, rowH, 'F');
+                }
+                doc.setTextColor(10, 37, 64);
+                doc.text(e.cantidad != null ? Number(e.cantidad).toLocaleString('es-CO') : 'No definida', x + 4, ry + 4.8);
+                doc.text(formatCOP(e.precioUnitario), x + w * 0.38, ry + 4.8);
+                doc.setFont('helvetica', 'bold');
+                doc.text(formatCOP(escalaSubtotal(e)), x + w * 0.72, ry + 4.8);
+                doc.setFont('helvetica', 'normal');
+                ry += rowH;
+            });
+
+            return ry - y;
+        }
+
         // --- PDF de cotización ---
         async function downloadQuotePDF() {
             const payload = buildQuotePayload();
@@ -1480,16 +1560,20 @@
             let hasAnyPricing = false;
 
             quoteFormulas.forEach((f, idx) => {
-                const subtotal = formulaSubtotal(f);
+                const singleEscala = f.escalas.length === 1;
+                const subtotal = singleEscala ? escalaSubtotal(f.escalas[0]) : null;
+                // Las fórmulas con varias escalas son opciones alternativas de
+                // cantidad para que el cliente elija una — no se suman al Total.
                 if (subtotal != null) { quoteTotal += subtotal; hasAnyPricing = true; }
 
                 const presentacion = [f.presentacionTipo, f.presentacionTamano].filter(Boolean).join(' · ');
                 const mezclaLines = doc.splitTextToSize(mezclaLabel(f), pageW - marginX * 2 - 4);
                 const insumosText = f.insumos.length ? f.insumos.map(i => `${i.name} (${i.code})`).join(', ') : null;
                 const insumosLines = insumosText ? doc.splitTextToSize(`Insumos: ${insumosText}`, pageW - marginX * 2 - 4) : [];
+                const priceSectionHeight = singleEscala ? 25 : (f.escalas.length + 1) * 7 + 10;
 
                 const blockHeight = 6 + (presentacion ? 5 : 0) + mezclaLines.length * 4.2 + 2
-                    + (insumosLines.length ? insumosLines.length * 4.2 + 2 : 0) + 25;
+                    + (insumosLines.length ? insumosLines.length * 4.2 + 2 : 0) + priceSectionHeight;
                 ensureSpace(blockHeight);
 
                 // Título grande de la fórmula/producto terminado
@@ -1518,8 +1602,17 @@
                     y += insumosLines.length * 4.2 + 2;
                 }
 
-                // Precio unitario | Cantidad | Subtotal, cada uno en su propio recuadro
-                y += drawPriceBoxes(doc, marginX, y, pageW - marginX * 2, f.precioUnitario, f.cantidad, subtotal) + 7;
+                if (singleEscala) {
+                    // Precio unitario | Cantidad | Subtotal, cada uno en su propio recuadro
+                    y += drawPriceBoxes(doc, marginX, y, pageW - marginX * 2, f.escalas[0].precioUnitario, f.escalas[0].cantidad, subtotal) + 7;
+                } else {
+                    y += drawEscalasTable(doc, marginX, y, pageW - marginX * 2, f.escalas) + 2;
+                    doc.setFont('helvetica', 'italic');
+                    doc.setFontSize(7.5);
+                    doc.setTextColor(180, 130, 10);
+                    doc.text('Opciones de cantidad — el cliente elige una.', marginX, y);
+                    y += 7;
+                }
             });
 
             // Total (suma de subtotales)

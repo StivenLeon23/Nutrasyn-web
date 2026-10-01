@@ -76,13 +76,26 @@ function normalizeConditionChoice(value) {
 // Suma precioUnitario × cantidad de las fórmulas que tengan ambos valores.
 // Si ninguna fórmula tiene precio todavía, se devuelve null (en vez de 0)
 // para distinguir "sin definir" de "total es cero".
+// Cada fórmula puede traer una o varias "escalas" (cantidad + precio
+// unitario). Con una sola escala se suma normal; con varias, son opciones
+// alternativas de cantidad para que el cliente elija una, así que esa
+// fórmula no se cuenta en el total (sumarlas sería tratarlas como pedidos
+// acumulados). Compatibilidad: cotizaciones guardadas antes de las escalas
+// traían precioUnitario/cantidad sueltos en vez del arreglo "escalas".
 function computeTotal(formulas) {
   let total = 0;
   let hasAny = false;
   for (const f of formulas || []) {
-    const unit = Number(f?.precioUnitario);
-    const qty = Number(f?.cantidad);
-    if (f?.precioUnitario != null && f?.cantidad != null && Number.isFinite(unit) && Number.isFinite(qty)) {
+    const escalas = Array.isArray(f?.escalas) && f.escalas.length
+      ? f.escalas
+      : (f?.precioUnitario != null || f?.cantidad != null)
+        ? [{ precioUnitario: f.precioUnitario, cantidad: f.cantidad }]
+        : [];
+    if (escalas.length !== 1) continue;
+    const e = escalas[0];
+    const unit = Number(e?.precioUnitario);
+    const qty = Number(e?.cantidad);
+    if (e?.precioUnitario != null && e?.cantidad != null && Number.isFinite(unit) && Number.isFinite(qty)) {
       total += unit * qty;
       hasAny = true;
     }
