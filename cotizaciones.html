@@ -321,7 +321,8 @@
         }
 
         function mezclaLabel(prod) {
-            return 'Ingredientes: ' + prod.ingredients;
+            const prefix = prod.format === 'Líquido' ? 'Mezcla líquida con: ' : 'Mezcla en polvo con: ';
+            return prefix + prod.ingredients;
         }
 
         // --- Ingredientes por fórmula (variedades alternas) ---
