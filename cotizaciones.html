@@ -1440,8 +1440,8 @@
                 doc.text(valueLines[0], bx + boxW / 2, y + boxH - 3.5, { align: 'center' });
             }
 
-            box(x, 'PRECIO UNITARIO', formatCOP(unitPrice), false);
-            box(x + boxW + gap, 'CANTIDAD', qty != null ? Number(qty).toLocaleString('es-CO') : 'No definida', false);
+            box(x, 'CANTIDAD', qty != null ? Number(qty).toLocaleString('es-CO') : 'No definida', false);
+            box(x + boxW + gap, 'VALOR', formatCOP(unitPrice), false);
             box(x + (boxW + gap) * 2, 'SUBTOTAL', formatCOP(subtotal), true);
 
             return boxH;
@@ -1456,9 +1456,9 @@
             const startY = y;
             escalas.forEach((e, i) => {
                 if (i > 0) y += 4;
-                doc.setFont('times', 'bolditalic');
+                doc.setFont('helvetica', 'bold');
                 doc.setFontSize(8);
-                doc.setTextColor(0, 140, 125);
+                doc.setTextColor(10, 37, 64);
                 doc.text(`OPCIÓN ${i + 1}`, x, y + 3);
                 y += 4.5;
                 y += drawPriceBoxes(doc, x, y, w, e.precioUnitario, e.cantidad, escalaSubtotal(e));
