@@ -14,6 +14,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="js/product-database.js"></script>
 
     <script>
@@ -91,9 +92,14 @@
 
         <div class="max-w-[1600px] w-full mx-auto p-4 lg:p-8 flex flex-col space-y-8">
 
-            <div class="space-y-1">
-                <h1 class="text-2xl lg:text-3xl font-extrabold text-white">Constructor de Cotizaciones</h1>
-                <p class="text-xs text-gray-400">Agrega fórmulas del catálogo; cada una es un producto terminado con su propia presentación, insumos, precio unitario y cantidad. Puedes guardar como borrador aunque falten datos.</p>
+            <div class="flex flex-wrap items-start justify-between gap-4">
+                <div class="space-y-1">
+                    <h1 class="text-2xl lg:text-3xl font-extrabold text-white">Constructor de Cotizaciones</h1>
+                    <p class="text-xs text-gray-400">Agrega fórmulas del catálogo; cada una es un producto terminado con su propia presentación, insumos, precio unitario y cantidad. Puedes guardar como borrador aunque falten datos.</p>
+                </div>
+                <button onclick="downloadIngredientsExcel()" class="btn-secondary flex items-center gap-1.5 shrink-0">
+                    <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> Catálogo de ingredientes (Excel)
+                </button>
             </div>
 
             <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
@@ -376,6 +382,38 @@
                 renderFormulasList(); // por si ya había fórmulas en pantalla, ahora les cruza el código
             } catch (err) {
                 toast('Error al cargar ingredientes', err.message, 'error');
+            }
+        }
+
+        // Descarga el catálogo completo de ingredientes (todos los códigos
+        // IN, incluyendo los que se hayan creado desde la interfaz) en un
+        // .xlsx, para actualizarlo en el cuadro de costeo externo. Siempre
+        // recarga del servidor primero para exportar lo más reciente, no
+        // una copia en memoria que pueda estar desactualizada.
+        async function downloadIngredientsExcel() {
+            try {
+                await loadIngredientsCatalog();
+                if (!ingredientsCatalogCache.length) {
+                    toast('Sin ingredientes', 'El catálogo de ingredientes está vacío.', 'warning');
+                    return;
+                }
+                const rows = ingredientsCatalogCache
+                    .slice()
+                    .sort((a, b) => a.code.localeCompare(b.code, 'es', { numeric: true }))
+                    .map(i => ({
+                        'Código': i.code,
+                        'Ingrediente': i.nombre,
+                        'Nombre limpio (cliente)': cleanIngredientDisplay(i.nombre),
+                    }));
+                const ws = XLSX.utils.json_to_sheet(rows);
+                ws['!cols'] = [{ wch: 10 }, { wch: 48 }, { wch: 35 }];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Ingredientes');
+                const fecha = new Date().toISOString().slice(0, 10);
+                XLSX.writeFile(wb, `NutraSyn_Ingredientes_${fecha}.xlsx`);
+                toast('Excel descargado', `${rows.length} ingredientes exportados.`);
+            } catch (err) {
+                toast('Error al exportar', err.message, 'error');
             }
         }
 
