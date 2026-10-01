@@ -512,31 +512,32 @@
             return null;
         }
 
-        function toggleIngredientEditor(productId) {
-            activeIngredientFormulaId = (activeIngredientFormulaId === productId) ? null : productId;
+        function toggleIngredientEditor(lineId) {
+            activeIngredientFormulaId = (activeIngredientFormulaId === lineId) ? null : lineId;
             renderFormulasList();
         }
 
-        function removeIngredientFromFormula(productId, encodedIngredient) {
+        function removeIngredientFromFormula(lineId, encodedIngredient) {
             const ingredient = decodeURIComponent(encodedIngredient);
-            const f = quoteFormulas.find(x => x.productId === productId);
+            const f = quoteFormulas.find(x => x.lineId === lineId);
             if (!f) return;
             f.ingredients = ingredientsArray(f).filter(i => i !== ingredient).join(', ');
             renderFormulasList();
         }
 
-        function resetIngredientsToOriginal(productId) {
-            const original = window.productDatabase.find(p => p.id === productId);
-            const f = quoteFormulas.find(x => x.productId === productId);
-            if (!original || !f) return;
+        function resetIngredientsToOriginal(lineId) {
+            const f = quoteFormulas.find(x => x.lineId === lineId);
+            if (!f) return;
+            const original = window.productDatabase.find(p => p.id === f.productId);
+            if (!original) return;
             f.ingredients = original.ingredients;
             renderFormulasList();
             toast('Ingredientes restaurados', 'Esta fórmula vuelve a coincidir con la variedad original.');
         }
 
-        function addCatalogIngredientToFormula(productId, code) {
+        function addCatalogIngredientToFormula(lineId, code) {
             const item = ingredientsCatalogCache.find(i => i.code === code);
-            const f = quoteFormulas.find(x => x.productId === productId);
+            const f = quoteFormulas.find(x => x.lineId === lineId);
             if (!item || !f) return;
             const list = ingredientsArray(f);
             if (list.some(i => i.toLowerCase() === item.nombre.toLowerCase())) {
@@ -552,7 +553,7 @@
             renderFormulasList();
         }
 
-        function renderIngredientSearchResults(productId) {
+        function renderIngredientSearchResults(lineId) {
             const q = document.getElementById('ingredient-search').value.trim().toLowerCase();
             const box = document.getElementById('ingredient-search-results');
             if (!q) { box.classList.add('hidden'); box.innerHTML = ''; return; }
@@ -562,14 +563,14 @@
             box.innerHTML = matches.length
                 ? matches.map(i => `
                     <div class="w-full flex items-center gap-1.5 p-2 rounded-lg hover:bg-white/5 transition-colors">
-                        <button onclick="addCatalogIngredientToFormula('${productId}','${i.code}')" class="flex-1 min-w-0 text-left flex items-center gap-1.5">
+                        <button onclick="addCatalogIngredientToFormula('${lineId}','${i.code}')" class="flex-1 min-w-0 text-left flex items-center gap-1.5">
                             <span class="text-[11px] truncate">
                                 <span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded uppercase font-mono">${escapeHtml(i.code)}</span>
                                 <span class="font-bold text-white ml-1">${escapeHtml(cleanIngredientDisplay(i.nombre))}</span>
                             </span>
                             <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-emerald-400 shrink-0 ml-auto"></i>
                         </button>
-                        <button onclick="deleteIngredientFromCatalog('${i.code}','${productId}')" title="Eliminar del catálogo" class="text-gray-500 hover:text-red-400 shrink-0 p-1">
+                        <button onclick="deleteIngredientFromCatalog('${i.code}','${lineId}')" title="Eliminar del catálogo" class="text-gray-500 hover:text-red-400 shrink-0 p-1">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>
@@ -583,14 +584,14 @@
             document.getElementById('new-ingredient-form').classList.toggle('hidden');
         }
 
-        async function submitNewIngredient(productId) {
+        async function submitNewIngredient(lineId) {
             const input = document.getElementById('ingredient-name');
             const nombre = input.value.trim();
             if (!nombre) { toast('Falta el nombre', 'Escribe el nombre del ingrediente.', 'warning'); return; }
             try {
                 const data = await apiFetch('/api/ingredients', { method: 'POST', body: JSON.stringify({ nombre }) });
                 ingredientsCatalogCache.push(data.item);
-                addCatalogIngredientToFormula(productId, data.item.code);
+                addCatalogIngredientToFormula(lineId, data.item.code);
                 input.value = '';
                 document.getElementById('new-ingredient-form').classList.add('hidden');
                 toast('Ingrediente creado', `${data.item.code} guardado para reutilizarlo en otras cotizaciones.`);
@@ -602,14 +603,14 @@
         // Elimina un ingrediente del catálogo reutilizable (no de esta
         // fórmula). Las cotizaciones ya guardadas guardan su propio nombre,
         // así que no se ven afectadas.
-        async function deleteIngredientFromCatalog(code, productId) {
+        async function deleteIngredientFromCatalog(code, lineId) {
             const item = ingredientsCatalogCache.find(i => i.code === code);
             if (!item) return;
             if (!confirm(`¿Eliminar "${cleanIngredientDisplay(item.nombre)}" (${item.code}) del catálogo de ingredientes?\n\nNo afecta cotizaciones ya guardadas.`)) return;
             try {
                 const data = await apiFetch('/api/ingredients?code=' + encodeURIComponent(code), { method: 'DELETE' });
                 ingredientsCatalogCache = data.items || [];
-                renderIngredientSearchResults(productId);
+                renderIngredientSearchResults(lineId);
                 toast('Ingrediente eliminado', `${code} se quitó del catálogo.`);
             } catch (err) {
                 toast('Error al eliminar', err.message, 'error');
@@ -626,7 +627,7 @@
                 <span class="inline-flex items-center gap-1.5 text-[10px] bg-deepblue-950 border border-white/10 text-gray-200 px-2.5 py-1 rounded-full">
                     ${code ? `<span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded uppercase font-mono">${escapeHtml(code)}</span>` : '<span class="text-[9px] text-amber-400" title="Sin código en el catálogo de ingredientes">Sin código</span>'}
                     ${escapeHtml(cleanIngredientDisplay(ing))}
-                    <button onclick="removeIngredientFromFormula('${f.productId}','${encodeURIComponent(ing).replace(/'/g, '%27')}')" class="text-gray-500 hover:text-red-400"><i data-lucide="x" class="w-3 h-3"></i></button>
+                    <button onclick="removeIngredientFromFormula('${f.lineId}','${encodeURIComponent(ing).replace(/'/g, '%27')}')" class="text-gray-500 hover:text-red-400"><i data-lucide="x" class="w-3 h-3"></i></button>
                 </span>
             `;
             }).join('');
@@ -635,7 +636,7 @@
                 <div class="mt-2 p-3 bg-deepblue-900/40 border border-white/5 rounded-xl space-y-3">
                     <div class="flex flex-wrap gap-1.5">${chips || '<p class="text-[10px] text-gray-500">Sin ingredientes.</p>'}</div>
                     <div class="relative">
-                        <input type="text" id="ingredient-search" oninput="renderIngredientSearchResults('${f.productId}')"
+                        <input type="text" id="ingredient-search" oninput="renderIngredientSearchResults('${f.lineId}')"
                             placeholder="Buscar por código o nombre..." class="field-input pl-9">
                         <i data-lucide="search" class="w-3.5 h-3.5 text-gray-500 absolute left-3 top-3"></i>
                     </div>
@@ -645,9 +646,9 @@
                     </button>
                     <div id="new-ingredient-form" class="hidden flex gap-2 p-3 bg-deepblue-950/60 border border-white/5 rounded-xl">
                         <input type="text" id="ingredient-name" class="field-input flex-1" placeholder="Nombre del ingrediente">
-                        <button onclick="submitNewIngredient('${f.productId}')" class="btn-primary text-[11px] px-3 shrink-0">Guardar y agregar</button>
+                        <button onclick="submitNewIngredient('${f.lineId}')" class="btn-primary text-[11px] px-3 shrink-0">Guardar y agregar</button>
                     </div>
-                    ${isAlternateFormula(f) ? `<button onclick="resetIngredientsToOriginal('${f.productId}')" class="text-[10px] text-gray-500 hover:text-red-400 flex items-center gap-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> Restaurar ingredientes originales</button>` : ''}
+                    ${isAlternateFormula(f) ? `<button onclick="resetIngredientsToOriginal('${f.lineId}')" class="text-[10px] text-gray-500 hover:text-red-400 flex items-center gap-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> Restaurar ingredientes originales</button>` : ''}
                 </div>
             `;
         }
@@ -677,14 +678,18 @@
             lucide.createIcons();
         }
 
+        // Una misma fórmula del catálogo se puede agregar varias veces a la
+        // cotización (ej. como variedad alterna con otros ingredientes, o la
+        // misma fórmula cotizada a distintas escalas de cantidad/precio) —
+        // por eso cada línea tiene su propio "lineId" único; productId ya NO
+        // es único dentro de quoteFormulas, solo identifica de qué fórmula
+        // del catálogo viene.
         function addFormulaToQuote(productId) {
             const prod = window.productDatabase.find(p => p.id === productId);
             if (!prod) return;
-            if (quoteFormulas.some(f => f.productId === productId)) {
-                toast('Ya agregada', 'Esa fórmula ya está en la cotización.', 'warning');
-                return;
-            }
+            const alreadyHasIt = quoteFormulas.some(f => f.productId === productId);
             quoteFormulas.push({
+                lineId: crypto.randomUUID(),
                 productId: prod.id, name: prod.name, format: prod.format, ingredients: prod.ingredients,
                 presentacionTipo: '', presentacionTamano: '',
                 insumos: [], precioUnitario: null, cantidad: null,
@@ -692,19 +697,22 @@
             document.getElementById('formula-search').value = '';
             document.getElementById('formula-search-results').classList.add('hidden');
             renderFormulasList();
+            if (alreadyHasIt) {
+                toast('Fórmula agregada de nuevo', 'Ya tenías esta fórmula — se agregó como otra línea independiente (útil para variedades alternas o escalas de precio distintas).');
+            }
         }
 
-        function removeFormula(productId) {
-            quoteFormulas = quoteFormulas.filter(f => f.productId !== productId);
-            if (activeInsumoFormulaId === productId) activeInsumoFormulaId = null;
-            if (activeIngredientFormulaId === productId) activeIngredientFormulaId = null;
+        function removeFormula(lineId) {
+            quoteFormulas = quoteFormulas.filter(f => f.lineId !== lineId);
+            if (activeInsumoFormulaId === lineId) activeInsumoFormulaId = null;
+            if (activeIngredientFormulaId === lineId) activeIngredientFormulaId = null;
             renderFormulasList();
         }
 
         // Cambios de texto libre (presentación) — onchange, no oninput, para no
         // perder el foco del campo al re-renderizar la lista completa.
-        function updateFormulaText(productId, field, value) {
-            const f = quoteFormulas.find(x => x.productId === productId);
+        function updateFormulaText(lineId, field, value) {
+            const f = quoteFormulas.find(x => x.lineId === lineId);
             if (f) f[field] = value.trim();
         }
 
@@ -718,12 +726,12 @@
         // Precio/cantidad por fórmula: actualiza solo el subtotal de esa fila y
         // el total general por DOM directo (evita re-renderizar toda la lista
         // y perder el foco mientras se escribe).
-        function updateFormulaPricing(productId, field, rawValue) {
-            const f = quoteFormulas.find(x => x.productId === productId);
+        function updateFormulaPricing(lineId, field, rawValue) {
+            const f = quoteFormulas.find(x => x.lineId === lineId);
             if (!f) return;
             const n = rawValue === '' ? null : Number(rawValue);
             f[field] = (n === null || Number.isNaN(n)) ? null : n;
-            const subtotalEl = document.getElementById('formula-subtotal-' + productId);
+            const subtotalEl = document.getElementById('formula-subtotal-' + lineId);
             if (subtotalEl) subtotalEl.textContent = formatCOP(formulaSubtotal(f));
             updateQuoteTotalDisplay();
         }
@@ -738,13 +746,13 @@
             if (el) el.textContent = formatCOP(computeQuoteTotal());
         }
 
-        function toggleInsumoPicker(productId) {
-            activeInsumoFormulaId = (activeInsumoFormulaId === productId) ? null : productId;
+        function toggleInsumoPicker(lineId) {
+            activeInsumoFormulaId = (activeInsumoFormulaId === lineId) ? null : lineId;
             renderFormulasList();
         }
 
-        function applyInsumosToAll(productId) {
-            const source = quoteFormulas.find(x => x.productId === productId);
+        function applyInsumosToAll(lineId) {
+            const source = quoteFormulas.find(x => x.lineId === lineId);
             if (!source) return;
             quoteFormulas.forEach(f => { f.insumos = source.insumos.map(i => ({ ...i })); });
             renderFormulasList();
@@ -759,7 +767,7 @@
                 ? f.insumos.map(i => `
                     <div class="flex items-center justify-between gap-2 p-2 bg-deepblue-900/60 rounded-lg">
                         <span class="text-[10px] text-gray-300"><span class="font-mono text-emerald-400">${escapeHtml(i.code)}</span> ${escapeHtml(i.name)}</span>
-                        <button onclick="removeInsumoFromFormula('${f.productId}','${i.code}')" class="text-gray-500 hover:text-red-400"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                        <button onclick="removeInsumoFromFormula('${f.lineId}','${i.code}')" class="text-gray-500 hover:text-red-400"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
                     </div>
                 `).join('')
                 : '<p class="text-[10px] text-gray-500">Sin insumos todavía.</p>';
@@ -794,7 +802,7 @@
                         </div>
                     </div>
                     <div class="space-y-1.5">${listHtml}</div>
-                    ${f.insumos.length ? `<button onclick="applyInsumosToAll('${f.productId}')" class="btn-secondary text-[10px] flex items-center gap-1.5"><i data-lucide="copy" class="w-3 h-3"></i> Usar estos insumos en todas las fórmulas</button>` : ''}
+                    ${f.insumos.length ? `<button onclick="applyInsumosToAll('${f.lineId}')" class="btn-secondary text-[10px] flex items-center gap-1.5"><i data-lucide="copy" class="w-3 h-3"></i> Usar estos insumos en todas las fórmulas</button>` : ''}
                 </div>
             `;
         }
@@ -807,8 +815,8 @@
                 return;
             }
             box.innerHTML = quoteFormulas.map(f => {
-                const isActive = activeInsumoFormulaId === f.productId;
-                const isIngredientEditorActive = activeIngredientFormulaId === f.productId;
+                const isActive = activeInsumoFormulaId === f.lineId;
+                const isIngredientEditorActive = activeIngredientFormulaId === f.lineId;
                 const isAlternate = isAlternateFormula(f);
                 const insumosText = f.insumos.length
                     ? f.insumos.map(i => `${i.name} (${i.code})`).join(', ')
@@ -824,7 +832,7 @@
                             </div>
                             <p class="text-[11px] text-gray-400 leading-relaxed">${escapeHtml(mezclaLabel(f))}</p>
                         </div>
-                        <button onclick="removeFormula('${f.productId}')" class="text-gray-500 hover:text-red-400 shrink-0">
+                        <button onclick="removeFormula('${f.lineId}')" class="text-gray-500 hover:text-red-400 shrink-0">
                             <i data-lucide="trash" class="w-4 h-4"></i>
                         </button>
                     </div>
@@ -832,7 +840,7 @@
                     <div>
                         <div class="flex items-center justify-between gap-2 flex-wrap">
                             <p class="text-[10px] text-gray-500">${isAlternate ? 'Ingredientes modificados respecto a la fórmula original — la fórmula original del catálogo no cambia.' : 'Puedes agregar o quitar ingredientes: se crea una variedad alterna solo para esta cotización.'}</p>
-                            <button onclick="toggleIngredientEditor('${f.productId}')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 shrink-0 whitespace-nowrap">
+                            <button onclick="toggleIngredientEditor('${f.lineId}')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 shrink-0 whitespace-nowrap">
                                 ${isIngredientEditorActive ? 'Cerrar' : 'Editar ingredientes'}
                             </button>
                         </div>
@@ -843,13 +851,13 @@
                         <div>
                             <label class="field-label">Presentación</label>
                             <input type="text" value="${escapeHtml(f.presentacionTipo)}"
-                                onchange="updateFormulaText('${f.productId}','presentacionTipo', this.value)"
+                                onchange="updateFormulaText('${f.lineId}','presentacionTipo', this.value)"
                                 class="field-input" placeholder="Ej: Cápsula, Tarro, Doypack...">
                         </div>
                         <div>
                             <label class="field-label">Contenido / Tamaño</label>
                             <input type="text" value="${escapeHtml(f.presentacionTamano)}"
-                                onchange="updateFormulaText('${f.productId}','presentacionTamano', this.value)"
+                                onchange="updateFormulaText('${f.lineId}','presentacionTamano', this.value)"
                                 class="field-input" placeholder="Ej: 500 gramos, 1.000 ml...">
                         </div>
                     </div>
@@ -857,7 +865,7 @@
                     <div>
                         <div class="flex items-center justify-between gap-2 flex-wrap">
                             <p class="text-[11px] text-gray-400"><span class="font-bold text-gray-300">Insumos:</span> ${escapeHtml(insumosText)}</p>
-                            <button onclick="toggleInsumoPicker('${f.productId}')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 shrink-0 whitespace-nowrap">
+                            <button onclick="toggleInsumoPicker('${f.lineId}')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 shrink-0 whitespace-nowrap">
                                 ${isActive ? 'Cerrar' : 'Gestionar insumos'}
                             </button>
                         </div>
@@ -868,18 +876,18 @@
                         <div>
                             <label class="field-label">Precio unitario</label>
                             <input type="number" min="0" step="1" value="${f.precioUnitario ?? ''}"
-                                onchange="updateFormulaPricing('${f.productId}','precioUnitario', this.value)"
+                                onchange="updateFormulaPricing('${f.lineId}','precioUnitario', this.value)"
                                 class="field-input" placeholder="COP">
                         </div>
                         <div>
                             <label class="field-label">Cantidad</label>
                             <input type="number" min="0" step="1" value="${f.cantidad ?? ''}"
-                                onchange="updateFormulaPricing('${f.productId}','cantidad', this.value)"
+                                onchange="updateFormulaPricing('${f.lineId}','cantidad', this.value)"
                                 class="field-input" placeholder="Unidades">
                         </div>
                         <div>
                             <label class="field-label">Subtotal</label>
-                            <div id="formula-subtotal-${f.productId}" class="field-input flex items-center font-bold text-emerald-300">${formatCOP(formulaSubtotal(f))}</div>
+                            <div id="formula-subtotal-${f.lineId}" class="field-input flex items-center font-bold text-emerald-300">${formatCOP(formulaSubtotal(f))}</div>
                         </div>
                     </div>
                 </div>
@@ -1004,7 +1012,7 @@
         // applyInsumosToAll) es la forma de copiarlos a las demás.
         function addInsumoToQuote(code) {
             const item = packagingCache.find(i => i.code === code);
-            const f = quoteFormulas.find(x => x.productId === activeInsumoFormulaId);
+            const f = quoteFormulas.find(x => x.lineId === activeInsumoFormulaId);
             if (!item || !f) return;
             if (f.insumos.some(i => i.code === code)) {
                 toast('Ya agregado', 'Ese insumo ya está en esta fórmula.', 'warning');
@@ -1014,8 +1022,8 @@
             renderFormulasList();
         }
 
-        function removeInsumoFromFormula(productId, code) {
-            const f = quoteFormulas.find(x => x.productId === productId);
+        function removeInsumoFromFormula(lineId, code) {
+            const f = quoteFormulas.find(x => x.lineId === lineId);
             if (!f) return;
             f.insumos = f.insumos.filter(i => i.code !== code);
             renderFormulasList();
@@ -1204,7 +1212,11 @@
             document.getElementById('cliente-telefono').value = keepClient ? (q.cliente?.telefono || '') : '';
             document.getElementById('observaciones').value = q.observaciones || '';
             document.getElementById('elaborado-por').value = q.elaboradoPor || session.user;
+            // lineId siempre se genera de nuevo al cargar (no se reutiliza el
+            // guardado) — es solo para distinguir líneas dentro de esta
+            // sesión del navegador, no necesita ser estable entre guardados.
             quoteFormulas = (q.formulas || []).map(f => ({
+                lineId: crypto.randomUUID(),
                 productId: f.productId, name: f.name, format: f.format, ingredients: f.ingredients,
                 presentacionTipo: f.presentacionTipo || '', presentacionTamano: f.presentacionTamano || '',
                 insumos: (Array.isArray(f.insumos) ? f.insumos : []).map(i => ({ ...i })),
