@@ -1609,12 +1609,7 @@
                     y += drawPriceBoxes(doc, marginX, y, pageW - marginX * 2, f.escalas[0].precioUnitario, f.escalas[0].cantidad, subtotal) + 7;
                     // (boxH=14 + 7 de margen = 21, igual al priceSectionHeight de arriba)
                 } else {
-                    y += drawEscalasTable(doc, marginX, y, pageW - marginX * 2, f.escalas) + 2;
-                    doc.setFont('helvetica', 'italic');
-                    doc.setFontSize(7.5);
-                    doc.setTextColor(180, 130, 10);
-                    doc.text('Opciones de cantidad — el cliente elige una.', marginX, y);
-                    y += 7;
+                    y += drawEscalasTable(doc, marginX, y, pageW - marginX * 2, f.escalas) + 9;
                 }
             });
 
