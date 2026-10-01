@@ -26,11 +26,16 @@
 // Configuración en Netlify (Site configuration -> Environment variables):
 //
 //   PORTAL_USERS  (recomendado) — una cuenta por colaborador, formato:
-//     usuario1:clave1:colaborador,usuario2:clave2:cliente,usuario3:clave3
-//     El tercer campo (rol) es opcional: "colaborador" o "cliente".
-//     Si se omite, el usuario queda como "cliente" (privilegio mínimo por
+//     usuario1:clave1:colaborador:Nombre Apellido,usuario2:clave2:cliente,usuario3:clave3
+//     El tercer campo (rol) es opcional: "colaborador" o "cliente". Si se
+//     omite, el usuario queda como "cliente" (privilegio mínimo por
 //     defecto). Solo el rol "colaborador" puede usar el módulo de
-//     Cotizaciones. (sin comas ni dos puntos dentro de usuarios/claves)
+//     Cotizaciones.
+//     El cuarto campo (nombre completo) también es opcional — si se pone,
+//     ese nombre llena automáticamente el campo "Elaborado por" en cada
+//     cotización que ese colaborador cree (sin tener que escribirlo cada
+//     vez). Sin él, se usa el nombre de usuario tal cual.
+//     (sin comas ni dos puntos dentro de usuarios/claves/nombres)
 //
 //   PORTAL_PASSWORD (alternativa simple) — si no defines PORTAL_USERS,
 //     se acepta cualquier nombre de usuario (no vacío) junto con esta
@@ -66,13 +71,14 @@ function getAuthConfig() {
     .filter(Boolean)
     .map(entry => {
       const parts = entry.split(":").map(p => p.trim());
-      if (parts.length < 2 || parts.length > 3) return null;
-      const [user, pass, roleRaw] = parts;
+      if (parts.length < 2 || parts.length > 4) return null;
+      const [user, pass, roleRaw, nameRaw] = parts;
       if (!user || !pass) return null;
       // Privilegio mínimo por defecto: cualquier valor que no sea
       // exactamente "colaborador" queda como "cliente".
       const role = roleRaw === "colaborador" ? "colaborador" : "cliente";
-      return { user, pass, role };
+      const name = nameRaw || null;
+      return { user, pass, role, name };
     })
     .filter(Boolean);
 
@@ -82,6 +88,10 @@ function getAuthConfig() {
       roleFor: (u, p) => {
         const account = accounts.find(a => a.user === u && a.pass === p);
         return account ? account.role : "cliente";
+      },
+      nameFor: (u, p) => {
+        const account = accounts.find(a => a.user === u && a.pass === p);
+        return account ? account.name : null;
       },
     };
   }
@@ -93,6 +103,7 @@ function getAuthConfig() {
     matches: (u, p) => Boolean(singlePassword) && Boolean(u) && p === singlePassword,
     // El modo de clave compartida no distingue personas: nunca da rol de colaborador.
     roleFor: () => "cliente",
+    nameFor: () => null,
   };
 }
 
@@ -154,7 +165,7 @@ function loginPage({ error = false } = {}) {
 
 // Pide el contenido real al origen y le inyecta window.__PORTAL_SESSION__.
 // La usan tanto el login por POST como la re-entrada válida por cookie.
-async function buildAuthenticatedResponse(url, request, context, { user, role, token }, setCookie) {
+async function buildAuthenticatedResponse(url, request, context, { user, role, name, token }, setCookie) {
   const originRequest = new Request(url, { method: "GET", headers: request.headers });
   const realResponse = await context.next(originRequest);
   const headers = new Headers(realResponse.headers);
@@ -171,7 +182,7 @@ async function buildAuthenticatedResponse(url, request, context, { user, role, t
   // llegara a incluir "</script>": evita que rompa la etiqueta <script> al
   // insertarse en el HTML.
   const sessionScript =
-    `<script>window.__PORTAL_SESSION__=${JSON.stringify({ user, role, token }).replace(/</g, "\\u003c")};</script>`;
+    `<script>window.__PORTAL_SESSION__=${JSON.stringify({ user, role, name, token }).replace(/</g, "\\u003c")};</script>`;
   const injected = html.includes("</head>")
     ? html.replace("</head>", sessionScript + "</head>")
     : html + sessionScript;
@@ -194,14 +205,15 @@ export default async (request, context) => {
 
     if (config.matches(submittedUser, submittedPass)) {
       const role = config.roleFor(submittedUser, submittedPass);
+      const name = config.nameFor(submittedUser, submittedPass);
       // Si no se configuró PORTAL_TOKEN_SECRET, el portal sigue funcionando
       // igual que antes: sin token, sin cookie, pidiendo la clave en cada
       // visita. Así el frontend puede avisar que falta configurar esa
       // variable en vez de fallar en silencio al llamar a la API.
-      const token = tokenSecret ? await createSessionToken(tokenSecret, submittedUser, role) : null;
+      const token = tokenSecret ? await createSessionToken(tokenSecret, submittedUser, role, name) : null;
       const setCookie = token ? sessionCookieHeader(token) : null;
 
-      return buildAuthenticatedResponse(url, request, context, { user: submittedUser, role, token }, setCookie);
+      return buildAuthenticatedResponse(url, request, context, { user: submittedUser, role, name, token }, setCookie);
     }
 
     return new Response(loginPage({ error: true }), {
@@ -229,7 +241,7 @@ export default async (request, context) => {
     const cookieToken = readSessionCookie(request.headers.get("cookie"));
     const session = await verifySessionToken(tokenSecret, cookieToken);
     if (session) {
-      return buildAuthenticatedResponse(url, request, context, { user: session.user, role: session.role, token: cookieToken }, null);
+      return buildAuthenticatedResponse(url, request, context, { user: session.user, role: session.role, name: session.name, token: cookieToken }, null);
     }
   }
 

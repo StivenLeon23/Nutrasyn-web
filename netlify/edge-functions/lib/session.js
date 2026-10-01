@@ -58,13 +58,16 @@ function timingSafeEqual(a, b) {
   return diff === 0;
 }
 
-// Crea un token firmado {usuario, rol, expiración} — el rol es "colaborador" o "cliente".
-export async function createSessionToken(secret, user, role) {
+// Crea un token firmado {usuario, rol, nombre completo, expiración} — el
+// rol es "colaborador" o "cliente"; name es opcional (viene del 4to campo
+// de PORTAL_USERS) y puede venir null si esa cuenta no tiene nombre configurado.
+export async function createSessionToken(secret, user, role, name) {
   const payload = {
     u: user,
     r: role,
     e: Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS,
   };
+  if (name) payload.n = name;
   const payloadB64 = b64url(new TextEncoder().encode(JSON.stringify(payload)));
   const sig = await hmac(secret, payloadB64);
   return `${payloadB64}.${sig}`;
@@ -72,7 +75,8 @@ export async function createSessionToken(secret, user, role) {
 
 // Verifica la firma y vigencia de un token (usado para la cookie de sesión
 // al recargar/navegar sin volver a mandar usuario/clave). Devuelve
-// { user, role } o null.
+// { user, role, name } o null (name puede ser null si la cuenta no tiene
+// nombre completo configurado en PORTAL_USERS).
 export async function verifySessionToken(secret, token) {
   if (!secret || !token) return null;
   const parts = token.split(".");
@@ -86,7 +90,7 @@ export async function verifySessionToken(secret, token) {
     const payload = JSON.parse(new TextDecoder().decode(b64urlDecode(payloadB64)));
     if (!payload.e || payload.e < Math.floor(Date.now() / 1000)) return null;
     if (payload.r !== "colaborador" && payload.r !== "cliente") return null;
-    return { user: payload.u, role: payload.r };
+    return { user: payload.u, role: payload.r, name: payload.n || null };
   } catch {
     return null;
   }

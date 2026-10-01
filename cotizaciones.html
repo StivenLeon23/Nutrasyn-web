@@ -237,6 +237,11 @@
 
     <script>
         const session = window.__PORTAL_SESSION__;
+        // Nombre completo configurado en PORTAL_USERS (4to campo) para esta
+        // cuenta — si no se configuró, se usa el usuario de login tal cual.
+        // Sirve para que "Elaborado por" se llene solo, igual en todas las
+        // cotizaciones que haga este colaborador, sin tener que escribirlo.
+        const collaboratorDisplayName = session ? (session.name || session.user) : '';
         let currentQuoteId = null;
         let quoteFormulas = [];     // cada fórmula lleva sus propios insumos, presentación y precio
         let quoteFormaPago = null;     // {code, texto} | null — selección única
@@ -291,7 +296,7 @@
             denyAccess('Tu usuario tiene permiso de colaborador, pero el servidor no tiene configurada la variable PORTAL_TOKEN_SECRET, así que no es posible conectar con la API de Cotizaciones. Pide a un administrador que la configure en Netlify (Site configuration → Environment variables) y vuelve a intentar.');
         } else {
             document.getElementById('app-root').classList.remove('hidden');
-            document.getElementById('session-user-badge').textContent = session.user + ' · colaborador';
+            document.getElementById('session-user-badge').textContent = collaboratorDisplayName + ' · colaborador';
             lucide.createIcons();
             initApp();
         }
@@ -1188,7 +1193,7 @@
             document.getElementById('cliente-nit').value = '';
             document.getElementById('cliente-telefono').value = '';
             document.getElementById('observaciones').value = '';
-            document.getElementById('elaborado-por').value = session.user;
+            document.getElementById('elaborado-por').value = collaboratorDisplayName;
             renderFormulasList();
             renderConditionSelect('pago');
             renderConditionSelect('entrega');
@@ -1249,7 +1254,7 @@
             document.getElementById('cliente-nit').value = keepClient ? (q.cliente?.nit || '') : '';
             document.getElementById('cliente-telefono').value = keepClient ? (q.cliente?.telefono || '') : '';
             document.getElementById('observaciones').value = q.observaciones || '';
-            document.getElementById('elaborado-por').value = q.elaboradoPor || session.user;
+            document.getElementById('elaborado-por').value = q.elaboradoPor || collaboratorDisplayName;
             // lineId siempre se genera de nuevo al cargar (no se reutiliza el
             // guardado) — es solo para distinguir líneas dentro de esta
             // sesión del navegador, no necesita ser estable entre guardados.
@@ -1722,7 +1727,7 @@
 
         // --- Init ---
         function initApp() {
-            document.getElementById('elaborado-por').value = session.user;
+            document.getElementById('elaborado-por').value = collaboratorDisplayName;
             renderFormulasList();
             loadPackagingCatalog();
             loadConditionsCatalog();
