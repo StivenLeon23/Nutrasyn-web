@@ -237,10 +237,10 @@
         let quoteTiempoEntrega = null; // {code, texto} | null — selección única
         let packagingCache = [];
         let conditionsCache = [];
+        let ingredientsCatalogCache = []; // catálogo de ingredientes con código (IN001...), ver /api/ingredients
         let quotesCache = [];
         let activeInsumoFormulaId = null; // qué fórmula tiene abierto el selector de insumos
         let activeIngredientFormulaId = null; // qué fórmula tiene abierto el editor de ingredientes
-        let ALL_INGREDIENTS = []; // sugerencias para el editor, se llena en initApp()
 
         const TYPE_LABELS = { envase: 'Envase', tapa: 'Tapa', copa: 'Copa', caja: 'Caja', divisor: 'Divisor', insumo: 'Insumo', otro: 'Otro' };
 
@@ -320,9 +320,32 @@
             return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value);
         }
 
+        // Limpia anotaciones internas de costeo (formato/origen/proveedor)
+        // que el cliente no debe ver en la cotización — "en Polvo",
+        // "en Liquido (WOH)", "(IMP)", "(AMPES)", "(APMES)", "(NoInvimagil)" —
+        // dejando solo el nombre del ingrediente. Se aplica SOLO al mostrar
+        // (en pantalla y en el PDF); lo que se guarda en la fórmula/catálogo
+        // sigue siendo el nombre interno completo.
+        function cleanIngredientDisplay(raw) {
+            let s = String(raw || '').trim();
+            const dashParts = s.split(/\s+-\s+/);
+            if (dashParts.length > 1) s = dashParts[0].trim();
+            s = s.replace(/\s+en\s+l[ií]quido\s*\(WOH\)/gi, '');
+            s = s.replace(/\s+en\s+l[ií]quido/gi, '');
+            s = s.replace(/\s+en\s+polvo/gi, '');
+            s = s.replace(/\s*\(WOH\)/gi, '');
+            s = s.replace(/\s*\(IMP\)/gi, '');
+            s = s.replace(/\s*\(AMPES\)/gi, '');
+            s = s.replace(/\s*\(APMES\)/gi, '');
+            s = s.replace(/\s*\(No\s*Invimagil\)/gi, '');
+            s = s.replace(/\s{2,}/g, ' ').trim();
+            return s || raw;
+        }
+
         function mezclaLabel(prod) {
             const prefix = prod.format === 'Líquido' ? 'Mezcla líquida con: ' : 'Mezcla en polvo con: ';
-            return prefix + prod.ingredients;
+            const cleaned = ingredientsArray(prod).map(cleanIngredientDisplay).join(', ');
+            return prefix + cleaned;
         }
 
         // --- Ingredientes por fórmula (variedades alternas) ---
@@ -330,7 +353,9 @@
         // cada línea de la cotización ya es una COPIA (f.ingredients es un
         // string propio, no una referencia al catálogo). Aquí solo se deja
         // editar esa copia y se detecta cuándo ya no coincide con el
-        // original, para marcarla como "Variedad Alterna".
+        // original, para marcarla como "Variedad Alterna". Los ingredientes
+        // que se agregan vienen del catálogo con código (IN001...), igual
+        // mecánica que los insumos — ver /api/ingredients.
         function ingredientsArray(f) {
             return f.ingredients.split(',').map(s => s.trim()).filter(Boolean);
         }
@@ -344,30 +369,17 @@
             return a.some((v, i) => v !== b[i]);
         }
 
-        function computeAllIngredients() {
-            const set = new Set();
-            window.productDatabase.forEach(p => ingredientsArray(p).forEach(i => set.add(i)));
-            return [...set].sort((a, b) => a.localeCompare(b, 'es'));
+        async function loadIngredientsCatalog() {
+            try {
+                const data = await apiFetch('/api/ingredients');
+                ingredientsCatalogCache = data.items || [];
+            } catch (err) {
+                toast('Error al cargar ingredientes', err.message, 'error');
+            }
         }
 
         function toggleIngredientEditor(productId) {
             activeIngredientFormulaId = (activeIngredientFormulaId === productId) ? null : productId;
-            renderFormulasList();
-        }
-
-        function addIngredientToFormula(productId) {
-            const input = document.getElementById('ingredient-add-input');
-            const value = input.value.trim();
-            if (!value) return;
-            const f = quoteFormulas.find(x => x.productId === productId);
-            if (!f) return;
-            const list = ingredientsArray(f);
-            if (list.some(i => i.toLowerCase() === value.toLowerCase())) {
-                toast('Ya está', 'Ese ingrediente ya está en la mezcla.', 'warning');
-                return;
-            }
-            list.push(value);
-            f.ingredients = list.join(', ');
             renderFormulasList();
         }
 
@@ -388,13 +400,95 @@
             toast('Ingredientes restaurados', 'Esta fórmula vuelve a coincidir con la variedad original.');
         }
 
+        function addCatalogIngredientToFormula(productId, code) {
+            const item = ingredientsCatalogCache.find(i => i.code === code);
+            const f = quoteFormulas.find(x => x.productId === productId);
+            if (!item || !f) return;
+            const list = ingredientsArray(f);
+            if (list.some(i => i.toLowerCase() === item.nombre.toLowerCase())) {
+                toast('Ya está', 'Ese ingrediente ya está en la mezcla.', 'warning');
+                return;
+            }
+            list.push(item.nombre);
+            f.ingredients = list.join(', ');
+            const search = document.getElementById('ingredient-search');
+            if (search) search.value = '';
+            const results = document.getElementById('ingredient-search-results');
+            if (results) results.classList.add('hidden');
+            renderFormulasList();
+        }
+
+        function renderIngredientSearchResults(productId) {
+            const q = document.getElementById('ingredient-search').value.trim().toLowerCase();
+            const box = document.getElementById('ingredient-search-results');
+            if (!q) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+            const matches = ingredientsCatalogCache.filter(i =>
+                i.code.toLowerCase().includes(q) || cleanIngredientDisplay(i.nombre).toLowerCase().includes(q)
+            ).slice(0, 25);
+            box.innerHTML = matches.length
+                ? matches.map(i => `
+                    <div class="w-full flex items-center gap-1.5 p-2 rounded-lg hover:bg-white/5 transition-colors">
+                        <button onclick="addCatalogIngredientToFormula('${productId}','${i.code}')" class="flex-1 min-w-0 text-left flex items-center gap-1.5">
+                            <span class="text-[11px] truncate">
+                                <span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded uppercase font-mono">${escapeHtml(i.code)}</span>
+                                <span class="font-bold text-white ml-1">${escapeHtml(cleanIngredientDisplay(i.nombre))}</span>
+                            </span>
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-emerald-400 shrink-0 ml-auto"></i>
+                        </button>
+                        <button onclick="deleteIngredientFromCatalog('${i.code}','${productId}')" title="Eliminar del catálogo" class="text-gray-500 hover:text-red-400 shrink-0 p-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                `).join('')
+                : '<p class="text-[11px] text-gray-500 p-2">Sin resultados. Usa "Nuevo ingrediente" para crearlo.</p>';
+            box.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function toggleNewIngredientForm() {
+            document.getElementById('new-ingredient-form').classList.toggle('hidden');
+        }
+
+        async function submitNewIngredient(productId) {
+            const input = document.getElementById('ingredient-name');
+            const nombre = input.value.trim();
+            if (!nombre) { toast('Falta el nombre', 'Escribe el nombre del ingrediente.', 'warning'); return; }
+            try {
+                const data = await apiFetch('/api/ingredients', { method: 'POST', body: JSON.stringify({ nombre }) });
+                ingredientsCatalogCache.push(data.item);
+                addCatalogIngredientToFormula(productId, data.item.code);
+                input.value = '';
+                document.getElementById('new-ingredient-form').classList.add('hidden');
+                toast('Ingrediente creado', `${data.item.code} guardado para reutilizarlo en otras cotizaciones.`);
+            } catch (err) {
+                toast('Error al crear el ingrediente', err.message, 'error');
+            }
+        }
+
+        // Elimina un ingrediente del catálogo reutilizable (no de esta
+        // fórmula). Las cotizaciones ya guardadas guardan su propio nombre,
+        // así que no se ven afectadas.
+        async function deleteIngredientFromCatalog(code, productId) {
+            const item = ingredientsCatalogCache.find(i => i.code === code);
+            if (!item) return;
+            if (!confirm(`¿Eliminar "${cleanIngredientDisplay(item.nombre)}" (${item.code}) del catálogo de ingredientes?\n\nNo afecta cotizaciones ya guardadas.`)) return;
+            try {
+                const data = await apiFetch('/api/ingredients?code=' + encodeURIComponent(code), { method: 'DELETE' });
+                ingredientsCatalogCache = data.items || [];
+                renderIngredientSearchResults(productId);
+                toast('Ingrediente eliminado', `${code} se quitó del catálogo.`);
+            } catch (err) {
+                toast('Error al eliminar', err.message, 'error');
+            }
+        }
+
         // Editor embebido dentro de la fórmula activa. Reutiliza IDs fijos
         // (mismo patrón que el selector de insumos) porque solo una fórmula
         // puede tener el editor abierto a la vez.
         function renderIngredientEditorHtml(f) {
             const chips = ingredientsArray(f).map(ing => `
                 <span class="inline-flex items-center gap-1.5 text-[10px] bg-deepblue-950 border border-white/10 text-gray-200 px-2.5 py-1 rounded-full">
-                    ${escapeHtml(ing)}
+                    ${escapeHtml(cleanIngredientDisplay(ing))}
                     <button onclick="removeIngredientFromFormula('${f.productId}','${encodeURIComponent(ing).replace(/'/g, '%27')}')" class="text-gray-500 hover:text-red-400"><i data-lucide="x" class="w-3 h-3"></i></button>
                 </span>
             `).join('');
@@ -402,11 +496,19 @@
             return `
                 <div class="mt-2 p-3 bg-deepblue-900/40 border border-white/5 rounded-xl space-y-3">
                     <div class="flex flex-wrap gap-1.5">${chips || '<p class="text-[10px] text-gray-500">Sin ingredientes.</p>'}</div>
-                    <div class="flex gap-2">
-                        <input type="text" id="ingredient-add-input" list="ingredient-add-options" class="field-input flex-1" placeholder="Escribe o elige un ingrediente...">
-                        <button onclick="addIngredientToFormula('${f.productId}')" class="btn-primary text-[11px] px-3 shrink-0">Agregar</button>
+                    <div class="relative">
+                        <input type="text" id="ingredient-search" oninput="renderIngredientSearchResults('${f.productId}')"
+                            placeholder="Buscar por código o nombre..." class="field-input pl-9">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-gray-500 absolute left-3 top-3"></i>
                     </div>
-                    <datalist id="ingredient-add-options">${ALL_INGREDIENTS.map(i => `<option value="${escapeHtml(i)}"></option>`).join('')}</datalist>
+                    <div id="ingredient-search-results" class="hidden max-h-40 overflow-y-auto custom-scrollbar space-y-1.5 border border-white/5 rounded-xl p-2 bg-deepblue-950/60"></div>
+                    <button onclick="toggleNewIngredientForm()" class="btn-secondary flex items-center gap-1.5 text-[10px]">
+                        <i data-lucide="plus" class="w-3 h-3"></i> Nuevo ingrediente
+                    </button>
+                    <div id="new-ingredient-form" class="hidden flex gap-2 p-3 bg-deepblue-950/60 border border-white/5 rounded-xl">
+                        <input type="text" id="ingredient-name" class="field-input flex-1" placeholder="Nombre del ingrediente">
+                        <button onclick="submitNewIngredient('${f.productId}')" class="btn-primary text-[11px] px-3 shrink-0">Guardar y agregar</button>
+                    </div>
                     ${isAlternateFormula(f) ? `<button onclick="resetIngredientsToOriginal('${f.productId}')" class="text-[10px] text-gray-500 hover:text-red-400 flex items-center gap-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> Restaurar ingredientes originales</button>` : ''}
                 </div>
             `;
@@ -1378,10 +1480,10 @@
         // --- Init ---
         function initApp() {
             document.getElementById('elaborado-por').value = session.user;
-            ALL_INGREDIENTS = computeAllIngredients();
             renderFormulasList();
             loadPackagingCatalog();
             loadConditionsCatalog();
+            loadIngredientsCatalog();
             loadQuotesList();
         }
     </script>
