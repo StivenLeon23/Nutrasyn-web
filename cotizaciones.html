@@ -1448,37 +1448,22 @@
         }
 
         // Para fórmulas con varias escalas de cantidad (opciones para que el
-        // cliente elija una), se dibuja una tabla en vez de los 3 recuadros.
-        // Devuelve el alto que ocupó.
+        // cliente elija una), se dibuja un trío de recuadros —igual de
+        // "bonitos" que los de precio unitario/cantidad/subtotal normales—
+        // por cada escala, una debajo de otra, con una etiqueta "OPCIÓN N"
+        // arriba de cada trío. Devuelve el alto total que ocupó.
         function drawEscalasTable(doc, x, y, w, escalas) {
-            const rowH = 7;
-            doc.setFillColor(10, 37, 64);
-            doc.rect(x, y, w, rowH, 'F');
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(7.5);
-            doc.setTextColor(255, 255, 255);
-            doc.text('CANTIDAD', x + 4, y + 4.8);
-            doc.text('PRECIO UNITARIO', x + w * 0.38, y + 4.8);
-            doc.text('SUBTOTAL', x + w * 0.72, y + 4.8);
-            let ry = y + rowH;
-
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8.5);
+            const startY = y;
             escalas.forEach((e, i) => {
-                if (i % 2 === 0) {
-                    doc.setFillColor(240, 253, 250);
-                    doc.rect(x, ry, w, rowH, 'F');
-                }
-                doc.setTextColor(10, 37, 64);
-                doc.text(e.cantidad != null ? Number(e.cantidad).toLocaleString('es-CO') : 'No definida', x + 4, ry + 4.8);
-                doc.text(formatCOP(e.precioUnitario), x + w * 0.38, ry + 4.8);
+                if (i > 0) y += 4;
                 doc.setFont('helvetica', 'bold');
-                doc.text(formatCOP(escalaSubtotal(e)), x + w * 0.72, ry + 4.8);
-                doc.setFont('helvetica', 'normal');
-                ry += rowH;
+                doc.setFontSize(7.5);
+                doc.setTextColor(100, 116, 139);
+                doc.text(`OPCIÓN ${i + 1}`, x, y + 3);
+                y += 5;
+                y += drawPriceBoxes(doc, x, y, w, e.precioUnitario, e.cantidad, escalaSubtotal(e));
             });
-
-            return ry - y;
+            return y - startY;
         }
 
         // --- PDF de cotización ---
@@ -1575,7 +1560,10 @@
                 const mezclaLines = doc.splitTextToSize(mezclaLabel(f), pageW - marginX * 2 - 4);
                 const insumosText = f.insumos.length ? f.insumos.map(i => `${i.name} (${i.code})`).join(', ') : null;
                 const insumosLines = insumosText ? doc.splitTextToSize(`Insumos: ${insumosText}`, pageW - marginX * 2 - 4) : [];
-                const priceSectionHeight = singleEscala ? 25 : (f.escalas.length + 1) * 7 + 10;
+                // Con varias escalas, cada una ocupa su propio trío de
+                // recuadros (23mm: etiqueta + caja) más 4mm de separación
+                // entre escalas (ver drawEscalasTable), más el margen final.
+                const priceSectionHeight = singleEscala ? 25 : (23 * f.escalas.length + 4 * (f.escalas.length - 1)) + 9;
 
                 const blockHeight = 6 + (presentacion ? 5 : 0) + mezclaLines.length * 4.2 + 2
                     + (insumosLines.length ? insumosLines.length * 4.2 + 2 : 0) + priceSectionHeight;
