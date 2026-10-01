@@ -379,30 +379,95 @@
             }
         }
 
-        // Quita tildes para comparar nombres sin que una diferencia de
-        // acentuación (p. ej. "Limón" vs. "Limon" del catálogo de costeo)
-        // cuente como un ingrediente distinto.
+        // Quita tildes y guiones para comparar nombres sin que una diferencia
+        // de acentuación o de puntuación (p. ej. "Limón" vs. "Limon",
+        // "Camu-Camu" vs. "Camu Camu" del catálogo de costeo) cuente como un
+        // ingrediente distinto.
         function normalizeForMatch(s) {
-            return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+            return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/-/g, ' ').replace(/\s{2,}/g, ' ').toLowerCase().trim();
         }
+
+        function stripTrailingParenthetical(s) {
+            return s.replace(/\s*\([^)]*\)\s*$/, '').trim();
+        }
+
+        const MATCH_STOPWORDS = new Set(['de', 'del', 'la', 'el', 'los', 'las', 'y', 'en', 'con', 'a']);
+        function significantTokens(s) {
+            return s.replace(/[()%]/g, ' ').split(/\s+/).filter(t => t && !MATCH_STOPWORDS.has(t));
+        }
+
+        // Alias manuales confirmados por el negocio para casos donde el
+        // nombre de la variedad no se parece lo suficiente al del catálogo
+        // de costeo como para emparejar por texto (ej. "Colágeno Bovino" es,
+        // para efectos de costeo, el mismo registro que "Colágeno
+        // Hidrolizado"). Se revisan antes que cualquier coincidencia por texto.
+        const INGREDIENT_CODE_ALIASES = {
+            'maltodextrina': 'IN045',              // 18-20, no 17-20
+            'proteina aislada de soya': 'IN162',   // Aislada 90%
+            'colageno bovino': 'IN048',            // = Colágeno Hidrolizado
+            'harina konjac': 'IN107',               // = Goma Konjac
+        };
 
         // Cruza un ingrediente (venga de una variedad original del catálogo
         // de 65 fórmulas, o de una variedad alterna) con su código IN del
-        // catálogo de costeo, comparando por nombre ya limpio y sin tildes.
+        // catálogo de costeo. Prueba varios niveles, del más exacto al más
+        // flexible, y se detiene en el primero que encuentre algo:
+        //   1) alias manual confirmado
+        //   2) nombre limpio igual (sin tildes/guiones)
+        //   3) igual quitando el paréntesis final de ambos lados
+        //      (ej. "Vitamina C" <-> catálogo "Vitamina C (Ácido Ascórbico)")
+        //   4) uno contiene al otro como texto
+        //      (ej. "Shiitake" <-> "Hongo Shiitake", "Niacina" <-> "Vitamina
+        //      B3 (Niacina)", "Vitamina D" <-> "Vitamina D3")
+        //   5) todas las palabras significativas del nombre corto aparecen
+        //      en el largo (ej. "Vinagre de Sidra de Manzana" <-> catálogo
+        //      "Vinagre de Manzana")
         // Cuando el mismo ingrediente existe en versión polvo y líquida (dos
         // códigos distintos, mismo nombre limpio — ver IN027/IN219 Cúrcuma),
-        // se prefiere la que coincide con el formato de la fórmula. Si el
-        // nombre no coincide exactamente con ninguno del catálogo (variantes
-        // de redacción, ej. "Vitamina B6" vs. "Vitamina B6 (Piridoxina)"),
-        // no se adivina: se deja sin código para no asociar mal un costeo.
+        // se prefiere la que coincide con el formato de la fórmula. Si nada
+        // de esto encuentra algo razonable, no se adivina más allá: se deja
+        // sin código para no asociar mal un costeo.
         function findIngredientCode(ingredientName, formatHint) {
             const target = normalizeForMatch(cleanIngredientDisplay(ingredientName));
-            const candidates = ingredientsCatalogCache.filter(i => normalizeForMatch(cleanIngredientDisplay(i.nombre)) === target);
-            if (!candidates.length) return null;
-            if (candidates.length === 1) return candidates[0].code;
-            const wantsLiquid = formatHint === 'Líquido';
-            const preferred = candidates.find(c => /l[ií]quido/i.test(c.nombre) === wantsLiquid);
-            return (preferred || candidates[0]).code;
+
+            const aliasCode = INGREDIENT_CODE_ALIASES[target];
+            if (aliasCode && ingredientsCatalogCache.some(i => i.code === aliasCode)) return aliasCode;
+
+            function pick(candidates) {
+                if (!candidates.length) return null;
+                if (candidates.length === 1) return candidates[0].code;
+                const wantsLiquid = formatHint === 'Líquido';
+                const preferred = candidates.find(c => /l[ií]quido/i.test(c.nombre) === wantsLiquid);
+                return (preferred || candidates[0]).code;
+            }
+
+            let candidates = ingredientsCatalogCache.filter(i => normalizeForMatch(cleanIngredientDisplay(i.nombre)) === target);
+            if (candidates.length) return pick(candidates);
+
+            const targetNoParen = normalizeForMatch(stripTrailingParenthetical(cleanIngredientDisplay(ingredientName)));
+            candidates = ingredientsCatalogCache.filter(i => {
+                const cClean = normalizeForMatch(stripTrailingParenthetical(cleanIngredientDisplay(i.nombre)));
+                return cClean === target || cClean === targetNoParen || normalizeForMatch(cleanIngredientDisplay(i.nombre)) === targetNoParen;
+            });
+            if (candidates.length) return pick(candidates);
+
+            candidates = ingredientsCatalogCache.filter(i => {
+                const c = normalizeForMatch(cleanIngredientDisplay(i.nombre));
+                return (c.length >= 4 && target.includes(c)) || (target.length >= 4 && c.includes(target));
+            });
+            if (candidates.length) return pick(candidates);
+
+            const targetTokens = significantTokens(target);
+            if (targetTokens.length) {
+                candidates = ingredientsCatalogCache.filter(i => {
+                    const cTokens = significantTokens(normalizeForMatch(cleanIngredientDisplay(i.nombre)));
+                    const [shorter, longer] = targetTokens.length <= cTokens.length ? [targetTokens, cTokens] : [cTokens, targetTokens];
+                    return shorter.length > 0 && shorter.every(t => longer.includes(t));
+                });
+                if (candidates.length) return pick(candidates);
+            }
+
+            return null;
         }
 
         function toggleIngredientEditor(productId) {

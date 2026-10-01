@@ -44,6 +44,30 @@ function nextIngredientCode(items) {
   return `IN${String(n).padStart(3, "0")}`;
 }
 
+// Ingredientes confirmados por el negocio que faltaban en el catálogo real
+// de costeo (no estaban en ingredient-seed.js). Se agregan solo si aún no
+// existen por nombre — nunca pisan nada que el usuario ya haya creado, y
+// reciben el siguiente código disponible (continúa la numeración real,
+// nunca un código fijo hardcodeado, por si alguien ya creó algo entre
+// medias desde la interfaz).
+const EXTRA_SEED_INGREDIENTS = ["Cilantro", "Citrato de Zinc"];
+
+async function ensureExtraIngredients(store, items) {
+  const existingNames = new Set(items.map((i) => i.nombre.toLowerCase().trim()));
+  const missing = EXTRA_SEED_INGREDIENTS.filter((n) => !existingNames.has(n.toLowerCase().trim()));
+  if (!missing.length) return items;
+
+  return readModifyWrite(store, "items", items, (list) => {
+    const now = new Date().toISOString();
+    let next = list;
+    for (const nombre of missing) {
+      if (next.some((i) => i.nombre.toLowerCase().trim() === nombre.toLowerCase().trim())) continue;
+      next = [...next, { code: nextIngredientCode(next), nombre, createdBy: "sistema", createdAt: now }];
+    }
+    return next;
+  });
+}
+
 export default async (req) => {
   const session = await authenticate(req);
   if (!requireCollaborator(session)) {
@@ -67,6 +91,7 @@ export default async (req) => {
       }));
       await store.setJSON("items", items);
     }
+    items = await ensureExtraIngredients(store, items);
     return jsonResponse(200, { items });
   }
 
