@@ -698,6 +698,7 @@
                 productId: prod.id, name: prod.name, format: prod.format, ingredients: prod.ingredients,
                 presentacionTipo: '', presentacionTamano: '',
                 insumos: [], escalas: [{ cantidad: null, precioUnitario: null }],
+                imagenMockup: null,
             });
             document.getElementById('formula-search').value = '';
             document.getElementById('formula-search-results').classList.add('hidden');
@@ -711,6 +712,59 @@
             quoteFormulas = quoteFormulas.filter(f => f.lineId !== lineId);
             if (activeInsumoFormulaId === lineId) activeInsumoFormulaId = null;
             if (activeIngredientFormulaId === lineId) activeIngredientFormulaId = null;
+            renderFormulasList();
+        }
+
+        // Imagen de referencia / mockup por fórmula. Se recorta a cuadrado y
+        // se reescala en el navegador (canvas) antes de guardarla como JPEG
+        // en base64 dentro de la propia fórmula — así no hace falta un
+        // endpoint ni un storage aparte, y la cotización sigue siendo un solo
+        // documento JSON que ya se guarda y se descarga como siempre.
+        const FORMULA_IMAGE_SIZE = 640;
+
+        function readFileAsImageElement(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+                    img.src = reader.result;
+                };
+                reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function handleFormulaImageUpload(lineId, inputEl) {
+            const file = inputEl.files && inputEl.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                toast('Archivo no válido', 'Selecciona una imagen (jpg, png...).', 'warning');
+                inputEl.value = '';
+                return;
+            }
+            try {
+                const img = await readFileAsImageElement(file);
+                const size = FORMULA_IMAGE_SIZE;
+                const srcSize = Math.min(img.naturalWidth, img.naturalHeight);
+                const sx = (img.naturalWidth - srcSize) / 2;
+                const sy = (img.naturalHeight - srcSize) / 2;
+                const canvas = document.createElement('canvas');
+                canvas.width = size; canvas.height = size;
+                canvas.getContext('2d').drawImage(img, sx, sy, srcSize, srcSize, 0, 0, size, size);
+                const f = quoteFormulas.find(x => x.lineId === lineId);
+                if (f) f.imagenMockup = canvas.toDataURL('image/jpeg', 0.85);
+                renderFormulasList();
+            } catch (err) {
+                toast('Error al procesar la imagen', err.message, 'error');
+                inputEl.value = '';
+            }
+        }
+
+        function removeFormulaImage(lineId) {
+            const f = quoteFormulas.find(x => x.lineId === lineId);
+            if (f) f.imagenMockup = null;
             renderFormulasList();
         }
 
@@ -853,13 +907,32 @@
                 return `
                 <div class="p-4 bg-deepblue-950/60 border border-white/5 rounded-xl space-y-3">
                     <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-2 flex-wrap mb-1">
-                                <span class="text-base font-extrabold text-white">${escapeHtml(f.name)}</span>
-                                <span class="text-[9px] font-mono text-gray-500">${f.productId.toUpperCase()}</span>
-                                ${isAlternate ? '<span class="text-[9px] font-bold text-amber-300 bg-amber-950/50 border border-amber-500/30 px-1.5 py-0.5 rounded uppercase">Variedad Alterna</span>' : ''}
+                        <div class="flex items-start gap-3 min-w-0">
+                            <div class="shrink-0">
+                                ${f.imagenMockup ? `
+                                    <div class="relative group w-16 h-16">
+                                        <img src="${f.imagenMockup}" class="w-16 h-16 rounded-lg object-cover border border-white/10">
+                                        <button onclick="removeFormulaImage('${f.lineId}')" title="Quitar imagen"
+                                            class="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-400 rounded-full w-4 h-4 flex items-center justify-center">
+                                            <i data-lucide="x" class="w-2.5 h-2.5 text-white"></i>
+                                        </button>
+                                    </div>
+                                ` : `
+                                    <label class="w-16 h-16 flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-white/15 hover:border-emerald-400/50 cursor-pointer text-gray-500 hover:text-emerald-400 transition">
+                                        <i data-lucide="image-plus" class="w-4 h-4"></i>
+                                        <span class="text-[8px] leading-none">Imagen</span>
+                                        <input type="file" accept="image/*" class="hidden" onchange="handleFormulaImageUpload('${f.lineId}', this)">
+                                    </label>
+                                `}
                             </div>
-                            <p class="text-[11px] text-gray-400 leading-relaxed">${escapeHtml(mezclaLabel(f))}</p>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap mb-1">
+                                    <span class="text-base font-extrabold text-white">${escapeHtml(f.name)}</span>
+                                    <span class="text-[9px] font-mono text-gray-500">${f.productId.toUpperCase()}</span>
+                                    ${isAlternate ? '<span class="text-[9px] font-bold text-amber-300 bg-amber-950/50 border border-amber-500/30 px-1.5 py-0.5 rounded uppercase">Variedad Alterna</span>' : ''}
+                                </div>
+                                <p class="text-[11px] text-gray-400 leading-relaxed">${escapeHtml(mezclaLabel(f))}</p>
+                            </div>
                         </div>
                         <button onclick="removeFormula('${f.lineId}')" class="text-gray-500 hover:text-red-400 shrink-0">
                             <i data-lucide="trash" class="w-4 h-4"></i>
@@ -1271,6 +1344,7 @@
                     presentacionTipo: f.presentacionTipo || '', presentacionTamano: f.presentacionTamano || '',
                     insumos: (Array.isArray(f.insumos) ? f.insumos : []).map(i => ({ ...i })),
                     escalas,
+                    imagenMockup: f.imagenMockup || null,
                 };
             });
             quoteFormaPago = q.formaPago ? { ...q.formaPago } : null;
@@ -1557,6 +1631,13 @@
                 if (subtotal != null) { quoteTotal += subtotal; hasAnyPricing = true; }
 
                 const presentacion = [f.presentacionTipo, f.presentacionTamano].filter(Boolean).join(' · ');
+                // Si la fórmula tiene imagen de referencia, se reserva una
+                // columna cuadrada a la derecha y el texto se envuelve en el
+                // ancho restante (no en el ancho completo de la página).
+                const hasImage = Boolean(f.imagenMockup);
+                const IMG_SIZE = 26;
+                const IMG_GAP = 4;
+                const textWidth = pageW - marginX * 2 - (hasImage ? IMG_SIZE + IMG_GAP : 0);
                 // splitTextToSize() mide el ancho de línea con la fuente
                 // ACTIVA en ese momento — si no se fija aquí la misma
                 // fuente/tamaño con la que luego se dibuja el texto (8.5pt
@@ -1566,17 +1647,32 @@
                 // de texto angosto en vez de usar el ancho real de la página.
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8.5);
-                const mezclaLines = doc.splitTextToSize(mezclaLabel(f), pageW - marginX * 2);
+                const mezclaLines = doc.splitTextToSize(mezclaLabel(f), textWidth);
                 const insumosText = f.insumos.length ? f.insumos.map(i => `${i.name} (${i.code})`).join(', ') : null;
-                const insumosLines = insumosText ? doc.splitTextToSize(`Insumos: ${insumosText}`, pageW - marginX * 2) : [];
+                const insumosLines = insumosText ? doc.splitTextToSize(`Insumos: ${insumosText}`, textWidth) : [];
                 // Con varias escalas, cada una ocupa su propio trío de
                 // recuadros (18.5mm: etiqueta + caja) más 4mm de separación
                 // entre escalas (ver drawEscalasTable), más el margen final.
                 const priceSectionHeight = singleEscala ? 21 : (18.5 * f.escalas.length + 4 * (f.escalas.length - 1)) + 9;
 
-                const blockHeight = 6 + (presentacion ? 5 : 0) + mezclaLines.length * 4.2 + 2
-                    + (insumosLines.length ? insumosLines.length * 4.2 + 2 : 0) + priceSectionHeight;
+                const textTopHeight = 6 + (presentacion ? 5 : 0) + mezclaLines.length * 4.2 + 2
+                    + (insumosLines.length ? insumosLines.length * 4.2 + 2 : 0);
+                // Si la imagen es más alta que el bloque de texto (título +
+                // presentación + mezcla + insumos), el bloque completo debe
+                // ser igual de alto que la imagen para no encimar lo que
+                // venga después (los recuadros de precio).
+                const topHeight = hasImage ? Math.max(textTopHeight, IMG_SIZE + 2) : textTopHeight;
+                const blockHeight = topHeight + priceSectionHeight;
                 ensureSpace(blockHeight);
+
+                const blockStartY = y;
+                if (hasImage) {
+                    const imgX = pageW - marginX - IMG_SIZE;
+                    doc.setDrawColor(0, 168, 150);
+                    doc.setLineWidth(0.35);
+                    doc.roundedRect(imgX, blockStartY, IMG_SIZE, IMG_SIZE, 2, 2, 'S');
+                    doc.addImage(f.imagenMockup, 'JPEG', imgX, blockStartY, IMG_SIZE, IMG_SIZE, undefined, 'FAST');
+                }
 
                 // Título grande de la fórmula/producto terminado
                 doc.setFont('helvetica', 'bold');
@@ -1603,6 +1699,11 @@
                     doc.text(insumosLines, marginX, y);
                     y += insumosLines.length * 4.2 + 2;
                 }
+
+                // Si la imagen quedó más baja que el texto, bajar el cursor
+                // hasta su borde inferior antes de dibujar los recuadros de
+                // precio, para no encimarlos con la imagen.
+                if (hasImage) y = Math.max(y, blockStartY + IMG_SIZE + 2);
 
                 if (singleEscala) {
                     // Precio unitario | Cantidad | Subtotal, cada uno en su propio recuadro
