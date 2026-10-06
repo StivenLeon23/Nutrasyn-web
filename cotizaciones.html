@@ -1637,7 +1637,17 @@
                 const hasImage = Boolean(f.imagenMockup);
                 const IMG_SIZE = 26;
                 const IMG_GAP = 4;
+                const IMG_CAPTION = 'Imagen de referencia, no es el producto final';
                 const textWidth = pageW - marginX * 2 - (hasImage ? IMG_SIZE + IMG_GAP : 0);
+                // La leyenda se mide con SU propia fuente (itálica 5.5pt)
+                // antes de pasar a medir el texto principal — mismo cuidado
+                // que con mezclaLines/insumosLines un poco más abajo.
+                let imgCaptionLines = [];
+                if (hasImage) {
+                    doc.setFont('helvetica', 'italic');
+                    doc.setFontSize(5.5);
+                    imgCaptionLines = doc.splitTextToSize(IMG_CAPTION, IMG_SIZE);
+                }
                 // splitTextToSize() mide el ancho de línea con la fuente
                 // ACTIVA en ese momento — si no se fija aquí la misma
                 // fuente/tamaño con la que luego se dibuja el texto (8.5pt
@@ -1657,11 +1667,13 @@
 
                 const textTopHeight = 6 + (presentacion ? 5 : 0) + mezclaLines.length * 4.2 + 2
                     + (insumosLines.length ? insumosLines.length * 4.2 + 2 : 0);
-                // Si la imagen es más alta que el bloque de texto (título +
+                // Alto total de la columna de imagen: el cuadro + la leyenda
+                // debajo. Si es más alta que el bloque de texto (título +
                 // presentación + mezcla + insumos), el bloque completo debe
-                // ser igual de alto que la imagen para no encimar lo que
-                // venga después (los recuadros de precio).
-                const topHeight = hasImage ? Math.max(textTopHeight, IMG_SIZE + 2) : textTopHeight;
+                // ser igual de alto que la imagen+leyenda para no encimar lo
+                // que venga después (los recuadros de precio).
+                const imgColumnHeight = IMG_SIZE + 3 + imgCaptionLines.length * 2.8;
+                const topHeight = hasImage ? Math.max(textTopHeight, imgColumnHeight) : textTopHeight;
                 const blockHeight = topHeight + priceSectionHeight;
                 ensureSpace(blockHeight);
 
@@ -1672,6 +1684,10 @@
                     doc.setLineWidth(0.35);
                     doc.roundedRect(imgX, blockStartY, IMG_SIZE, IMG_SIZE, 2, 2, 'S');
                     doc.addImage(f.imagenMockup, 'JPEG', imgX, blockStartY, IMG_SIZE, IMG_SIZE, undefined, 'FAST');
+                    doc.setFont('helvetica', 'italic');
+                    doc.setFontSize(5.5);
+                    doc.setTextColor(148, 163, 184);
+                    doc.text(imgCaptionLines, imgX + IMG_SIZE / 2, blockStartY + IMG_SIZE + 3, { align: 'center' });
                 }
 
                 // Título grande de la fórmula/producto terminado
@@ -1700,10 +1716,10 @@
                     y += insumosLines.length * 4.2 + 2;
                 }
 
-                // Si la imagen quedó más baja que el texto, bajar el cursor
-                // hasta su borde inferior antes de dibujar los recuadros de
-                // precio, para no encimarlos con la imagen.
-                if (hasImage) y = Math.max(y, blockStartY + IMG_SIZE + 2);
+                // Si la imagen (+ leyenda) quedó más baja que el texto,
+                // bajar el cursor hasta su borde inferior antes de dibujar
+                // los recuadros de precio, para no encimarlos.
+                if (hasImage) y = Math.max(y, blockStartY + imgColumnHeight + 1);
 
                 if (singleEscala) {
                     // Precio unitario | Cantidad | Subtotal, cada uno en su propio recuadro
@@ -1729,7 +1745,10 @@
             // Condiciones comerciales: forma de pago / tiempo de entrega
             // elegidas para esta cotización, más las condiciones estándar
             // fijas (ver FIXED_CONDITIONS) que aplican siempre.
-            ensureSpace(15);
+            // Se reserva espacio de sobra (no solo el del título) para que
+            // el encabezado nunca quede solo al pie de una página con su
+            // contenido empezando recién en la siguiente.
+            ensureSpace(28);
             doc.setDrawColor(0, 168, 150);
             doc.line(marginX, y, pageW - marginX, y);
             y += 7;
@@ -1778,7 +1797,17 @@
 
             // Observaciones
             if (payload.observaciones) {
-                ensureSpace(15);
+                // Se mide el texto ANTES de reservar espacio y de dibujar el
+                // título — si se reservara solo el espacio del título (como
+                // antes) y el cuerpo no cupiera, el salto de página dejaba
+                // "Observaciones" solo al final de una página y el texto
+                // arrancaba en la siguiente, con el título cortado del
+                // contenido al que pertenece.
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                const obsLines = doc.splitTextToSize(payload.observaciones, pageW - marginX * 2);
+                ensureSpace(6 + obsLines.length * 4.6);
+
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(10.5);
                 doc.setTextColor(10, 37, 64);
@@ -1787,8 +1816,6 @@
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(9);
                 doc.setTextColor(51, 65, 85);
-                const obsLines = doc.splitTextToSize(payload.observaciones, pageW - marginX * 2);
-                ensureSpace(obsLines.length * 4.6);
                 doc.text(obsLines, marginX, y);
                 y += obsLines.length * 4.6 + 6;
             }
