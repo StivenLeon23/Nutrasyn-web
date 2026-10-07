@@ -1828,7 +1828,7 @@
             doc.setFontSize(8.3);
             doc.setTextColor(51, 65, 85);
             FIXED_CONDITIONS.forEach(texto => {
-                const lines = doc.splitTextToSize(`• ${texto}`, pageW - marginX * 2 - 2);
+                const lines = doc.splitTextToSize(texto, pageW - marginX * 2 - 2);
                 ensureSpace(lines.length * 4.2 + 1.5);
                 doc.text(lines, marginX, y);
                 y += lines.length * 4.2 + 1.5;
