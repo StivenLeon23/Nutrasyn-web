@@ -12,10 +12,11 @@
 // cada fórmula — no se valida a fondo esa forma en el servidor, se guarda
 // tal cual la arma el frontend.
 //
-// formaPago y tiempoEntrega son una sola opción cada uno (snapshot
-// {code, texto} tomado de /api/conditions, o null) — el resto de
-// condiciones estándar de la cotización se generan como texto fijo en el
-// PDF, no se guardan aquí.
+// formaPago y tiempoEntrega pueden traer varias opciones cada uno
+// (arreglo de snapshots {code, texto} tomados de /api/conditions, o
+// arreglo vacío) — el cliente ve todas las listadas y elige una. El
+// resto de condiciones estándar de la cotización se generan como texto
+// fijo en el PDF, no se guardan aquí.
 //
 // Una cotización se puede guardar como borrador con datos incompletos (el
 // único requisito es traer nombre de cliente o al menos una fórmula, para
@@ -65,12 +66,16 @@ function normalizeCliente(cliente) {
   };
 }
 
-// Forma de pago y tiempo de entrega son selección única (no una lista),
-// tomadas del catálogo de /api/conditions y guardadas como snapshot
-// {code, texto} — o null si no se eligió ninguna.
-function normalizeConditionChoice(value) {
-  if (!value || !value.texto) return null;
-  return { code: value.code || null, texto: String(value.texto).trim() };
+// Forma de pago y tiempo de entrega admiten varias opciones marcadas a
+// la vez, tomadas del catálogo de /api/conditions y guardadas como
+// snapshots {code, texto}. Compatibilidad: cotizaciones guardadas antes
+// de permitir varias traían un solo objeto {code,texto} (o null) en vez
+// de un arreglo.
+function normalizeConditionChoices(value) {
+  const arr = Array.isArray(value) ? value : value && value.texto ? [value] : [];
+  return arr
+    .filter((v) => v && v.texto)
+    .map((v) => ({ code: v.code || null, texto: String(v.texto).trim() }));
 }
 
 // Suma precioUnitario × cantidad de las fórmulas que tengan ambos valores.
@@ -183,8 +188,8 @@ export default async (req) => {
       folio: assignedFolio,
       cliente,
       formulas,
-      formaPago: normalizeConditionChoice(body.formaPago),
-      tiempoEntrega: normalizeConditionChoice(body.tiempoEntrega),
+      formaPago: normalizeConditionChoices(body.formaPago),
+      tiempoEntrega: normalizeConditionChoices(body.tiempoEntrega),
       observaciones: String(body.observaciones || "").trim(),
       elaboradoPor: String(body.elaboradoPor || "").trim(),
       createdBy: session.user,
@@ -213,8 +218,8 @@ export default async (req) => {
       ...existing,
       cliente: body.cliente ? normalizeCliente(body.cliente) : existing.cliente,
       formulas: Array.isArray(body.formulas) ? body.formulas : existing.formulas,
-      formaPago: body.formaPago !== undefined ? normalizeConditionChoice(body.formaPago) : existing.formaPago,
-      tiempoEntrega: body.tiempoEntrega !== undefined ? normalizeConditionChoice(body.tiempoEntrega) : existing.tiempoEntrega,
+      formaPago: body.formaPago !== undefined ? normalizeConditionChoices(body.formaPago) : existing.formaPago,
+      tiempoEntrega: body.tiempoEntrega !== undefined ? normalizeConditionChoices(body.tiempoEntrega) : existing.tiempoEntrega,
       observaciones: body.observaciones !== undefined ? String(body.observaciones).trim() : existing.observaciones,
       elaboradoPor: body.elaboradoPor !== undefined ? String(body.elaboradoPor).trim() : existing.elaboradoPor,
       updatedBy: session.user,

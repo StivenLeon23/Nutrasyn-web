@@ -171,10 +171,10 @@
                             <p class="text-[10px] text-gray-500 mt-1">Forma de pago y tiempo de entrega son lo único que cambia por cotización — el resto de condiciones estándar (IVA, validez, cambios de especificación, etc.) se agregan solas en el PDF.</p>
                         </div>
 
-                        <!-- Forma de pago -->
+                        <!-- Forma de pago (selección múltiple: se pueden ofrecer varias) -->
                         <div class="space-y-2">
-                            <label class="field-label">Forma de pago</label>
-                            <select id="forma-pago-select" onchange="updateConditionChoice('pago', this.value)" class="field-input"><option value="">Cargando...</option></select>
+                            <label class="field-label">Forma de pago <span class="text-gray-500 font-normal normal-case">(puedes marcar varias)</span></label>
+                            <div id="forma-pago-checklist" class="space-y-1.5"><p class="text-[10px] text-gray-500">Cargando...</p></div>
                             <div class="flex items-center justify-between">
                                 <button onclick="toggleNewConditionForm('pago')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
                                     <i data-lucide="plus" class="w-3 h-3"></i> Nueva forma de pago
@@ -188,10 +188,10 @@
                             <div id="manage-conditions-pago" class="hidden space-y-1.5"></div>
                         </div>
 
-                        <!-- Tiempo de entrega -->
+                        <!-- Tiempo de entrega (selección múltiple: se pueden ofrecer varias) -->
                         <div class="space-y-2 pt-2 border-t border-white/5">
-                            <label class="field-label">Tiempo de entrega</label>
-                            <select id="tiempo-entrega-select" onchange="updateConditionChoice('entrega', this.value)" class="field-input"><option value="">Cargando...</option></select>
+                            <label class="field-label">Tiempo de entrega <span class="text-gray-500 font-normal normal-case">(puedes marcar varias)</span></label>
+                            <div id="tiempo-entrega-checklist" class="space-y-1.5"><p class="text-[10px] text-gray-500">Cargando...</p></div>
                             <div class="flex items-center justify-between">
                                 <button onclick="toggleNewConditionForm('entrega')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
                                     <i data-lucide="plus" class="w-3 h-3"></i> Nueva condición de entrega
@@ -244,8 +244,8 @@
         const collaboratorDisplayName = session ? (session.name || session.user) : '';
         let currentQuoteId = null;
         let quoteFormulas = [];     // cada fórmula lleva sus propios insumos, presentación y precio
-        let quoteFormaPago = null;     // {code, texto} | null — selección única
-        let quoteTiempoEntrega = null; // {code, texto} | null — selección única
+        let quoteFormaPago = [];     // [{code, texto}...] — se pueden ofrecer varias
+        let quoteTiempoEntrega = []; // [{code, texto}...] — se pueden ofrecer varias
         let packagingCache = [];
         let conditionsCache = [];
         let ingredientsCatalogCache = []; // catálogo de ingredientes con código (IN001...), ver /api/ingredients
@@ -910,17 +910,18 @@
                         <div class="flex items-start gap-3 min-w-0">
                             <div class="shrink-0">
                                 ${f.imagenMockup ? `
-                                    <div class="relative group w-16 h-16">
-                                        <img src="${f.imagenMockup}" class="w-16 h-16 rounded-lg object-cover border border-white/10">
+                                    <div class="relative group w-28 h-28">
+                                        <img src="${f.imagenMockup}" class="w-28 h-28 rounded-lg object-cover border border-white/10">
                                         <button onclick="removeFormulaImage('${f.lineId}')" title="Quitar imagen"
-                                            class="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-400 rounded-full w-4 h-4 flex items-center justify-center">
-                                            <i data-lucide="x" class="w-2.5 h-2.5 text-white"></i>
+                                            class="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-400 rounded-full w-5 h-5 flex items-center justify-center">
+                                            <i data-lucide="x" class="w-3 h-3 text-white"></i>
                                         </button>
+                                        <p class="text-[8px] text-gray-500 text-center mt-1 leading-tight">Referencia, no es el producto final</p>
                                     </div>
                                 ` : `
-                                    <label class="w-16 h-16 flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-white/15 hover:border-emerald-400/50 cursor-pointer text-gray-500 hover:text-emerald-400 transition">
-                                        <i data-lucide="image-plus" class="w-4 h-4"></i>
-                                        <span class="text-[8px] leading-none">Imagen</span>
+                                    <label class="w-28 h-28 flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-white/15 hover:border-emerald-400/50 cursor-pointer text-gray-500 hover:text-emerald-400 transition">
+                                        <i data-lucide="image-plus" class="w-5 h-5"></i>
+                                        <span class="text-[9px] leading-none text-center px-1">Agregar imagen<br>de referencia</span>
                                         <input type="file" accept="image/*" class="hidden" onchange="handleFormulaImageUpload('${f.lineId}', this)">
                                     </label>
                                 `}
@@ -1151,32 +1152,46 @@
         // (/api/conditions). El resto de condiciones estándar de la
         // cotización se generan como texto fijo en el PDF — ver
         // FIXED_CONDITIONS más abajo, no viven en este catálogo.
-        const SELECT_ID_BY_CATEGORY = { pago: 'forma-pago-select', entrega: 'tiempo-entrega-select' };
+        const CHECKLIST_ID_BY_CATEGORY = { pago: 'forma-pago-checklist', entrega: 'tiempo-entrega-checklist' };
         const CATEGORY_LABELS = { pago: 'forma de pago', entrega: 'tiempo de entrega' };
 
         async function loadConditionsCatalog() {
             try {
                 const data = await apiFetch('/api/conditions');
                 conditionsCache = data.items || [];
-                renderConditionSelect('pago');
-                renderConditionSelect('entrega');
+                renderConditionChecklist('pago');
+                renderConditionChecklist('entrega');
             } catch (err) {
                 toast('Error al cargar condiciones', err.message, 'error');
             }
         }
 
-        function renderConditionSelect(categoria) {
-            const select = document.getElementById(SELECT_ID_BY_CATEGORY[categoria]);
-            const current = categoria === 'pago' ? quoteFormaPago : quoteTiempoEntrega;
+        // Forma de pago / tiempo de entrega admiten varias opciones marcadas
+        // a la vez (ej. "50% anticipo / 50% contraentrega" Y "Crédito a 30
+        // días", para que el cliente elija) — por eso es una lista de
+        // checkboxes y no un <select> de selección única.
+        function renderConditionChecklist(categoria) {
+            const box = document.getElementById(CHECKLIST_ID_BY_CATEGORY[categoria]);
+            const selected = categoria === 'pago' ? quoteFormaPago : quoteTiempoEntrega;
             const options = conditionsCache.filter(c => c.categoria === categoria);
-            select.innerHTML = '<option value="">Sin especificar</option>' +
-                options.map(c => `<option value="${escapeHtml(c.code)}" ${current && current.code === c.code ? 'selected' : ''}>${escapeHtml(c.texto)}</option>`).join('');
+            box.innerHTML = options.length
+                ? options.map(c => `
+                    <label class="flex items-center gap-2 p-2 bg-deepblue-950/60 border border-white/5 rounded-lg cursor-pointer hover:border-emerald-500/30 transition-colors">
+                        <input type="checkbox" class="accent-emerald-500 shrink-0" ${selected.some(s => s.code === c.code) ? 'checked' : ''}
+                            onchange="toggleConditionChoice('${categoria}','${c.code}', this.checked)">
+                        <span class="text-[11px] text-gray-300">${escapeHtml(c.texto)}</span>
+                    </label>
+                `).join('')
+                : '<p class="text-[10px] text-gray-500">Sin opciones guardadas todavía.</p>';
         }
 
-        function updateConditionChoice(categoria, code) {
+        function toggleConditionChoice(categoria, code, checked) {
             const item = conditionsCache.find(c => c.code === code);
-            const value = item ? { code: item.code, texto: item.texto } : null;
-            if (categoria === 'pago') quoteFormaPago = value; else quoteTiempoEntrega = value;
+            if (!item) return;
+            const arr = categoria === 'pago' ? quoteFormaPago : quoteTiempoEntrega;
+            const idx = arr.findIndex(c => c.code === code);
+            if (checked && idx === -1) arr.push({ code: item.code, texto: item.texto });
+            if (!checked && idx !== -1) arr.splice(idx, 1);
         }
 
         function toggleNewConditionForm(categoria) {
@@ -1190,12 +1205,12 @@
             try {
                 const data = await apiFetch('/api/conditions', { method: 'POST', body: JSON.stringify({ texto, categoria }) });
                 conditionsCache.push(data.item);
-                if (categoria === 'pago') quoteFormaPago = { code: data.item.code, texto: data.item.texto };
-                else quoteTiempoEntrega = { code: data.item.code, texto: data.item.texto };
-                renderConditionSelect(categoria);
+                const arr = categoria === 'pago' ? quoteFormaPago : quoteTiempoEntrega;
+                arr.push({ code: data.item.code, texto: data.item.texto });
+                renderConditionChecklist(categoria);
                 textarea.value = '';
                 document.getElementById('new-condition-form-' + categoria).classList.add('hidden');
-                toast('Opción creada', `Se guardó y se seleccionó para esta cotización.`);
+                toast('Opción creada', `Se guardó y se marcó para esta cotización.`);
             } catch (err) {
                 toast('Error al crear la condición', err.message, 'error');
             }
@@ -1232,9 +1247,9 @@
             try {
                 const data = await apiFetch('/api/conditions?code=' + encodeURIComponent(code), { method: 'DELETE' });
                 conditionsCache = data.items || [];
-                if (quoteFormaPago?.code === code) quoteFormaPago = null;
-                if (quoteTiempoEntrega?.code === code) quoteTiempoEntrega = null;
-                renderConditionSelect(categoria);
+                quoteFormaPago = quoteFormaPago.filter(c => c.code !== code);
+                quoteTiempoEntrega = quoteTiempoEntrega.filter(c => c.code !== code);
+                renderConditionChecklist(categoria);
                 renderManageConditionsList(categoria);
                 toast('Opción eliminada', `${code} se quitó del catálogo.`);
             } catch (err) {
@@ -1258,8 +1273,8 @@
         function newQuote() {
             currentQuoteId = null;
             quoteFormulas = [];
-            quoteFormaPago = null;
-            quoteTiempoEntrega = null;
+            quoteFormaPago = [];
+            quoteTiempoEntrega = [];
             activeInsumoFormulaId = null;
             activeIngredientFormulaId = null;
             document.getElementById('cliente-nombre').value = '';
@@ -1268,8 +1283,8 @@
             document.getElementById('observaciones').value = '';
             document.getElementById('elaborado-por').value = collaboratorDisplayName;
             renderFormulasList();
-            renderConditionSelect('pago');
-            renderConditionSelect('entrega');
+            renderConditionChecklist('pago');
+            renderConditionChecklist('entrega');
             setBuilderMode(null);
             toast('Cotización nueva', 'Lienzo limpio para armar otra cotización.');
         }
@@ -1347,13 +1362,22 @@
                     imagenMockup: f.imagenMockup || null,
                 };
             });
-            quoteFormaPago = q.formaPago ? { ...q.formaPago } : null;
-            quoteTiempoEntrega = q.tiempoEntrega ? { ...q.tiempoEntrega } : null;
+            // Compatibilidad con cotizaciones guardadas antes de permitir
+            // varias condiciones (formaPago/tiempoEntrega eran un objeto
+            // único {code,texto} o null, en vez de un arreglo).
+            quoteFormaPago = normalizeConditionArray(q.formaPago);
+            quoteTiempoEntrega = normalizeConditionArray(q.tiempoEntrega);
             activeInsumoFormulaId = null;
             activeIngredientFormulaId = null;
             renderFormulasList();
-            renderConditionSelect('pago');
-            renderConditionSelect('entrega');
+            renderConditionChecklist('pago');
+            renderConditionChecklist('entrega');
+        }
+
+        function normalizeConditionArray(value) {
+            if (Array.isArray(value)) return value.map(c => ({ ...c }));
+            if (value && value.texto) return [{ ...value }];
+            return [];
         }
 
         async function editQuote(id) {
@@ -1635,17 +1659,18 @@
                 // columna cuadrada a la derecha y el texto se envuelve en el
                 // ancho restante (no en el ancho completo de la página).
                 const hasImage = Boolean(f.imagenMockup);
-                const IMG_SIZE = 26;
-                const IMG_GAP = 4;
+                const IMG_SIZE = 42;
+                const IMG_GAP = 5;
                 const IMG_CAPTION = 'Imagen de referencia, no es el producto final';
                 const textWidth = pageW - marginX * 2 - (hasImage ? IMG_SIZE + IMG_GAP : 0);
-                // La leyenda se mide con SU propia fuente (itálica 5.5pt)
-                // antes de pasar a medir el texto principal — mismo cuidado
-                // que con mezclaLines/insumosLines un poco más abajo.
+                // La leyenda se mide con SU propia fuente (negrita itálica
+                // 6.5pt, bien visible) antes de pasar a medir el texto
+                // principal — mismo cuidado que con mezclaLines/insumosLines
+                // un poco más abajo.
                 let imgCaptionLines = [];
                 if (hasImage) {
-                    doc.setFont('helvetica', 'italic');
-                    doc.setFontSize(5.5);
+                    doc.setFont('helvetica', 'bolditalic');
+                    doc.setFontSize(6.5);
                     imgCaptionLines = doc.splitTextToSize(IMG_CAPTION, IMG_SIZE);
                 }
                 // splitTextToSize() mide el ancho de línea con la fuente
@@ -1672,7 +1697,7 @@
                 // presentación + mezcla + insumos), el bloque completo debe
                 // ser igual de alto que la imagen+leyenda para no encimar lo
                 // que venga después (los recuadros de precio).
-                const imgColumnHeight = IMG_SIZE + 3 + imgCaptionLines.length * 2.8;
+                const imgColumnHeight = IMG_SIZE + 3 + imgCaptionLines.length * 3.2;
                 const topHeight = hasImage ? Math.max(textTopHeight, imgColumnHeight) : textTopHeight;
                 const blockHeight = topHeight + priceSectionHeight;
                 ensureSpace(blockHeight);
@@ -1684,10 +1709,10 @@
                     doc.setLineWidth(0.35);
                     doc.roundedRect(imgX, blockStartY, IMG_SIZE, IMG_SIZE, 2, 2, 'S');
                     doc.addImage(f.imagenMockup, 'JPEG', imgX, blockStartY, IMG_SIZE, IMG_SIZE, undefined, 'FAST');
-                    doc.setFont('helvetica', 'italic');
-                    doc.setFontSize(5.5);
-                    doc.setTextColor(148, 163, 184);
-                    doc.text(imgCaptionLines, imgX + IMG_SIZE / 2, blockStartY + IMG_SIZE + 3, { align: 'center' });
+                    doc.setFont('helvetica', 'bolditalic');
+                    doc.setFontSize(6.5);
+                    doc.setTextColor(100, 116, 139);
+                    doc.text(imgCaptionLines, imgX + IMG_SIZE / 2, blockStartY + IMG_SIZE + 4, { align: 'center' });
                 }
 
                 // Título grande de la fórmula/producto terminado
@@ -1758,23 +1783,31 @@
             doc.text('Condiciones Comerciales', marginX, y);
             y += 6.5;
 
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8.5);
-            doc.setTextColor(51, 65, 85);
-            if (payload.formaPago) {
-                const lines = doc.splitTextToSize(`Forma de pago: ${payload.formaPago.texto}`, pageW - marginX * 2 - 2);
-                ensureSpace(lines.length * 4.2 + 1.5);
+            // Forma de pago / tiempo de entrega pueden traer varias opciones
+            // (el cliente elige una de las listadas) — se dibuja un título
+            // y debajo una viñeta por cada opción marcada, reservando el
+            // espacio de todo el grupo de una vez para que el título nunca
+            // quede separado de su lista por un salto de página.
+            function drawConditionGroup(label, items) {
+                if (!items || !items.length) return;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8.5);
+                const allLines = items.map(c => doc.splitTextToSize(`• ${c.texto}`, pageW - marginX * 2 - 4));
+                const totalHeight = 4.5 + allLines.reduce((sum, lines) => sum + lines.length * 4.2 + 1, 0);
+                ensureSpace(totalHeight);
                 doc.setFont('helvetica', 'bold');
-                doc.text(lines, marginX, y);
-                y += lines.length * 4.2 + 1.5;
+                doc.setTextColor(10, 37, 64);
+                doc.text(label, marginX, y);
+                y += 4.5;
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(51, 65, 85);
+                allLines.forEach(lines => {
+                    doc.text(lines, marginX + 2, y);
+                    y += lines.length * 4.2 + 1;
+                });
             }
-            if (payload.tiempoEntrega) {
-                const lines = doc.splitTextToSize(`Tiempo de entrega: ${payload.tiempoEntrega.texto}`, pageW - marginX * 2 - 2);
-                ensureSpace(lines.length * 4.2 + 1.5);
-                doc.setFont('helvetica', 'bold');
-                doc.text(lines, marginX, y);
-                y += lines.length * 4.2 + 1.5;
-            }
+            drawConditionGroup('Forma de pago:', payload.formaPago);
+            drawConditionGroup('Tiempo de entrega:', payload.tiempoEntrega);
             y += 1;
 
             doc.setFont('helvetica', 'normal');
