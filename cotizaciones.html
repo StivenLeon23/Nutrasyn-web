@@ -1703,6 +1703,13 @@
                 ensureSpace(blockHeight);
 
                 const blockStartY = y;
+                // Si la imagen y el texto no miden lo mismo de alto, la más
+                // corta de las dos se centra respecto a la más alta (en vez
+                // de quedar pegada arriba con un vacío grande debajo antes
+                // de los recuadros de precio).
+                const imgStartY = blockStartY + Math.max(0, (topHeight - imgColumnHeight) / 2);
+                const textStartY = blockStartY + Math.max(0, (topHeight - textTopHeight) / 2);
+
                 if (hasImage) {
                     const imgX = pageW - marginX - IMG_SIZE;
                     // "Squircle": esquinas muy redondeadas (radio ~22% del
@@ -1712,19 +1719,20 @@
                     // esquinas rectas por encima del borde.
                     const IMG_RADIUS = IMG_SIZE * 0.22;
                     doc.saveGraphicsState();
-                    doc.roundedRect(imgX, blockStartY, IMG_SIZE, IMG_SIZE, IMG_RADIUS, IMG_RADIUS, null).clip().discardPath();
-                    doc.addImage(f.imagenMockup, 'JPEG', imgX, blockStartY, IMG_SIZE, IMG_SIZE, undefined, 'FAST');
+                    doc.roundedRect(imgX, imgStartY, IMG_SIZE, IMG_SIZE, IMG_RADIUS, IMG_RADIUS, null).clip().discardPath();
+                    doc.addImage(f.imagenMockup, 'JPEG', imgX, imgStartY, IMG_SIZE, IMG_SIZE, undefined, 'FAST');
                     doc.restoreGraphicsState();
                     doc.setDrawColor(0, 168, 150);
                     doc.setLineWidth(0.35);
-                    doc.roundedRect(imgX, blockStartY, IMG_SIZE, IMG_SIZE, IMG_RADIUS, IMG_RADIUS, 'S');
+                    doc.roundedRect(imgX, imgStartY, IMG_SIZE, IMG_SIZE, IMG_RADIUS, IMG_RADIUS, 'S');
                     doc.setFont('helvetica', 'bolditalic');
                     doc.setFontSize(6.5);
                     doc.setTextColor(100, 116, 139);
-                    doc.text(imgCaptionLines, imgX + IMG_SIZE / 2, blockStartY + IMG_SIZE + 4, { align: 'center' });
+                    doc.text(imgCaptionLines, imgX + IMG_SIZE / 2, imgStartY + IMG_SIZE + 4, { align: 'center' });
                 }
 
                 // Título grande de la fórmula/producto terminado
+                y = textStartY;
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(13);
                 doc.setTextColor(10, 37, 64);
@@ -1750,10 +1758,10 @@
                     y += insumosLines.length * 4.2 + 2;
                 }
 
-                // Si la imagen (+ leyenda) quedó más baja que el texto,
-                // bajar el cursor hasta su borde inferior antes de dibujar
-                // los recuadros de precio, para no encimarlos.
-                if (hasImage) y = Math.max(y, blockStartY + imgColumnHeight + 1);
+                // Volver al borde inferior de la columna completa (texto o
+                // imagen, lo que haya quedado más abajo) antes de los
+                // recuadros de precio.
+                y = blockStartY + topHeight + 1;
 
                 if (singleEscala) {
                     // Precio unitario | Cantidad | Subtotal, cada uno en su propio recuadro
@@ -1793,30 +1801,27 @@
             y += 6.5;
 
             // Forma de pago / tiempo de entrega pueden traer varias opciones
-            // (el cliente elige una de las listadas) — se dibuja un título
-            // y debajo una viñeta por cada opción marcada, reservando el
-            // espacio de todo el grupo de una vez para que el título nunca
-            // quede separado de su lista por un salto de página.
-            function drawConditionGroup(label, items) {
+            // (el cliente elige una de las listadas) — mismo estilo que
+            // tenía cuando era una sola opción (una línea en negrita
+            // "Forma de pago: ..."), repetido por cada opción marcada. Se
+            // reserva el espacio de todas las líneas de una vez para que no
+            // quede ninguna huérfana al pie de una página.
+            function drawConditionLines(label, items) {
                 if (!items || !items.length) return;
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8.5);
-                const allLines = items.map(c => doc.splitTextToSize(`• ${c.texto}`, pageW - marginX * 2 - 4));
-                const totalHeight = 4.5 + allLines.reduce((sum, lines) => sum + lines.length * 4.2 + 1, 0);
+                const allLines = items.map(c => doc.splitTextToSize(`${label} ${c.texto}`, pageW - marginX * 2 - 2));
+                const totalHeight = allLines.reduce((sum, lines) => sum + lines.length * 4.2 + 1.5, 0);
                 ensureSpace(totalHeight);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(10, 37, 64);
-                doc.text(label, marginX, y);
-                y += 4.5;
-                doc.setFont('helvetica', 'normal');
                 doc.setTextColor(51, 65, 85);
                 allLines.forEach(lines => {
-                    doc.text(lines, marginX + 2, y);
-                    y += lines.length * 4.2 + 1;
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(lines, marginX, y);
+                    y += lines.length * 4.2 + 1.5;
                 });
             }
-            drawConditionGroup('Forma de pago:', payload.formaPago);
-            drawConditionGroup('Tiempo de entrega:', payload.tiempoEntrega);
+            drawConditionLines('Forma de pago:', payload.formaPago);
+            drawConditionLines('Tiempo de entrega:', payload.tiempoEntrega);
             y += 1;
 
             doc.setFont('helvetica', 'normal');
