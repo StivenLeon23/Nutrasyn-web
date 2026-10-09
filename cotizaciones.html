@@ -252,6 +252,7 @@
         let quotesCache = [];
         let activeInsumoFormulaId = null; // qué fórmula tiene abierto el selector de insumos
         let activeIngredientFormulaId = null; // qué fórmula tiene abierto el editor de ingredientes
+        let editingInsumoNota = null; // `${lineId}:${code}` del insumo cuya nota está en edición, o null
 
         const TYPE_LABELS = { envase: 'Envase', tapa: 'Tapa', copa: 'Copa', caja: 'Caja', divisor: 'Divisor', insumo: 'Insumo', otro: 'Otro' };
 
@@ -719,6 +720,7 @@
             quoteFormulas = quoteFormulas.filter(f => f.lineId !== lineId);
             if (activeInsumoFormulaId === lineId) activeInsumoFormulaId = null;
             if (activeIngredientFormulaId === lineId) activeIngredientFormulaId = null;
+            if (editingInsumoNota && editingInsumoNota.startsWith(lineId + ':')) editingInsumoNota = null;
             renderFormulasList();
         }
 
@@ -854,18 +856,31 @@
         // fórmula puede tener el selector abierto a la vez.
         function renderInsumoPickerHtml(f) {
             const listHtml = f.insumos.length
-                ? f.insumos.map(i => `
+                ? f.insumos.map(i => {
+                    const notaKey = f.lineId + ':' + i.code;
+                    const isEditingNota = editingInsumoNota === notaKey;
+                    return `
                     <div class="p-2 bg-deepblue-900/60 rounded-lg space-y-1.5">
                         <div class="flex items-center justify-between gap-2">
                             <span class="text-[10px] text-gray-300"><span class="font-mono text-emerald-400">${escapeHtml(i.code)}</span> ${escapeHtml(i.name)}</span>
-                            <button onclick="removeInsumoFromFormula('${f.lineId}','${i.code}')" class="text-gray-500 hover:text-red-400 shrink-0"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <button onclick="toggleInsumoNotaEdit('${f.lineId}','${i.code}')" title="${i.nota ? 'Editar nota' : 'Agregar nota'}"
+                                    class="${i.nota ? 'text-emerald-400 hover:text-emerald-300' : 'text-gray-500 hover:text-emerald-400'}">
+                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button onclick="removeInsumoFromFormula('${f.lineId}','${i.code}')" class="text-gray-500 hover:text-red-400"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                            </div>
                         </div>
-                        <input type="text" value="${escapeHtml(i.nota || '')}"
-                            onchange="updateInsumoNota('${f.lineId}','${i.code}', this.value)"
-                            placeholder="Nota para esta cotización (opcional, ej: color especial, proveedor alterno...)"
-                            class="field-input !text-[10px] !py-1.5">
+                        ${isEditingNota ? `
+                            <input type="text" value="${escapeHtml(i.nota || '')}" autofocus
+                                onblur="updateInsumoNota('${f.lineId}','${i.code}', this.value)"
+                                onkeydown="if(event.key==='Enter') this.blur()"
+                                placeholder="Nota para esta cotización (opcional, ej: color especial, proveedor alterno...)"
+                                class="field-input !text-[10px] !py-1.5">
+                        ` : (i.nota ? `<p class="text-[10px] text-gray-500 italic pl-0.5">${escapeHtml(i.nota)}</p>` : '')}
                     </div>
-                `).join('')
+                `;
+                }).join('')
                 : '<p class="text-[10px] text-gray-500">Sin insumos todavía.</p>';
 
             return `
@@ -1164,13 +1179,23 @@
         // escribe en el catálogo reutilizable de insumos (packagingCache /
         // /api/packaging). Por eso la próxima vez que se use ese mismo
         // insumo en otra fórmula o cotización, aparece sin nota, tal como
-        // está en el catálogo.
+        // está en el catálogo. Solo se ve/edita detrás del lápiz, no como
+        // un campo siempre abierto.
+        function toggleInsumoNotaEdit(lineId, code) {
+            const key = lineId + ':' + code;
+            editingInsumoNota = editingInsumoNota === key ? null : key;
+            renderFormulasList();
+        }
+
         function updateInsumoNota(lineId, code, value) {
             const f = quoteFormulas.find(x => x.lineId === lineId);
             const insumo = f && f.insumos.find(i => i.code === code);
-            if (!insumo) return;
-            const trimmed = value.trim();
-            if (trimmed) insumo.nota = trimmed; else delete insumo.nota;
+            if (insumo) {
+                const trimmed = value.trim();
+                if (trimmed) insumo.nota = trimmed; else delete insumo.nota;
+            }
+            editingInsumoNota = null;
+            renderFormulasList();
         }
 
         // --- Condiciones Comerciales ---
