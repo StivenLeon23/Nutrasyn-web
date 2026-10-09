@@ -359,6 +359,13 @@
             return prefix + cleaned;
         }
 
+        // Nombre + código de un insumo para mostrar, con su nota (si tiene)
+        // entre paréntesis al final — la nota es propia de esta cotización,
+        // ver updateInsumoNota.
+        function insumoLabel(i) {
+            return `${i.name} (${i.code})${i.nota ? ' — ' + i.nota : ''}`;
+        }
+
         // --- Ingredientes por fórmula (variedades alternas) ---
         // La fórmula del catálogo (window.productDatabase) NUNCA se toca —
         // cada línea de la cotización ya es una COPIA (f.ingredients es un
@@ -848,9 +855,15 @@
         function renderInsumoPickerHtml(f) {
             const listHtml = f.insumos.length
                 ? f.insumos.map(i => `
-                    <div class="flex items-center justify-between gap-2 p-2 bg-deepblue-900/60 rounded-lg">
-                        <span class="text-[10px] text-gray-300"><span class="font-mono text-emerald-400">${escapeHtml(i.code)}</span> ${escapeHtml(i.name)}</span>
-                        <button onclick="removeInsumoFromFormula('${f.lineId}','${i.code}')" class="text-gray-500 hover:text-red-400"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                    <div class="p-2 bg-deepblue-900/60 rounded-lg space-y-1.5">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[10px] text-gray-300"><span class="font-mono text-emerald-400">${escapeHtml(i.code)}</span> ${escapeHtml(i.name)}</span>
+                            <button onclick="removeInsumoFromFormula('${f.lineId}','${i.code}')" class="text-gray-500 hover:text-red-400 shrink-0"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                        <input type="text" value="${escapeHtml(i.nota || '')}"
+                            onchange="updateInsumoNota('${f.lineId}','${i.code}', this.value)"
+                            placeholder="Nota para esta cotización (opcional, ej: color especial, proveedor alterno...)"
+                            class="field-input !text-[10px] !py-1.5">
                     </div>
                 `).join('')
                 : '<p class="text-[10px] text-gray-500">Sin insumos todavía.</p>';
@@ -902,7 +915,7 @@
                 const isIngredientEditorActive = activeIngredientFormulaId === f.lineId;
                 const isAlternate = isAlternateFormula(f);
                 const insumosText = f.insumos.length
-                    ? f.insumos.map(i => `${i.name} (${i.code})`).join(', ')
+                    ? f.insumos.map(insumoLabel).join(', ')
                     : 'Sin insumos asignados';
                 return `
                 <div class="p-4 bg-deepblue-950/60 border border-white/5 rounded-xl space-y-3">
@@ -1144,6 +1157,20 @@
             if (!f) return;
             f.insumos = f.insumos.filter(i => i.code !== code);
             renderFormulasList();
+        }
+
+        // Nota libre por insumo, solo para esta cotización — vive únicamente
+        // en f.insumos (parte del documento de la cotización), nunca se
+        // escribe en el catálogo reutilizable de insumos (packagingCache /
+        // /api/packaging). Por eso la próxima vez que se use ese mismo
+        // insumo en otra fórmula o cotización, aparece sin nota, tal como
+        // está en el catálogo.
+        function updateInsumoNota(lineId, code, value) {
+            const f = quoteFormulas.find(x => x.lineId === lineId);
+            const insumo = f && f.insumos.find(i => i.code === code);
+            if (!insumo) return;
+            const trimmed = value.trim();
+            if (trimmed) insumo.nota = trimmed; else delete insumo.nota;
         }
 
         // --- Condiciones Comerciales ---
@@ -1683,7 +1710,7 @@
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8.5);
                 const mezclaLines = doc.splitTextToSize(mezclaLabel(f), textWidth);
-                const insumosText = f.insumos.length ? f.insumos.map(i => `${i.name} (${i.code})`).join(', ') : null;
+                const insumosText = f.insumos.length ? f.insumos.map(insumoLabel).join(', ') : null;
                 const insumosLines = insumosText ? doc.splitTextToSize(`Insumos: ${insumosText}`, textWidth) : [];
                 // Con varias escalas, cada una ocupa su propio trío de
                 // recuadros (18.5mm: etiqueta + caja) más 4mm de separación

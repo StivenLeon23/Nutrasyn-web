@@ -7,7 +7,11 @@
 // con su propia presentación, sus propios insumos y su propio precio:
 //   { productId, name, format, ingredients,
 //     presentacionTipo, presentacionTamano,
-//     insumos: [{code, type, name}], precioUnitario, cantidad }
+//     insumos: [{code, type, name, nota?}], precioUnitario, cantidad }
+// "nota" en un insumo es texto libre propio de ESTA cotización (ej. un
+// color o proveedor alterno) — nunca se escribe en el catálogo
+// reutilizable de insumos (netlify/functions/packaging.js), así que no
+// se arrastra la próxima vez que se use ese insumo en otra fórmula.
 // El total de la cotización es la suma de (precioUnitario × cantidad) de
 // cada fórmula — no se valida a fondo esa forma en el servidor, se guarda
 // tal cual la arma el frontend.
