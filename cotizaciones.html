@@ -706,7 +706,7 @@
         // fórmula completa (con sus ingredientes) solo para variar el
         // empaque o el precio por cantidad.
         function nuevaPresentacion() {
-            return { presId: crypto.randomUUID(), presentacionTipo: '', presentacionTamano: '', insumos: [], escalas: [{ cantidad: null, precioUnitario: null }] };
+            return { presId: crypto.randomUUID(), presentacionTipo: '', presentacionTamano: '', insumos: [], escalas: [{ cantidad: null, precioUnitario: null }], imagenMockup: null };
         }
 
         function addFormulaToQuote(productId) {
@@ -716,7 +716,6 @@
             quoteFormulas.push({
                 lineId: crypto.randomUUID(),
                 productId: prod.id, name: prod.name, format: prod.format, ingredients: prod.ingredients,
-                imagenMockup: null,
                 presentaciones: [nuevaPresentacion()],
             });
             document.getElementById('formula-search').value = '';
@@ -766,11 +765,13 @@
             renderFormulasList();
         }
 
-        // Imagen de referencia / mockup por fórmula. Se recorta a cuadrado y
-        // se reescala en el navegador (canvas) antes de guardarla como JPEG
-        // en base64 dentro de la propia fórmula — así no hace falta un
-        // endpoint ni un storage aparte, y la cotización sigue siendo un solo
-        // documento JSON que ya se guarda y se descarga como siempre.
+        // Imagen de referencia / mockup por PRESENTACIÓN (no por fórmula: un
+        // frasco y un doypack del mismo producto se ven distintos). Se
+        // recorta a cuadrado y se reescala en el navegador (canvas) antes de
+        // guardarla como JPEG en base64 dentro de la propia presentación —
+        // así no hace falta un endpoint ni un storage aparte, y la
+        // cotización sigue siendo un solo documento JSON que ya se guarda y
+        // se descarga como siempre.
         const FORMULA_IMAGE_SIZE = 640;
 
         function readFileAsImageElement(file) {
@@ -787,7 +788,10 @@
             });
         }
 
-        async function handleFormulaImageUpload(lineId, inputEl) {
+        // La imagen es propia de cada PRESENTACIÓN (no de la fórmula): un
+        // frasco y un doypack del mismo producto se ven distintos, así que
+        // cada presentación lleva su propia foto/mockup de referencia.
+        async function handleImageUpload(presId, inputEl) {
             const file = inputEl.files && inputEl.files[0];
             if (!file) return;
             if (!file.type.startsWith('image/')) {
@@ -804,8 +808,8 @@
                 const canvas = document.createElement('canvas');
                 canvas.width = size; canvas.height = size;
                 canvas.getContext('2d').drawImage(img, sx, sy, srcSize, srcSize, 0, 0, size, size);
-                const f = quoteFormulas.find(x => x.lineId === lineId);
-                if (f) f.imagenMockup = canvas.toDataURL('image/jpeg', 0.85);
+                const found = findPresentacion(presId);
+                if (found) found.p.imagenMockup = canvas.toDataURL('image/jpeg', 0.85);
                 renderFormulasList();
             } catch (err) {
                 toast('Error al procesar la imagen', err.message, 'error');
@@ -813,9 +817,9 @@
             }
         }
 
-        function removeFormulaImage(lineId) {
-            const f = quoteFormulas.find(x => x.lineId === lineId);
-            if (f) f.imagenMockup = null;
+        function removeImage(presId) {
+            const found = findPresentacion(presId);
+            if (found) found.p.imagenMockup = null;
             renderFormulasList();
         }
 
@@ -980,33 +984,13 @@
                 return `
                 <div class="p-4 bg-deepblue-950/60 border border-white/5 rounded-xl space-y-3">
                     <div class="flex items-start justify-between gap-3">
-                        <div class="flex items-start gap-3 min-w-0">
-                            <div class="shrink-0">
-                                ${f.imagenMockup ? `
-                                    <div class="relative group w-28 h-28">
-                                        <img src="${f.imagenMockup}" class="w-28 h-28 rounded-[26px] object-cover border border-white/10">
-                                        <button onclick="removeFormulaImage('${f.lineId}')" title="Quitar imagen"
-                                            class="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-400 rounded-full w-5 h-5 flex items-center justify-center">
-                                            <i data-lucide="x" class="w-3 h-3 text-white"></i>
-                                        </button>
-                                        <p class="text-[8px] text-gray-500 text-center mt-1 leading-tight">Referencia, no es el producto final</p>
-                                    </div>
-                                ` : `
-                                    <label class="w-28 h-28 flex flex-col items-center justify-center gap-1.5 rounded-[26px] border border-dashed border-white/15 hover:border-emerald-400/50 cursor-pointer text-gray-500 hover:text-emerald-400 transition">
-                                        <i data-lucide="image-plus" class="w-5 h-5"></i>
-                                        <span class="text-[9px] leading-none text-center px-1">Agregar imagen<br>de referencia</span>
-                                        <input type="file" accept="image/*" class="hidden" onchange="handleFormulaImageUpload('${f.lineId}', this)">
-                                    </label>
-                                `}
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap mb-1">
+                                <span class="text-base font-extrabold text-white">${escapeHtml(f.name)}</span>
+                                <span class="text-[9px] font-mono text-gray-500">${f.productId.toUpperCase()}</span>
+                                ${isAlternate ? '<span class="text-[9px] font-bold text-amber-300 bg-amber-950/50 border border-amber-500/30 px-1.5 py-0.5 rounded uppercase">Variedad Alterna</span>' : ''}
                             </div>
-                            <div class="min-w-0">
-                                <div class="flex items-center gap-2 flex-wrap mb-1">
-                                    <span class="text-base font-extrabold text-white">${escapeHtml(f.name)}</span>
-                                    <span class="text-[9px] font-mono text-gray-500">${f.productId.toUpperCase()}</span>
-                                    ${isAlternate ? '<span class="text-[9px] font-bold text-amber-300 bg-amber-950/50 border border-amber-500/30 px-1.5 py-0.5 rounded uppercase">Variedad Alterna</span>' : ''}
-                                </div>
-                                <p class="text-[11px] text-gray-400 leading-relaxed">${escapeHtml(mezclaLabel(f))}</p>
-                            </div>
+                            <p class="text-[11px] text-gray-400 leading-relaxed">${escapeHtml(mezclaLabel(f))}</p>
                         </div>
                         <button onclick="removeFormula('${f.lineId}')" class="text-gray-500 hover:text-red-400 shrink-0">
                             <i data-lucide="trash" class="w-4 h-4"></i>
@@ -1057,18 +1041,38 @@
                             <button onclick="removePresentacion('${f.lineId}','${p.presId}')" class="text-gray-500 hover:text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                         </div>
                     ` : ''}
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                            <label class="field-label">Presentación</label>
-                            <input type="text" value="${escapeHtml(p.presentacionTipo)}"
-                                onchange="updatePresentacionText('${p.presId}','presentacionTipo', this.value)"
-                                class="field-input" placeholder="Ej: Cápsula, Tarro, Doypack...">
+                    <div class="flex items-start gap-3">
+                        <div class="shrink-0">
+                            ${p.imagenMockup ? `
+                                <div class="relative group w-24 h-24">
+                                    <img src="${p.imagenMockup}" class="w-24 h-24 rounded-[22px] object-cover border border-white/10">
+                                    <button onclick="removeImage('${p.presId}')" title="Quitar imagen"
+                                        class="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-400 rounded-full w-5 h-5 flex items-center justify-center">
+                                        <i data-lucide="x" class="w-3 h-3 text-white"></i>
+                                    </button>
+                                    <p class="text-[8px] text-gray-500 text-center mt-1 leading-tight">Referencia, no es el producto final</p>
+                                </div>
+                            ` : `
+                                <label class="w-24 h-24 flex flex-col items-center justify-center gap-1.5 rounded-[22px] border border-dashed border-white/15 hover:border-emerald-400/50 cursor-pointer text-gray-500 hover:text-emerald-400 transition">
+                                    <i data-lucide="image-plus" class="w-5 h-5"></i>
+                                    <span class="text-[9px] leading-none text-center px-1">Agregar imagen<br>de referencia</span>
+                                    <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload('${p.presId}', this)">
+                                </label>
+                            `}
                         </div>
-                        <div>
-                            <label class="field-label">Contenido / Tamaño</label>
-                            <input type="text" value="${escapeHtml(p.presentacionTamano)}"
-                                onchange="updatePresentacionText('${p.presId}','presentacionTamano', this.value)"
-                                class="field-input" placeholder="Ej: 500 gramos, 1.000 ml...">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 min-w-0">
+                            <div>
+                                <label class="field-label">Presentación</label>
+                                <input type="text" value="${escapeHtml(p.presentacionTipo)}"
+                                    onchange="updatePresentacionText('${p.presId}','presentacionTipo', this.value)"
+                                    class="field-input" placeholder="Ej: Cápsula, Tarro, Doypack...">
+                            </div>
+                            <div>
+                                <label class="field-label">Contenido / Tamaño</label>
+                                <input type="text" value="${escapeHtml(p.presentacionTamano)}"
+                                    onchange="updatePresentacionText('${p.presId}','presentacionTamano', this.value)"
+                                    class="field-input" placeholder="Ej: 500 gramos, 1.000 ml...">
+                            </div>
                         </div>
                     </div>
 
@@ -1495,12 +1499,16 @@
                         presentacionTipo: p.presentacionTipo || '', presentacionTamano: p.presentacionTamano || '',
                         insumos: (Array.isArray(p.insumos) ? p.insumos : []).map(i => ({ ...i })),
                         escalas,
+                        // Compatibilidad con cotizaciones guardadas cuando la
+                        // imagen todavía era por fórmula (no por
+                        // presentación): si esta presentación no trae la
+                        // suya, se usa la de la fórmula como respaldo.
+                        imagenMockup: p.imagenMockup || f.imagenMockup || null,
                     };
                 });
                 return {
                     lineId: crypto.randomUUID(),
                     productId: f.productId, name: f.name, format: f.format, ingredients: f.ingredients,
-                    imagenMockup: f.imagenMockup || null,
                     presentaciones,
                 };
             });
@@ -1790,77 +1798,16 @@
             let hasAnyPricing = false;
 
             quoteFormulas.forEach((f, idx) => {
-                // El encabezado (imagen, título, mezcla de ingredientes) se
-                // dibuja UNA sola vez por fórmula — los ingredientes son los
-                // mismos para todas sus presentaciones. Cada presentación
-                // (empaque + escalas de cantidad/precio) se dibuja después,
+                // El título y la mezcla de ingredientes se dibujan UNA sola
+                // vez por fórmula (son los mismos para todas sus
+                // presentaciones). Cada presentación (imagen, empaque,
+                // insumos y escalas de cantidad/precio) se dibuja después,
                 // una debajo de otra, sin repetir la mezcla.
-                const hasImage = Boolean(f.imagenMockup);
-                const IMG_SIZE = 42;
-                const IMG_GAP = 5;
-                const IMG_CAPTION = 'Imagen de referencia, no es el producto final';
-                const textWidth = pageW - marginX * 2 - (hasImage ? IMG_SIZE + IMG_GAP : 0);
-                // La leyenda se mide con SU propia fuente (negrita itálica
-                // 6.5pt, bien visible) antes de pasar a medir el texto
-                // principal — mismo cuidado que con mezclaLines un poco más
-                // abajo.
-                let imgCaptionLines = [];
-                if (hasImage) {
-                    doc.setFont('helvetica', 'bolditalic');
-                    doc.setFontSize(6.5);
-                    imgCaptionLines = doc.splitTextToSize(IMG_CAPTION, IMG_SIZE);
-                }
-                // splitTextToSize() mide el ancho de línea con la fuente
-                // ACTIVA en ese momento — si no se fija aquí la misma
-                // fuente/tamaño con la que luego se dibuja el texto (8.5pt
-                // normal), mide con la fuente que haya quedado puesta del
-                // título anterior (13pt bold, bastante más ancha) y corta
-                // las líneas mucho antes de lo necesario, dejando el bloque
-                // de texto angosto en vez de usar el ancho real de la página.
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8.5);
-                const mezclaLines = doc.splitTextToSize(mezclaLabel(f), textWidth);
+                const mezclaLines = doc.splitTextToSize(mezclaLabel(f), pageW - marginX * 2);
+                ensureSpace(6 + mezclaLines.length * 4.2 + 2 + 21);
 
-                const textTopHeight = 6 + mezclaLines.length * 4.2 + 2;
-                // Alto total de la columna de imagen: el cuadro + la leyenda
-                // debajo. Si es más alta que el bloque de texto (título +
-                // mezcla), el bloque completo debe ser igual de alto que la
-                // imagen+leyenda para no encimar lo que venga después (las
-                // presentaciones).
-                const imgColumnHeight = IMG_SIZE + 3 + imgCaptionLines.length * 3.2;
-                const topHeight = hasImage ? Math.max(textTopHeight, imgColumnHeight) : textTopHeight;
-                ensureSpace(topHeight + 21); // + espacio mínimo para que al menos la 1ra presentación no quede huérfana
-
-                const blockStartY = y;
-                // Si la imagen y el texto no miden lo mismo de alto, la más
-                // corta de las dos se centra respecto a la más alta (en vez
-                // de quedar pegada arriba con un vacío grande debajo).
-                const imgStartY = blockStartY + Math.max(0, (topHeight - imgColumnHeight) / 2);
-                const textStartY = blockStartY + Math.max(0, (topHeight - textTopHeight) / 2);
-
-                if (hasImage) {
-                    const imgX = pageW - marginX - IMG_SIZE;
-                    // "Squircle": esquinas muy redondeadas (radio ~22% del
-                    // lado, como un ícono de app) en vez del cuadrado
-                    // cerrado de antes. La imagen se recorta al mismo path
-                    // redondeado (clip) para que no le sobresalgan las
-                    // esquinas rectas por encima del borde.
-                    const IMG_RADIUS = IMG_SIZE * 0.22;
-                    doc.saveGraphicsState();
-                    doc.roundedRect(imgX, imgStartY, IMG_SIZE, IMG_SIZE, IMG_RADIUS, IMG_RADIUS, null).clip().discardPath();
-                    doc.addImage(f.imagenMockup, 'JPEG', imgX, imgStartY, IMG_SIZE, IMG_SIZE, undefined, 'FAST');
-                    doc.restoreGraphicsState();
-                    doc.setDrawColor(0, 168, 150);
-                    doc.setLineWidth(0.35);
-                    doc.roundedRect(imgX, imgStartY, IMG_SIZE, IMG_SIZE, IMG_RADIUS, IMG_RADIUS, 'S');
-                    doc.setFont('helvetica', 'bolditalic');
-                    doc.setFontSize(6.5);
-                    doc.setTextColor(100, 116, 139);
-                    doc.text(imgCaptionLines, imgX + IMG_SIZE / 2, imgStartY + IMG_SIZE + 4, { align: 'center' });
-                }
-
-                // Título grande de la fórmula/producto terminado
-                y = textStartY;
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(13);
                 doc.setTextColor(10, 37, 64);
@@ -1871,12 +1818,7 @@
                 doc.setFontSize(8.5);
                 doc.setTextColor(90, 100, 115);
                 doc.text(mezclaLines, marginX, y);
-                y += mezclaLines.length * 4.2 + 2;
-
-                // Volver al borde inferior de la columna completa (texto o
-                // imagen, lo que haya quedado más abajo) antes de las
-                // presentaciones.
-                y = blockStartY + topHeight + 3;
+                y += mezclaLines.length * 4.2 + 5;
 
                 const multiplePresentaciones = f.presentaciones.length > 1;
                 f.presentaciones.forEach((p, pIdx) => {
@@ -1887,16 +1829,64 @@
                     // — no se suman al Total.
                     if (subtotal != null) { quoteTotal += subtotal; hasAnyPricing = true; }
 
+                    // La imagen es propia de esta presentación (un frasco y
+                    // un doypack del mismo producto se ven distintos) — si
+                    // tiene, se reserva una columna a la derecha igual que
+                    // antes se hacía a nivel de fórmula.
+                    const hasImage = Boolean(p.imagenMockup);
+                    const IMG_SIZE = 42;
+                    const IMG_GAP = 5;
+                    const IMG_CAPTION = 'Imagen de referencia, no es el producto final';
+                    const presTextWidth = pageW - marginX * 2 - (hasImage ? IMG_SIZE + IMG_GAP : 0);
+
+                    let imgCaptionLines = [];
+                    if (hasImage) {
+                        doc.setFont('helvetica', 'bolditalic');
+                        doc.setFontSize(6.5);
+                        imgCaptionLines = doc.splitTextToSize(IMG_CAPTION, IMG_SIZE);
+                    }
+
                     const presentacionLabel = [p.presentacionTipo, p.presentacionTamano].filter(Boolean).join(' · ');
                     doc.setFont('helvetica', 'normal');
                     doc.setFontSize(8.5);
                     const presInsumosText = p.insumos.length ? p.insumos.map(insumoLabel).join(', ') : null;
-                    const presInsumosLines = presInsumosText ? doc.splitTextToSize(`Insumos: ${presInsumosText}`, pageW - marginX * 2) : [];
+                    const presInsumosLines = presInsumosText ? doc.splitTextToSize(`Insumos: ${presInsumosText}`, presTextWidth) : [];
                     const priceSectionHeight = singleEscala ? 21 : (18.5 * p.escalas.length + 4 * (p.escalas.length - 1)) + 9;
-                    const presHeaderHeight = (multiplePresentaciones ? 5 : 0) + (presentacionLabel ? 5 : 0)
+                    const presTextTopHeight = (multiplePresentaciones ? 5 : 0) + (presentacionLabel ? 5 : 0)
                         + (presInsumosLines.length ? presInsumosLines.length * 4.2 + 2 : 0);
-                    ensureSpace(presHeaderHeight + priceSectionHeight);
+                    const imgColumnHeight = hasImage ? IMG_SIZE + 3 + imgCaptionLines.length * 3.2 : 0;
+                    const presTopHeight = hasImage ? Math.max(presTextTopHeight, imgColumnHeight) : presTextTopHeight;
+                    ensureSpace(presTopHeight + priceSectionHeight);
 
+                    const presBlockStartY = y;
+                    // Si la imagen y el texto de esta presentación no miden
+                    // lo mismo de alto, la más corta se centra respecto a la
+                    // más alta.
+                    const imgStartY = presBlockStartY + Math.max(0, (presTopHeight - imgColumnHeight) / 2);
+                    const textStartY = presBlockStartY + Math.max(0, (presTopHeight - presTextTopHeight) / 2);
+
+                    if (hasImage) {
+                        const imgX = pageW - marginX - IMG_SIZE;
+                        // "Squircle": esquinas muy redondeadas (radio ~22%
+                        // del lado, como un ícono de app). La imagen se
+                        // recorta al mismo path redondeado (clip) para que
+                        // no le sobresalgan las esquinas rectas por encima
+                        // del borde.
+                        const IMG_RADIUS = IMG_SIZE * 0.22;
+                        doc.saveGraphicsState();
+                        doc.roundedRect(imgX, imgStartY, IMG_SIZE, IMG_SIZE, IMG_RADIUS, IMG_RADIUS, null).clip().discardPath();
+                        doc.addImage(p.imagenMockup, 'JPEG', imgX, imgStartY, IMG_SIZE, IMG_SIZE, undefined, 'FAST');
+                        doc.restoreGraphicsState();
+                        doc.setDrawColor(0, 168, 150);
+                        doc.setLineWidth(0.35);
+                        doc.roundedRect(imgX, imgStartY, IMG_SIZE, IMG_SIZE, IMG_RADIUS, IMG_RADIUS, 'S');
+                        doc.setFont('helvetica', 'bolditalic');
+                        doc.setFontSize(6.5);
+                        doc.setTextColor(100, 116, 139);
+                        doc.text(imgCaptionLines, imgX + IMG_SIZE / 2, imgStartY + IMG_SIZE + 4, { align: 'center' });
+                    }
+
+                    y = textStartY;
                     if (multiplePresentaciones) {
                         doc.setFont('helvetica', 'bold');
                         doc.setFontSize(8.5);
@@ -1920,6 +1910,11 @@
                         doc.text(presInsumosLines, marginX, y);
                         y += presInsumosLines.length * 4.2 + 2;
                     }
+
+                    // Volver al borde inferior de la columna completa (texto
+                    // o imagen, lo que haya quedado más abajo) antes de los
+                    // recuadros de precio.
+                    y = presBlockStartY + presTopHeight + 1;
 
                     if (singleEscala) {
                         // Precio unitario | Cantidad | Subtotal, cada uno en su propio recuadro
