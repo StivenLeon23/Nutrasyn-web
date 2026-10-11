@@ -250,9 +250,9 @@
         let conditionsCache = [];
         let ingredientsCatalogCache = []; // catálogo de ingredientes con código (IN001...), ver /api/ingredients
         let quotesCache = [];
-        let activeInsumoFormulaId = null; // qué fórmula tiene abierto el selector de insumos
+        let activeInsumoPresId = null; // qué presentación tiene abierto el selector de insumos
         let activeIngredientFormulaId = null; // qué fórmula tiene abierto el editor de ingredientes
-        let editingInsumoNota = null; // `${lineId}:${code}` del insumo cuya nota está en edición, o null
+        let editingInsumoNota = null; // `${presId}:${code}` del insumo cuya nota está en edición, o null
 
         const TYPE_LABELS = { envase: 'Envase', tapa: 'Tapa', copa: 'Copa', caja: 'Caja', divisor: 'Divisor', insumo: 'Insumo', otro: 'Otro' };
 
@@ -697,6 +697,18 @@
         // por eso cada línea tiene su propio "lineId" único; productId ya NO
         // es único dentro de quoteFormulas, solo identifica de qué fórmula
         // del catálogo viene.
+        // Los ingredientes de una fórmula se definen UNA vez por línea —
+        // pero una misma fórmula puede venderse en varias presentaciones
+        // (ej. frasco x100 / doypack x500), cada una con sus propios
+        // insumos y escalas de cantidad/precio. Por eso cada fórmula tiene
+        // un arreglo "presentaciones" en vez de un solo juego de
+        // presentación/insumos/escalas — evita tener que duplicar la
+        // fórmula completa (con sus ingredientes) solo para variar el
+        // empaque o el precio por cantidad.
+        function nuevaPresentacion() {
+            return { presId: crypto.randomUUID(), presentacionTipo: '', presentacionTamano: '', insumos: [], escalas: [{ cantidad: null, precioUnitario: null }] };
+        }
+
         function addFormulaToQuote(productId) {
             const prod = window.productDatabase.find(p => p.id === productId);
             if (!prod) return;
@@ -704,23 +716,53 @@
             quoteFormulas.push({
                 lineId: crypto.randomUUID(),
                 productId: prod.id, name: prod.name, format: prod.format, ingredients: prod.ingredients,
-                presentacionTipo: '', presentacionTamano: '',
-                insumos: [], escalas: [{ cantidad: null, precioUnitario: null }],
                 imagenMockup: null,
+                presentaciones: [nuevaPresentacion()],
             });
             document.getElementById('formula-search').value = '';
             document.getElementById('formula-search-results').classList.add('hidden');
             renderFormulasList();
             if (alreadyHasIt) {
-                toast('Fórmula agregada de nuevo', 'Ya tenías esta fórmula — se agregó como otra línea independiente (útil para variedades alternas o escalas de precio distintas).');
+                toast('Fórmula agregada de nuevo', 'Ya tenías esta fórmula — se agregó como otra línea independiente (útil para variedades alternas o escalas de precio distintas). Si solo necesitas otra presentación del mismo producto, mejor usa "Agregar presentación" dentro de la fórmula ya agregada.');
             }
         }
 
+        // Busca en qué fórmula y presentación vive un presId — se usa en
+        // vez de pasar lineId+presId por todos lados porque presId ya es
+        // único en toda la cotización (crypto.randomUUID()).
+        function findPresentacion(presId) {
+            for (const f of quoteFormulas) {
+                const p = f.presentaciones.find(x => x.presId === presId);
+                if (p) return { f, p };
+            }
+            return null;
+        }
+
+        function addPresentacion(lineId) {
+            const f = quoteFormulas.find(x => x.lineId === lineId);
+            if (!f) return;
+            f.presentaciones.push(nuevaPresentacion());
+            renderFormulasList();
+        }
+
+        function removePresentacion(lineId, presId) {
+            const f = quoteFormulas.find(x => x.lineId === lineId);
+            if (!f || f.presentaciones.length <= 1) return;
+            f.presentaciones = f.presentaciones.filter(p => p.presId !== presId);
+            if (activeInsumoPresId === presId) activeInsumoPresId = null;
+            if (editingInsumoNota && editingInsumoNota.startsWith(presId + ':')) editingInsumoNota = null;
+            renderFormulasList();
+        }
+
         function removeFormula(lineId) {
-            quoteFormulas = quoteFormulas.filter(f => f.lineId !== lineId);
-            if (activeInsumoFormulaId === lineId) activeInsumoFormulaId = null;
+            const f = quoteFormulas.find(x => x.lineId === lineId);
+            quoteFormulas = quoteFormulas.filter(x => x.lineId !== lineId);
             if (activeIngredientFormulaId === lineId) activeIngredientFormulaId = null;
-            if (editingInsumoNota && editingInsumoNota.startsWith(lineId + ':')) editingInsumoNota = null;
+            if (f) {
+                const presIds = f.presentaciones.map(p => p.presId);
+                if (presIds.includes(activeInsumoPresId)) activeInsumoPresId = null;
+                if (editingInsumoNota && presIds.some(id => editingInsumoNota.startsWith(id + ':'))) editingInsumoNota = null;
+            }
             renderFormulasList();
         }
 
@@ -779,18 +821,18 @@
 
         // Cambios de texto libre (presentación) — onchange, no oninput, para no
         // perder el foco del campo al re-renderizar la lista completa.
-        function updateFormulaText(lineId, field, value) {
-            const f = quoteFormulas.find(x => x.lineId === lineId);
-            if (f) f[field] = value.trim();
+        function updatePresentacionText(presId, field, value) {
+            const found = findPresentacion(presId);
+            if (found) found.p[field] = value.trim();
         }
 
-        // Cada fórmula tiene una o varias "escalas" (cantidad + precio
+        // Cada presentación tiene una o varias "escalas" (cantidad + precio
         // unitario). Con una sola escala es el caso normal de siempre; con
         // varias, son opciones alternativas de cantidad para que el cliente
         // elija una (ej. 100 / 500 / 1000 unidades, cada una a su precio) —
-        // por eso esas fórmulas NO se suman al Total general: sumarlas sería
-        // tratarlas como si el cliente fuera a comprar las tres cantidades
-        // juntas, no a elegir una.
+        // por eso esas presentaciones NO se suman al Total general: sumarlas
+        // sería tratarlas como si el cliente fuera a comprar las tres
+        // cantidades juntas, no a elegir una.
         function escalaSubtotal(escala) {
             const unit = Number(escala?.precioUnitario);
             const qty = Number(escala?.cantidad);
@@ -798,37 +840,38 @@
             return unit * qty;
         }
 
-        function addEscala(lineId) {
-            const f = quoteFormulas.find(x => x.lineId === lineId);
-            if (!f) return;
-            f.escalas.push({ cantidad: null, precioUnitario: null });
+        function addEscala(presId) {
+            const found = findPresentacion(presId);
+            if (!found) return;
+            found.p.escalas.push({ cantidad: null, precioUnitario: null });
             renderFormulasList();
         }
 
-        function removeEscala(lineId, index) {
-            const f = quoteFormulas.find(x => x.lineId === lineId);
-            if (!f || f.escalas.length <= 1) return;
-            f.escalas.splice(index, 1);
+        function removeEscala(presId, index) {
+            const found = findPresentacion(presId);
+            if (!found || found.p.escalas.length <= 1) return;
+            found.p.escalas.splice(index, 1);
             renderFormulasList();
         }
 
         // Actualiza solo el subtotal de esa escala y el total general por DOM
         // directo (evita re-renderizar toda la lista y perder el foco
         // mientras se escribe).
-        function updateEscala(lineId, index, field, rawValue) {
-            const f = quoteFormulas.find(x => x.lineId === lineId);
-            if (!f || !f.escalas[index]) return;
+        function updateEscala(presId, index, field, rawValue) {
+            const found = findPresentacion(presId);
+            if (!found || !found.p.escalas[index]) return;
             const n = rawValue === '' ? null : Number(rawValue);
-            f.escalas[index][field] = (n === null || Number.isNaN(n)) ? null : n;
-            const subtotalEl = document.getElementById(`escala-subtotal-${lineId}-${index}`);
-            if (subtotalEl) subtotalEl.textContent = formatCOP(escalaSubtotal(f.escalas[index]));
+            found.p.escalas[index][field] = (n === null || Number.isNaN(n)) ? null : n;
+            const subtotalEl = document.getElementById(`escala-subtotal-${presId}-${index}`);
+            if (subtotalEl) subtotalEl.textContent = formatCOP(escalaSubtotal(found.p.escalas[index]));
             updateQuoteTotalDisplay();
         }
 
         function computeQuoteTotal() {
             const subtotals = quoteFormulas
-                .filter(f => f.escalas.length === 1)
-                .map(f => escalaSubtotal(f.escalas[0]))
+                .flatMap(f => f.presentaciones)
+                .filter(p => p.escalas.length === 1)
+                .map(p => escalaSubtotal(p.escalas[0]))
                 .filter(s => s != null);
             return subtotals.length ? subtotals.reduce((a, b) => a + b, 0) : null;
         }
@@ -838,42 +881,47 @@
             if (el) el.textContent = formatCOP(computeQuoteTotal());
         }
 
-        function toggleInsumoPicker(lineId) {
-            activeInsumoFormulaId = (activeInsumoFormulaId === lineId) ? null : lineId;
+        function toggleInsumoPicker(presId) {
+            activeInsumoPresId = (activeInsumoPresId === presId) ? null : presId;
             renderFormulasList();
         }
 
-        function applyInsumosToAll(lineId) {
-            const source = quoteFormulas.find(x => x.lineId === lineId);
-            if (!source) return;
-            quoteFormulas.forEach(f => { f.insumos = source.insumos.map(i => ({ ...i })); });
+        // Copia los insumos de esta presentación a las DEMÁS presentaciones
+        // de la MISMA fórmula (ej. mismo tapón/caja para todas las escalas
+        // de tamaño de un mismo producto) — no toca otras fórmulas.
+        function applyInsumosToAllPresentaciones(presId) {
+            const found = findPresentacion(presId);
+            if (!found) return;
+            found.f.presentaciones.forEach(p => {
+                if (p.presId !== presId) p.insumos = found.p.insumos.map(i => ({ ...i }));
+            });
             renderFormulasList();
-            toast('Insumos aplicados', 'Se copiaron los insumos de esta fórmula a todas las demás.');
+            toast('Insumos aplicados', 'Se copiaron a las demás presentaciones de este producto.');
         }
 
-        // Selector de insumos embebido dentro de la fórmula activa. Reutiliza
-        // IDs fijos (insumo-search, new-insumo-form...) porque solo una
-        // fórmula puede tener el selector abierto a la vez.
-        function renderInsumoPickerHtml(f) {
-            const listHtml = f.insumos.length
-                ? f.insumos.map(i => {
-                    const notaKey = f.lineId + ':' + i.code;
+        // Selector de insumos embebido dentro de la presentación activa.
+        // Reutiliza IDs fijos (insumo-search, new-insumo-form...) porque solo
+        // una presentación puede tener el selector abierto a la vez.
+        function renderInsumoPickerHtml(f, p) {
+            const listHtml = p.insumos.length
+                ? p.insumos.map(i => {
+                    const notaKey = p.presId + ':' + i.code;
                     const isEditingNota = editingInsumoNota === notaKey;
                     return `
                     <div class="p-2 bg-deepblue-900/60 rounded-lg space-y-1.5">
                         <div class="flex items-center justify-between gap-2">
                             <span class="text-[10px] text-gray-300"><span class="font-mono text-emerald-400">${escapeHtml(i.code)}</span> ${escapeHtml(i.name)}</span>
                             <div class="flex items-center gap-2 shrink-0">
-                                <button onclick="toggleInsumoNotaEdit('${f.lineId}','${i.code}')" title="${i.nota ? 'Editar nota' : 'Agregar nota'}"
+                                <button onclick="toggleInsumoNotaEdit('${p.presId}','${i.code}')" title="${i.nota ? 'Editar nota' : 'Agregar nota'}"
                                     class="${i.nota ? 'text-emerald-400 hover:text-emerald-300' : 'text-gray-500 hover:text-emerald-400'}">
                                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                 </button>
-                                <button onclick="removeInsumoFromFormula('${f.lineId}','${i.code}')" class="text-gray-500 hover:text-red-400"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="removeInsumoFromPresentacion('${p.presId}','${i.code}')" class="text-gray-500 hover:text-red-400"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
                             </div>
                         </div>
                         ${isEditingNota ? `
                             <input type="text" value="${escapeHtml(i.nota || '')}" autofocus
-                                onblur="updateInsumoNota('${f.lineId}','${i.code}', this.value)"
+                                onblur="updateInsumoNota('${p.presId}','${i.code}', this.value)"
                                 onkeydown="if(event.key==='Enter') this.blur()"
                                 placeholder="Nota para esta cotización (opcional, ej: color especial, proveedor alterno...)"
                                 class="field-input !text-[10px] !py-1.5">
@@ -913,7 +961,7 @@
                         </div>
                     </div>
                     <div class="space-y-1.5">${listHtml}</div>
-                    ${f.insumos.length ? `<button onclick="applyInsumosToAll('${f.lineId}')" class="btn-secondary text-[10px] flex items-center gap-1.5"><i data-lucide="copy" class="w-3 h-3"></i> Usar estos insumos en todas las fórmulas</button>` : ''}
+                    ${p.insumos.length && f.presentaciones.length > 1 ? `<button onclick="applyInsumosToAllPresentaciones('${p.presId}')" class="btn-secondary text-[10px] flex items-center gap-1.5"><i data-lucide="copy" class="w-3 h-3"></i> Usar estos insumos en todas las presentaciones de este producto</button>` : ''}
                 </div>
             `;
         }
@@ -926,12 +974,9 @@
                 return;
             }
             box.innerHTML = quoteFormulas.map(f => {
-                const isActive = activeInsumoFormulaId === f.lineId;
                 const isIngredientEditorActive = activeIngredientFormulaId === f.lineId;
                 const isAlternate = isAlternateFormula(f);
-                const insumosText = f.insumos.length
-                    ? f.insumos.map(insumoLabel).join(', ')
-                    : 'Sin insumos asignados';
+                const multiplePresentaciones = f.presentaciones.length > 1;
                 return `
                 <div class="p-4 bg-deepblue-950/60 border border-white/5 rounded-xl space-y-3">
                     <div class="flex items-start justify-between gap-3">
@@ -978,62 +1023,15 @@
                         ${isIngredientEditorActive ? renderIngredientEditorHtml(f) : ''}
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                            <label class="field-label">Presentación</label>
-                            <input type="text" value="${escapeHtml(f.presentacionTipo)}"
-                                onchange="updateFormulaText('${f.lineId}','presentacionTipo', this.value)"
-                                class="field-input" placeholder="Ej: Cápsula, Tarro, Doypack...">
-                        </div>
-                        <div>
-                            <label class="field-label">Contenido / Tamaño</label>
-                            <input type="text" value="${escapeHtml(f.presentacionTamano)}"
-                                onchange="updateFormulaText('${f.lineId}','presentacionTamano', this.value)"
-                                class="field-input" placeholder="Ej: 500 gramos, 1.000 ml...">
-                        </div>
-                    </div>
-
-                    <div>
+                    <div class="pt-2 border-t border-white/5 space-y-3">
                         <div class="flex items-center justify-between gap-2 flex-wrap">
-                            <p class="text-[11px] text-gray-400"><span class="font-bold text-gray-300">Insumos:</span> ${escapeHtml(insumosText)}</p>
-                            <button onclick="toggleInsumoPicker('${f.lineId}')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 shrink-0 whitespace-nowrap">
-                                ${isActive ? 'Cerrar' : 'Gestionar insumos'}
+                            <label class="field-label !mb-0">Presentaciones ${multiplePresentaciones ? `(${f.presentaciones.length})` : ''}</label>
+                            <button onclick="addPresentacion('${f.lineId}')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                                <i data-lucide="plus" class="w-3 h-3"></i> Agregar presentación
                             </button>
                         </div>
-                        ${isActive ? renderInsumoPickerHtml(f) : ''}
-                    </div>
-
-                    <div class="pt-2 border-t border-white/5 space-y-2">
-                        <div class="flex items-center justify-between gap-2 flex-wrap">
-                            <label class="field-label !mb-0">Escalas de cantidad y precio</label>
-                            <button onclick="addEscala('${f.lineId}')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
-                                <i data-lucide="plus" class="w-3 h-3"></i> Agregar escala
-                            </button>
-                        </div>
-                        ${f.escalas.map((e, idx) => `
-                            <div class="grid grid-cols-7 gap-2 items-end">
-                                <div class="col-span-2">
-                                    <label class="field-label">Cantidad</label>
-                                    <input type="number" min="0" step="1" value="${e.cantidad ?? ''}"
-                                        onchange="updateEscala('${f.lineId}', ${idx}, 'cantidad', this.value)"
-                                        class="field-input" placeholder="Unidades">
-                                </div>
-                                <div class="col-span-2">
-                                    <label class="field-label">Precio unitario</label>
-                                    <input type="number" min="0" step="1" value="${e.precioUnitario ?? ''}"
-                                        onchange="updateEscala('${f.lineId}', ${idx}, 'precioUnitario', this.value)"
-                                        class="field-input" placeholder="COP">
-                                </div>
-                                <div class="col-span-2">
-                                    <label class="field-label">Subtotal</label>
-                                    <div id="escala-subtotal-${f.lineId}-${idx}" class="field-input flex items-center font-bold text-emerald-300">${formatCOP(escalaSubtotal(e))}</div>
-                                </div>
-                                <div class="col-span-1 flex justify-center pb-2.5">
-                                    ${f.escalas.length > 1 ? `<button onclick="removeEscala('${f.lineId}', ${idx})" class="text-gray-500 hover:text-red-400"><i data-lucide="trash" class="w-4 h-4"></i></button>` : ''}
-                                </div>
-                            </div>
-                        `).join('')}
-                        ${f.escalas.length > 1 ? '<p class="text-[9px] text-amber-400">Varias escalas: son opciones de cantidad para que el cliente elija una, por eso esta fórmula no se suma al Total general.</p>' : ''}
+                        <p class="text-[10px] text-gray-500 -mt-1.5">Misma fórmula (mismos ingredientes), pero cada presentación puede tener su propio empaque y sus propias escalas de cantidad/precio — por ejemplo, frasco x100 y doypack x500 del mismo producto.</p>
+                        ${f.presentaciones.map((p, pIdx) => renderPresentacionHtml(f, p, pIdx, multiplePresentaciones)).join('')}
                     </div>
                 </div>
             `;
@@ -1041,6 +1039,83 @@
             renderInsumoTypeOptions();
             updateQuoteTotalDisplay();
             lucide.createIcons();
+        }
+
+        // Una presentación = su propia combinación de tipo/tamaño + insumos +
+        // escalas de cantidad/precio, pero comparte los ingredientes de la
+        // fórmula (que se editan una sola vez, arriba, en toda la fórmula).
+        function renderPresentacionHtml(f, p, pIdx, multiplePresentaciones) {
+            const isInsumoPickerActive = activeInsumoPresId === p.presId;
+            const insumosText = p.insumos.length
+                ? p.insumos.map(insumoLabel).join(', ')
+                : 'Sin insumos asignados';
+            return `
+                <div class="p-3 bg-deepblue-900/30 border border-white/5 rounded-xl space-y-3">
+                    ${multiplePresentaciones ? `
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Presentación ${pIdx + 1}</span>
+                            <button onclick="removePresentacion('${f.lineId}','${p.presId}')" class="text-gray-500 hover:text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    ` : ''}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="field-label">Presentación</label>
+                            <input type="text" value="${escapeHtml(p.presentacionTipo)}"
+                                onchange="updatePresentacionText('${p.presId}','presentacionTipo', this.value)"
+                                class="field-input" placeholder="Ej: Cápsula, Tarro, Doypack...">
+                        </div>
+                        <div>
+                            <label class="field-label">Contenido / Tamaño</label>
+                            <input type="text" value="${escapeHtml(p.presentacionTamano)}"
+                                onchange="updatePresentacionText('${p.presId}','presentacionTamano', this.value)"
+                                class="field-input" placeholder="Ej: 500 gramos, 1.000 ml...">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <p class="text-[11px] text-gray-400"><span class="font-bold text-gray-300">Insumos:</span> ${escapeHtml(insumosText)}</p>
+                            <button onclick="toggleInsumoPicker('${p.presId}')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 shrink-0 whitespace-nowrap">
+                                ${isInsumoPickerActive ? 'Cerrar' : 'Gestionar insumos'}
+                            </button>
+                        </div>
+                        ${isInsumoPickerActive ? renderInsumoPickerHtml(f, p) : ''}
+                    </div>
+
+                    <div class="pt-2 border-t border-white/5 space-y-2">
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <label class="field-label !mb-0">Escalas de cantidad y precio</label>
+                            <button onclick="addEscala('${p.presId}')" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                                <i data-lucide="plus" class="w-3 h-3"></i> Agregar escala
+                            </button>
+                        </div>
+                        ${p.escalas.map((e, idx) => `
+                            <div class="grid grid-cols-7 gap-2 items-end">
+                                <div class="col-span-2">
+                                    <label class="field-label">Cantidad</label>
+                                    <input type="number" min="0" step="1" value="${e.cantidad ?? ''}"
+                                        onchange="updateEscala('${p.presId}', ${idx}, 'cantidad', this.value)"
+                                        class="field-input" placeholder="Unidades">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="field-label">Precio unitario</label>
+                                    <input type="number" min="0" step="1" value="${e.precioUnitario ?? ''}"
+                                        onchange="updateEscala('${p.presId}', ${idx}, 'precioUnitario', this.value)"
+                                        class="field-input" placeholder="COP">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="field-label">Subtotal</label>
+                                    <div id="escala-subtotal-${p.presId}-${idx}" class="field-input flex items-center font-bold text-emerald-300">${formatCOP(escalaSubtotal(e))}</div>
+                                </div>
+                                <div class="col-span-1 flex justify-center pb-2.5">
+                                    ${p.escalas.length > 1 ? `<button onclick="removeEscala('${p.presId}', ${idx})" class="text-gray-500 hover:text-red-400"><i data-lucide="trash" class="w-4 h-4"></i></button>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                        ${p.escalas.length > 1 ? '<p class="text-[9px] text-amber-400">Varias escalas: son opciones de cantidad para que el cliente elija una, por eso esta presentación no se suma al Total general.</p>' : ''}
+                    </div>
+                </div>
+            `;
         }
 
         // --- Insumos / Empaques ---
@@ -1151,45 +1226,46 @@
             }
         }
 
-        // Los insumos son propios de cada fórmula (producto terminado): se
-        // agregan al selector abierto (activeInsumoFormulaId), no a la
-        // cotización en general. "Usar en todas las fórmulas" (ver
-        // applyInsumosToAll) es la forma de copiarlos a las demás.
+        // Los insumos son propios de cada presentación: se agregan al
+        // selector abierto (activeInsumoPresId), no a la fórmula ni a la
+        // cotización en general. "Usar en todas las presentaciones" (ver
+        // applyInsumosToAllPresentaciones) es la forma de copiarlos a las
+        // demás presentaciones de la MISMA fórmula.
         function addInsumoToQuote(code) {
             const item = packagingCache.find(i => i.code === code);
-            const f = quoteFormulas.find(x => x.lineId === activeInsumoFormulaId);
-            if (!item || !f) return;
-            if (f.insumos.some(i => i.code === code)) {
-                toast('Ya agregado', 'Ese insumo ya está en esta fórmula.', 'warning');
+            const found = findPresentacion(activeInsumoPresId);
+            if (!item || !found) return;
+            if (found.p.insumos.some(i => i.code === code)) {
+                toast('Ya agregado', 'Ese insumo ya está en esta presentación.', 'warning');
                 return;
             }
-            f.insumos.push({ code: item.code, type: item.type, name: item.name });
+            found.p.insumos.push({ code: item.code, type: item.type, name: item.name });
             renderFormulasList();
         }
 
-        function removeInsumoFromFormula(lineId, code) {
-            const f = quoteFormulas.find(x => x.lineId === lineId);
-            if (!f) return;
-            f.insumos = f.insumos.filter(i => i.code !== code);
+        function removeInsumoFromPresentacion(presId, code) {
+            const found = findPresentacion(presId);
+            if (!found) return;
+            found.p.insumos = found.p.insumos.filter(i => i.code !== code);
             renderFormulasList();
         }
 
         // Nota libre por insumo, solo para esta cotización — vive únicamente
-        // en f.insumos (parte del documento de la cotización), nunca se
+        // en p.insumos (parte del documento de la cotización), nunca se
         // escribe en el catálogo reutilizable de insumos (packagingCache /
         // /api/packaging). Por eso la próxima vez que se use ese mismo
-        // insumo en otra fórmula o cotización, aparece sin nota, tal como
-        // está en el catálogo. Solo se ve/edita detrás del lápiz, no como
-        // un campo siempre abierto.
-        function toggleInsumoNotaEdit(lineId, code) {
-            const key = lineId + ':' + code;
+        // insumo en otra presentación o cotización, aparece sin nota, tal
+        // como está en el catálogo. Solo se ve/edita detrás del lápiz, no
+        // como un campo siempre abierto.
+        function toggleInsumoNotaEdit(presId, code) {
+            const key = presId + ':' + code;
             editingInsumoNota = editingInsumoNota === key ? null : key;
             renderFormulasList();
         }
 
-        function updateInsumoNota(lineId, code, value) {
-            const f = quoteFormulas.find(x => x.lineId === lineId);
-            const insumo = f && f.insumos.find(i => i.code === code);
+        function updateInsumoNota(presId, code, value) {
+            const found = findPresentacion(presId);
+            const insumo = found && found.p.insumos.find(i => i.code === code);
             if (insumo) {
                 const trimmed = value.trim();
                 if (trimmed) insumo.nota = trimmed; else delete insumo.nota;
@@ -1327,7 +1403,7 @@
             quoteFormulas = [];
             quoteFormaPago = [];
             quoteTiempoEntrega = [];
-            activeInsumoFormulaId = null;
+            activeInsumoPresId = null;
             activeIngredientFormulaId = null;
             document.getElementById('cliente-nombre').value = '';
             document.getElementById('cliente-nit').value = '';
@@ -1395,23 +1471,37 @@
             document.getElementById('cliente-telefono').value = keepClient ? (q.cliente?.telefono || '') : '';
             document.getElementById('observaciones').value = q.observaciones || '';
             document.getElementById('elaborado-por').value = q.elaboradoPor || collaboratorDisplayName;
-            // lineId siempre se genera de nuevo al cargar (no se reutiliza el
-            // guardado) — es solo para distinguir líneas dentro de esta
-            // sesión del navegador, no necesita ser estable entre guardados.
+            // lineId y presId siempre se generan de nuevo al cargar (no se
+            // reutiliza lo guardado) — son solo para distinguir líneas
+            // dentro de esta sesión del navegador, no necesitan ser
+            // estables entre guardados.
             quoteFormulas = (q.formulas || []).map(f => {
-                // Compatibilidad con cotizaciones guardadas antes de las
-                // escalas (tenían precioUnitario/cantidad sueltos en vez de
-                // un arreglo "escalas").
-                const escalas = Array.isArray(f.escalas) && f.escalas.length
-                    ? f.escalas.map(e => ({ cantidad: e.cantidad ?? null, precioUnitario: e.precioUnitario ?? null }))
-                    : [{ cantidad: f.cantidad ?? null, precioUnitario: f.precioUnitario ?? null }];
+                // Compatibilidad con cotizaciones guardadas antes de permitir
+                // varias presentaciones por fórmula (presentación/insumos/
+                // escalas vivían sueltos en la fórmula, no en un arreglo
+                // "presentaciones").
+                const presentacionesRaw = Array.isArray(f.presentaciones) && f.presentaciones.length
+                    ? f.presentaciones
+                    : [{ presentacionTipo: f.presentacionTipo, presentacionTamano: f.presentacionTamano, insumos: f.insumos, escalas: f.escalas, cantidad: f.cantidad, precioUnitario: f.precioUnitario }];
+                const presentaciones = presentacionesRaw.map(p => {
+                    // Compatibilidad con cotizaciones guardadas antes de las
+                    // escalas (tenían precioUnitario/cantidad sueltos en vez
+                    // de un arreglo "escalas").
+                    const escalas = Array.isArray(p.escalas) && p.escalas.length
+                        ? p.escalas.map(e => ({ cantidad: e.cantidad ?? null, precioUnitario: e.precioUnitario ?? null }))
+                        : [{ cantidad: p.cantidad ?? null, precioUnitario: p.precioUnitario ?? null }];
+                    return {
+                        presId: crypto.randomUUID(),
+                        presentacionTipo: p.presentacionTipo || '', presentacionTamano: p.presentacionTamano || '',
+                        insumos: (Array.isArray(p.insumos) ? p.insumos : []).map(i => ({ ...i })),
+                        escalas,
+                    };
+                });
                 return {
                     lineId: crypto.randomUUID(),
                     productId: f.productId, name: f.name, format: f.format, ingredients: f.ingredients,
-                    presentacionTipo: f.presentacionTipo || '', presentacionTamano: f.presentacionTamano || '',
-                    insumos: (Array.isArray(f.insumos) ? f.insumos : []).map(i => ({ ...i })),
-                    escalas,
                     imagenMockup: f.imagenMockup || null,
+                    presentaciones,
                 };
             });
             // Compatibilidad con cotizaciones guardadas antes de permitir
@@ -1419,7 +1509,7 @@
             // único {code,texto} o null, en vez de un arreglo).
             quoteFormaPago = normalizeConditionArray(q.formaPago);
             quoteTiempoEntrega = normalizeConditionArray(q.tiempoEntrega);
-            activeInsumoFormulaId = null;
+            activeInsumoPresId = null;
             activeIngredientFormulaId = null;
             renderFormulasList();
             renderConditionChecklist('pago');
@@ -1700,16 +1790,11 @@
             let hasAnyPricing = false;
 
             quoteFormulas.forEach((f, idx) => {
-                const singleEscala = f.escalas.length === 1;
-                const subtotal = singleEscala ? escalaSubtotal(f.escalas[0]) : null;
-                // Las fórmulas con varias escalas son opciones alternativas de
-                // cantidad para que el cliente elija una — no se suman al Total.
-                if (subtotal != null) { quoteTotal += subtotal; hasAnyPricing = true; }
-
-                const presentacion = [f.presentacionTipo, f.presentacionTamano].filter(Boolean).join(' · ');
-                // Si la fórmula tiene imagen de referencia, se reserva una
-                // columna cuadrada a la derecha y el texto se envuelve en el
-                // ancho restante (no en el ancho completo de la página).
+                // El encabezado (imagen, título, mezcla de ingredientes) se
+                // dibuja UNA sola vez por fórmula — los ingredientes son los
+                // mismos para todas sus presentaciones. Cada presentación
+                // (empaque + escalas de cantidad/precio) se dibuja después,
+                // una debajo de otra, sin repetir la mezcla.
                 const hasImage = Boolean(f.imagenMockup);
                 const IMG_SIZE = 42;
                 const IMG_GAP = 5;
@@ -1717,8 +1802,8 @@
                 const textWidth = pageW - marginX * 2 - (hasImage ? IMG_SIZE + IMG_GAP : 0);
                 // La leyenda se mide con SU propia fuente (negrita itálica
                 // 6.5pt, bien visible) antes de pasar a medir el texto
-                // principal — mismo cuidado que con mezclaLines/insumosLines
-                // un poco más abajo.
+                // principal — mismo cuidado que con mezclaLines un poco más
+                // abajo.
                 let imgCaptionLines = [];
                 if (hasImage) {
                     doc.setFont('helvetica', 'bolditalic');
@@ -1735,30 +1820,21 @@
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8.5);
                 const mezclaLines = doc.splitTextToSize(mezclaLabel(f), textWidth);
-                const insumosText = f.insumos.length ? f.insumos.map(insumoLabel).join(', ') : null;
-                const insumosLines = insumosText ? doc.splitTextToSize(`Insumos: ${insumosText}`, textWidth) : [];
-                // Con varias escalas, cada una ocupa su propio trío de
-                // recuadros (18.5mm: etiqueta + caja) más 4mm de separación
-                // entre escalas (ver drawEscalasTable), más el margen final.
-                const priceSectionHeight = singleEscala ? 21 : (18.5 * f.escalas.length + 4 * (f.escalas.length - 1)) + 9;
 
-                const textTopHeight = 6 + (presentacion ? 5 : 0) + mezclaLines.length * 4.2 + 2
-                    + (insumosLines.length ? insumosLines.length * 4.2 + 2 : 0);
+                const textTopHeight = 6 + mezclaLines.length * 4.2 + 2;
                 // Alto total de la columna de imagen: el cuadro + la leyenda
                 // debajo. Si es más alta que el bloque de texto (título +
-                // presentación + mezcla + insumos), el bloque completo debe
-                // ser igual de alto que la imagen+leyenda para no encimar lo
-                // que venga después (los recuadros de precio).
+                // mezcla), el bloque completo debe ser igual de alto que la
+                // imagen+leyenda para no encimar lo que venga después (las
+                // presentaciones).
                 const imgColumnHeight = IMG_SIZE + 3 + imgCaptionLines.length * 3.2;
                 const topHeight = hasImage ? Math.max(textTopHeight, imgColumnHeight) : textTopHeight;
-                const blockHeight = topHeight + priceSectionHeight;
-                ensureSpace(blockHeight);
+                ensureSpace(topHeight + 21); // + espacio mínimo para que al menos la 1ra presentación no quede huérfana
 
                 const blockStartY = y;
                 // Si la imagen y el texto no miden lo mismo de alto, la más
                 // corta de las dos se centra respecto a la más alta (en vez
-                // de quedar pegada arriba con un vacío grande debajo antes
-                // de los recuadros de precio).
+                // de quedar pegada arriba con un vacío grande debajo).
                 const imgStartY = blockStartY + Math.max(0, (topHeight - imgColumnHeight) / 2);
                 const textStartY = blockStartY + Math.max(0, (topHeight - textTopHeight) / 2);
 
@@ -1791,37 +1867,69 @@
                 doc.text(`${idx + 1}. ${f.name}`, marginX, y);
                 y += 6;
 
-                if (presentacion) {
-                    doc.setFont('helvetica', 'normal');
-                    doc.setFontSize(8.5);
-                    doc.setTextColor(0, 140, 125);
-                    doc.text(`Presentación: ${presentacion}`, marginX, y);
-                    y += 5;
-                }
-
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8.5);
                 doc.setTextColor(90, 100, 115);
                 doc.text(mezclaLines, marginX, y);
                 y += mezclaLines.length * 4.2 + 2;
 
-                if (insumosLines.length) {
-                    doc.text(insumosLines, marginX, y);
-                    y += insumosLines.length * 4.2 + 2;
-                }
-
                 // Volver al borde inferior de la columna completa (texto o
-                // imagen, lo que haya quedado más abajo) antes de los
-                // recuadros de precio.
-                y = blockStartY + topHeight + 1;
+                // imagen, lo que haya quedado más abajo) antes de las
+                // presentaciones.
+                y = blockStartY + topHeight + 3;
 
-                if (singleEscala) {
-                    // Precio unitario | Cantidad | Subtotal, cada uno en su propio recuadro
-                    y += drawPriceBoxes(doc, marginX, y, pageW - marginX * 2, f.escalas[0].precioUnitario, f.escalas[0].cantidad, subtotal) + 7;
-                    // (boxH=14 + 7 de margen = 21, igual al priceSectionHeight de arriba)
-                } else {
-                    y += drawEscalasTable(doc, marginX, y, pageW - marginX * 2, f.escalas) + 9;
-                }
+                const multiplePresentaciones = f.presentaciones.length > 1;
+                f.presentaciones.forEach((p, pIdx) => {
+                    const singleEscala = p.escalas.length === 1;
+                    const subtotal = singleEscala ? escalaSubtotal(p.escalas[0]) : null;
+                    // Las presentaciones con varias escalas son opciones
+                    // alternativas de cantidad para que el cliente elija una
+                    // — no se suman al Total.
+                    if (subtotal != null) { quoteTotal += subtotal; hasAnyPricing = true; }
+
+                    const presentacionLabel = [p.presentacionTipo, p.presentacionTamano].filter(Boolean).join(' · ');
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(8.5);
+                    const presInsumosText = p.insumos.length ? p.insumos.map(insumoLabel).join(', ') : null;
+                    const presInsumosLines = presInsumosText ? doc.splitTextToSize(`Insumos: ${presInsumosText}`, pageW - marginX * 2) : [];
+                    const priceSectionHeight = singleEscala ? 21 : (18.5 * p.escalas.length + 4 * (p.escalas.length - 1)) + 9;
+                    const presHeaderHeight = (multiplePresentaciones ? 5 : 0) + (presentacionLabel ? 5 : 0)
+                        + (presInsumosLines.length ? presInsumosLines.length * 4.2 + 2 : 0);
+                    ensureSpace(presHeaderHeight + priceSectionHeight);
+
+                    if (multiplePresentaciones) {
+                        doc.setFont('helvetica', 'bold');
+                        doc.setFontSize(8.5);
+                        doc.setTextColor(10, 37, 64);
+                        doc.text(`Presentación ${pIdx + 1}`, marginX, y);
+                        y += 5;
+                    }
+
+                    if (presentacionLabel) {
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(8.5);
+                        doc.setTextColor(0, 140, 125);
+                        doc.text(`Presentación: ${presentacionLabel}`, marginX, y);
+                        y += 5;
+                    }
+
+                    if (presInsumosLines.length) {
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(8.5);
+                        doc.setTextColor(90, 100, 115);
+                        doc.text(presInsumosLines, marginX, y);
+                        y += presInsumosLines.length * 4.2 + 2;
+                    }
+
+                    if (singleEscala) {
+                        // Precio unitario | Cantidad | Subtotal, cada uno en su propio recuadro
+                        y += drawPriceBoxes(doc, marginX, y, pageW - marginX * 2, p.escalas[0].precioUnitario, p.escalas[0].cantidad, subtotal) + 7;
+                        // (boxH=14 + 7 de margen = 21, igual al priceSectionHeight de arriba)
+                    } else {
+                        y += drawEscalasTable(doc, marginX, y, pageW - marginX * 2, p.escalas) + 9;
+                    }
+                    if (pIdx < f.presentaciones.length - 1) y += 2;
+                });
             });
 
             // Total (suma de subtotales)

@@ -3,18 +3,23 @@
 // en Netlify Blobs: cada cotización es un documento propio y además se
 // mantiene un índice liviano para listarlas sin tener que leerlas todas.
 //
-// Cada fórmula dentro de "formulas" es un producto terminado independiente
-// con su propia presentación, sus propios insumos y su propio precio:
-//   { productId, name, format, ingredients,
-//     presentacionTipo, presentacionTamano,
-//     insumos: [{code, type, name, nota?}], precioUnitario, cantidad }
+// Cada fórmula dentro de "formulas" es un producto terminado con sus
+// ingredientes (compartidos por todas sus presentaciones) y un arreglo
+// "presentaciones" — así una misma fórmula se puede cotizar en varios
+// empaques/tamaños distintos sin duplicar los ingredientes:
+//   { productId, name, format, ingredients, imagenMockup,
+//     presentaciones: [
+//       { presentacionTipo, presentacionTamano,
+//         insumos: [{code, type, name, nota?}],
+//         escalas: [{cantidad, precioUnitario}] }
+//     ] }
 // "nota" en un insumo es texto libre propio de ESTA cotización (ej. un
 // color o proveedor alterno) — nunca se escribe en el catálogo
 // reutilizable de insumos (netlify/functions/packaging.js), así que no
-// se arrastra la próxima vez que se use ese insumo en otra fórmula.
+// se arrastra la próxima vez que se use ese insumo en otra presentación.
 // El total de la cotización es la suma de (precioUnitario × cantidad) de
-// cada fórmula — no se valida a fondo esa forma en el servidor, se guarda
-// tal cual la arma el frontend.
+// cada presentación con una sola escala — no se valida a fondo esa forma
+// en el servidor, se guarda tal cual la arma el frontend.
 //
 // formaPago y tiempoEntrega pueden traer varias opciones cada uno
 // (arreglo de snapshots {code, texto} tomados de /api/conditions, o
@@ -82,31 +87,41 @@ function normalizeConditionChoices(value) {
     .map((v) => ({ code: v.code || null, texto: String(v.texto).trim() }));
 }
 
-// Suma precioUnitario × cantidad de las fórmulas que tengan ambos valores.
-// Si ninguna fórmula tiene precio todavía, se devuelve null (en vez de 0)
+// Suma precioUnitario × cantidad de cada presentación que tenga ambos
+// valores. Si nada tiene precio todavía, se devuelve null (en vez de 0)
 // para distinguir "sin definir" de "total es cero".
-// Cada fórmula puede traer una o varias "escalas" (cantidad + precio
+// Cada presentación puede traer una o varias "escalas" (cantidad + precio
 // unitario). Con una sola escala se suma normal; con varias, son opciones
 // alternativas de cantidad para que el cliente elija una, así que esa
-// fórmula no se cuenta en el total (sumarlas sería tratarlas como pedidos
-// acumulados). Compatibilidad: cotizaciones guardadas antes de las escalas
-// traían precioUnitario/cantidad sueltos en vez del arreglo "escalas".
+// presentación no se cuenta en el total (sumarlas sería tratarlas como
+// pedidos acumulados).
+// Compatibilidad con formatos guardados antes de este, de más reciente a
+// más vieja: (1) antes de permitir varias presentaciones por fórmula,
+// presentación/insumos/escalas vivían sueltos en la fórmula en vez de en
+// un arreglo "presentaciones"; (2) antes de las escalas, esa misma
+// fórmula traía precioUnitario/cantidad sueltos en vez del arreglo
+// "escalas".
 function computeTotal(formulas) {
   let total = 0;
   let hasAny = false;
   for (const f of formulas || []) {
-    const escalas = Array.isArray(f?.escalas) && f.escalas.length
-      ? f.escalas
-      : (f?.precioUnitario != null || f?.cantidad != null)
-        ? [{ precioUnitario: f.precioUnitario, cantidad: f.cantidad }]
-        : [];
-    if (escalas.length !== 1) continue;
-    const e = escalas[0];
-    const unit = Number(e?.precioUnitario);
-    const qty = Number(e?.cantidad);
-    if (e?.precioUnitario != null && e?.cantidad != null && Number.isFinite(unit) && Number.isFinite(qty)) {
-      total += unit * qty;
-      hasAny = true;
+    const presentaciones = Array.isArray(f?.presentaciones) && f.presentaciones.length
+      ? f.presentaciones
+      : [{ escalas: f?.escalas, precioUnitario: f?.precioUnitario, cantidad: f?.cantidad }];
+    for (const p of presentaciones) {
+      const escalas = Array.isArray(p?.escalas) && p.escalas.length
+        ? p.escalas
+        : (p?.precioUnitario != null || p?.cantidad != null)
+          ? [{ precioUnitario: p.precioUnitario, cantidad: p.cantidad }]
+          : [];
+      if (escalas.length !== 1) continue;
+      const e = escalas[0];
+      const unit = Number(e?.precioUnitario);
+      const qty = Number(e?.cantidad);
+      if (e?.precioUnitario != null && e?.cantidad != null && Number.isFinite(unit) && Number.isFinite(qty)) {
+        total += unit * qty;
+        hasAny = true;
+      }
     }
   }
   return hasAny ? total : null;
