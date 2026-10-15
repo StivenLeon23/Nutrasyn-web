@@ -1367,6 +1367,7 @@
         // "no incluido" en otro dentro de la misma cotización.
         let activeServicesFormulaId = null; // qué fórmula tiene abierto "gestionar catálogo" de servicios
         let editingServicioExtra = null; // `${lineId}:${code}` del servicio cuyo costo adicional/nota está en edición
+        let editingServiceCatalogName = null; // code del servicio del catálogo cuyo nombre se está renombrando
 
         async function loadServicesCatalog() {
             try {
@@ -1473,6 +1474,36 @@
             }
         }
 
+        function toggleServiceCatalogNameEdit(code) {
+            editingServiceCatalogName = editingServiceCatalogName === code ? null : code;
+            renderFormulasList();
+        }
+
+        // Renombra un servicio del catálogo (ej. corregir un error de
+        // tipeo). El nuevo nombre se refleja de inmediato en las fórmulas
+        // de la cotización actual que ya lo tenían sincronizado (ver
+        // syncFormulaServicios) — a diferencia de insumos/condiciones, los
+        // servicios no son "elegidos" uno por uno sino que todo el
+        // catálogo se aplica siempre, así que tiene más sentido que el
+        // nombre se actualice en vez de quedar con el texto viejo.
+        async function renameServiceInCatalog(code, value) {
+            const nombre = value.trim();
+            if (!nombre) { toast('Falta el nombre', 'Escribe un nombre para el servicio.', 'warning'); return; }
+            try {
+                const data = await apiFetch('/api/services?code=' + encodeURIComponent(code), { method: 'PUT', body: JSON.stringify({ nombre }) });
+                servicesCache = data.items || [];
+                quoteFormulas.forEach(f => {
+                    const s = (f.servicios || []).find(x => x.code === code);
+                    if (s) s.nombre = nombre;
+                });
+                editingServiceCatalogName = null;
+                renderFormulasList();
+                toast('Servicio renombrado', `Ahora se llama "${nombre}".`);
+            } catch (err) {
+                toast('Error al renombrar', err.message, 'error');
+            }
+        }
+
         async function deleteServiceFromCatalog(code) {
             const item = servicesCache.find(s => s.code === code);
             if (!item) return;
@@ -1498,12 +1529,26 @@
                         <button onclick="submitNewService('${f.lineId}')" class="btn-primary text-[11px] px-3 shrink-0">Guardar</button>
                     </div>
                     <div class="space-y-1.5">
-                        ${servicesCache.map(s => `
-                            <div class="flex items-center justify-between gap-2 p-2 bg-deepblue-950/60 rounded-lg">
-                                <span class="text-[10px] text-gray-300">${escapeHtml(s.nombre)}</span>
-                                <button onclick="deleteServiceFromCatalog('${s.code}')" title="Eliminar del catálogo" class="text-gray-500 hover:text-red-400 shrink-0"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                            </div>
-                        `).join('')}
+                        ${servicesCache.map(s => {
+                            const isEditingName = editingServiceCatalogName === s.code;
+                            return isEditingName ? `
+                                <div class="flex items-center gap-2 p-2 bg-deepblue-950/60 rounded-lg">
+                                    <input type="text" id="service-rename-${s.code}" value="${escapeHtml(s.nombre)}" autofocus
+                                        onkeydown="if(event.key==='Enter') renameServiceInCatalog('${s.code}', this.value)"
+                                        class="field-input !text-[10px] !py-1.5 flex-1">
+                                    <button onclick="renameServiceInCatalog('${s.code}', document.getElementById('service-rename-${s.code}').value)" title="Guardar" class="text-emerald-400 hover:text-emerald-300 shrink-0"><i data-lucide="check" class="w-3.5 h-3.5"></i></button>
+                                    <button onclick="toggleServiceCatalogNameEdit(null)" title="Cancelar" class="text-gray-500 hover:text-red-400 shrink-0"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                                </div>
+                            ` : `
+                                <div class="flex items-center justify-between gap-2 p-2 bg-deepblue-950/60 rounded-lg">
+                                    <span class="text-[10px] text-gray-300">${escapeHtml(s.nombre)}</span>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <button onclick="toggleServiceCatalogNameEdit('${s.code}')" title="Renombrar" class="text-gray-500 hover:text-amber-400"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                                        <button onclick="deleteServiceFromCatalog('${s.code}')" title="Eliminar del catálogo" class="text-gray-500 hover:text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 </div>
             `;

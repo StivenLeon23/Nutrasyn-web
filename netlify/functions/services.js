@@ -15,9 +15,10 @@
 //
 // Solo colaboradores (ver netlify/functions/lib/session.js).
 //
-// GET    /api/services                -> { items: [{code, nombre, createdBy, createdAt}] }
-// POST   /api/services {nombre}       -> crea un servicio, { item, items }
-// DELETE /api/services?code=SERV-0001 -> elimina un servicio del catálogo, { items }
+// GET    /api/services                      -> { items: [{code, nombre, createdBy, createdAt}] }
+// POST   /api/services {nombre}             -> crea un servicio, { item, items }
+// PUT    /api/services?code=SERV-0001 {nombre} -> renombra un servicio (ej. corregir un error de tipeo), { item, items }
+// DELETE /api/services?code=SERV-0001       -> elimina un servicio del catálogo, { items }
 
 import { getStore } from "@netlify/blobs";
 import { verifySessionToken, requireCollaborator, bearerToken } from "./lib/session.js";
@@ -83,6 +84,31 @@ export default async (req) => {
     });
 
     return jsonResponse(201, { item: created, items });
+  }
+
+  if (req.method === "PUT") {
+    const code = new URL(req.url).searchParams.get("code");
+    if (!code) return jsonResponse(400, { error: "El código del servicio es obligatorio." });
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResponse(400, { error: "Cuerpo de la solicitud inválido." });
+    }
+    const nombre = (body.nombre || "").toString().trim();
+    if (!nombre) return jsonResponse(400, { error: "El nombre del servicio es obligatorio." });
+
+    let updated = null;
+    const items = await readModifyWrite(store, "items", [], (list) =>
+      list.map((item) => {
+        if (item.code !== code) return item;
+        updated = { ...item, nombre };
+        return updated;
+      }),
+    );
+
+    if (!updated) return jsonResponse(404, { error: "Servicio no encontrado." });
+    return jsonResponse(200, { item: updated, items });
   }
 
   if (req.method === "DELETE") {
