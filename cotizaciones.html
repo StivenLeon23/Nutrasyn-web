@@ -2257,53 +2257,20 @@
             // cada una ya se paginaba sola de forma correcta (nunca se
             // parte una presentación a la mitad) y ahora además queda claro
             // con el aviso "Continúa en la página siguiente".
-            function computeFormulaHeadHeight(f) {
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(8.5);
-                const mezclaLines = doc.splitTextToSize(mezclaLabel(f), pageW - marginX * 2);
-                let total = 6 + mezclaLines.length * 4.2 + 5;
-
-                if (f.servicios && serviciosVisibles(f.servicios).length) {
-                    total += serviciosBoxHeight(doc, pageW - marginX * 2, f.servicios) + 5;
-                }
-
-                const p = f.presentaciones[0];
-                const multiplePresentaciones = f.presentaciones.length > 1;
-                const singleEscala = p.escalas.length === 1;
-                const hasImage = Boolean(p.imagenMockup);
-                const IMG_SIZE = 42, IMG_GAP = 5;
-                const presTextWidth = pageW - marginX * 2 - (hasImage ? IMG_SIZE + IMG_GAP : 0);
-                let imgCaptionLines = [];
-                if (hasImage) {
-                    doc.setFont('helvetica', 'bolditalic');
-                    doc.setFontSize(6.5);
-                    imgCaptionLines = doc.splitTextToSize('Imagen de referencia, no es el producto final', IMG_SIZE);
-                }
-                const presentacionLabel = [p.presentacionTipo, p.presentacionTamano].filter(Boolean).join(' · ');
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(8.5);
-                const presInsumosText = p.insumos.length ? p.insumos.map(insumoLabel).join(', ') : null;
-                const presInsumosLines = presInsumosText ? doc.splitTextToSize(`Insumos: ${presInsumosText}`, presTextWidth) : [];
-                const priceSectionHeight = singleEscala ? 21 : (18.5 * p.escalas.length + 4 * (p.escalas.length - 1)) + 9;
-                const presTextTopHeight = (multiplePresentaciones ? 5 : 0) + (presentacionLabel ? 5 : 0)
-                    + (presInsumosLines.length ? presInsumosLines.length * 4.2 + 2 : 0);
-                const imgColumnHeight = hasImage ? IMG_SIZE + 3 + imgCaptionLines.length * 3.2 : 0;
-                const presTopHeight = hasImage ? Math.max(presTextTopHeight, imgColumnHeight) : presTextTopHeight;
-                total += presTopHeight + priceSectionHeight;
-                return total;
-            }
-
             quoteFormulas.forEach((f, idx) => {
-                // Si el título + la primera presentación caben en una
-                // página en blanco, se reservan de una sola vez para que,
-                // si no caben en lo que queda de la página actual, salten
-                // juntos a la siguiente en vez de dejar el título solo. El
-                // resto de presentaciones (si hay más de una) siguen
-                // fluyendo normalmente, cada una completa en sí misma.
-                const formulaHeadHeight = computeFormulaHeadHeight(f);
-                if (formulaHeadHeight <= pageH - 40) {
-                    ensureSpace(formulaHeadHeight);
-                }
+                // Reservar el bloque completo (título + 1ra presentación)
+                // de una sola vez sonaba bien, pero cuando ese bloque es
+                // grande (muchos servicios o varias escalas) terminaba
+                // saltando página aunque quedara casi toda la hoja libre —
+                // un desperdicio peor que el problema que intentaba
+                // resolver. En cambio, solo se evita arrancar un producto
+                // nuevo cuando ya casi no queda espacio en la página actual
+                // (muy poco para mostrar nada útil); si queda espacio
+                // razonable, el producto arranca ahí y lo que no quepa
+                // sigue fluyendo normalmente a la siguiente página — cada
+                // sección (servicios, cada presentación) ya es atómica por
+                // su cuenta, y el aviso "Continúa" dice que sigue.
+                ensureSpace(70);
 
                 // El título y la mezcla de ingredientes se dibujan UNA sola
                 // vez por fórmula (son los mismos para todas sus
