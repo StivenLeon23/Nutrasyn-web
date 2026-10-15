@@ -1074,6 +1074,7 @@
                             `;
                             }).join('')}
                         </div>
+                        ${quoteFormulas.length > 1 ? `<button onclick="applyServiciosToAllFormulas('${f.lineId}')" class="btn-secondary text-[10px] flex items-center gap-1.5"><i data-lucide="copy" class="w-3 h-3"></i> Duplicar estos servicios en las demás fórmulas</button>` : ''}
                         ${isManagingServices ? renderManageServicesHtml(f) : ''}
                     </div>
 
@@ -1404,6 +1405,21 @@
                 if (s.incluido && editingServicioExtra === lineId + ':' + code) editingServicioExtra = null;
             }
             renderFormulasList();
+        }
+
+        // Copia el estado completo de servicios (incluido/no incluido,
+        // costo adicional y nota) de esta fórmula a TODAS las demás
+        // fórmulas de la cotización — útil cuando varias variedades del
+        // mismo pedido comparten exactamente las mismas condiciones de
+        // maquila y no se quiere repetir el marcado una por una.
+        function applyServiciosToAllFormulas(lineId) {
+            const source = quoteFormulas.find(x => x.lineId === lineId);
+            if (!source) return;
+            quoteFormulas.forEach(f => {
+                if (f.lineId !== lineId) f.servicios = source.servicios.map(s => ({ ...s }));
+            });
+            renderFormulasList();
+            toast('Servicios duplicados', 'Se copiaron a las demás fórmulas de esta cotización.');
         }
 
         function toggleServicioExtraEdit(lineId, code) {
