@@ -1021,13 +1021,40 @@
                         </div>
                         <p class="text-[10px] text-gray-500 -mt-1">Marca cuáles aplican para este producto — puede variar de un producto a otro en la misma cotización (ej. análisis de laboratorio incluido en uno y no en otro).</p>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                            ${f.servicios.map(s => `
-                                <button type="button" onclick="toggleServicioIncluido('${f.lineId}','${s.code}')"
-                                    class="flex items-center gap-2 p-2 rounded-lg border text-left transition-colors ${s.incluido ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300' : 'bg-deepblue-900/40 border-white/5 text-gray-500'}">
-                                    <i data-lucide="${s.incluido ? 'check-circle-2' : 'circle'}" class="w-3.5 h-3.5 shrink-0"></i>
-                                    <span class="text-[10px] font-medium">${escapeHtml(s.nombre)}</span>
-                                </button>
-                            `).join('')}
+                            ${f.servicios.map(s => {
+                                const isEditingExtra = editingServicioExtra === (f.lineId + ':' + s.code);
+                                const hasExtra = !s.incluido && (s.precioAdicional != null || s.nota);
+                                return `
+                                <div class="rounded-lg border p-2 ${s.incluido ? 'bg-emerald-950/30 border-emerald-500/30' : 'bg-deepblue-900/40 border-white/5'}">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <button type="button" onclick="toggleServicioIncluido('${f.lineId}','${s.code}')"
+                                            class="flex items-center gap-2 min-w-0 text-left transition-colors ${s.incluido ? 'text-emerald-300' : 'text-gray-500'}">
+                                            <i data-lucide="${s.incluido ? 'check-circle-2' : 'circle'}" class="w-3.5 h-3.5 shrink-0"></i>
+                                            <span class="text-[10px] font-medium truncate">${escapeHtml(s.nombre)}</span>
+                                        </button>
+                                        ${!s.incluido ? `
+                                            <button type="button" onclick="toggleServicioExtraEdit('${f.lineId}','${s.code}')" title="Costo adicional / nota"
+                                                class="shrink-0 ${hasExtra ? 'text-amber-400 hover:text-amber-300' : 'text-gray-500 hover:text-emerald-400'}">
+                                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                    ${!s.incluido && isEditingExtra ? `
+                                        <div class="mt-1.5 grid grid-cols-2 gap-1.5">
+                                            <input type="number" min="0" step="1" value="${s.precioAdicional ?? ''}"
+                                                onchange="updateServicioExtra('${f.lineId}','${s.code}','precioAdicional', this.value)"
+                                                placeholder="Costo adicional (COP)" class="field-input !text-[10px] !py-1.5">
+                                            <input type="text" value="${escapeHtml(s.nota || '')}"
+                                                onchange="updateServicioExtra('${f.lineId}','${s.code}','nota', this.value)"
+                                                placeholder="Nota (opcional)" class="field-input !text-[10px] !py-1.5">
+                                        </div>
+                                    ` : ''}
+                                    ${!s.incluido && !isEditingExtra && hasExtra ? `
+                                        <p class="text-[9px] text-amber-400 mt-1 leading-snug">${s.precioAdicional != null ? escapeHtml(formatCOP(s.precioAdicional)) : ''}${s.precioAdicional != null && s.nota ? ' — ' : ''}${escapeHtml(s.nota || '')}</p>
+                                    ` : ''}
+                                </div>
+                            `;
+                            }).join('')}
                         </div>
                         ${isManagingServices ? renderManageServicesHtml(f) : ''}
                     </div>
@@ -1311,6 +1338,7 @@
         // puede marcar "Análisis de laboratorio: incluido" en un producto y
         // "no incluido" en otro dentro de la misma cotización.
         let activeServicesFormulaId = null; // qué fórmula tiene abierto "gestionar catálogo" de servicios
+        let editingServicioExtra = null; // `${lineId}:${code}` del servicio cuyo costo adicional/nota está en edición
 
         async function loadServicesCatalog() {
             try {
@@ -1327,11 +1355,14 @@
         // defecto; los que ya estaban marcados conservan su estado, incluso
         // si luego se borraron del catálogo — igual que con los insumos,
         // queda como snapshot propio de esta cotización/fórmula).
+        // precioAdicional/nota solo tienen sentido cuando incluido=false —
+        // son el costo extra y la aclaración que ve el cliente cuando un
+        // servicio NO está cubierto por el precio del producto.
         function syncFormulaServicios(f) {
             if (!Array.isArray(f.servicios)) f.servicios = [];
             servicesCache.forEach(s => {
                 if (!f.servicios.some(x => x.code === s.code)) {
-                    f.servicios.push({ code: s.code, nombre: s.nombre, incluido: true });
+                    f.servicios.push({ code: s.code, nombre: s.nombre, incluido: true, precioAdicional: null, nota: '' });
                 }
             });
         }
@@ -1341,7 +1372,34 @@
             if (!f) return;
             syncFormulaServicios(f);
             const s = f.servicios.find(x => x.code === code);
-            if (s) s.incluido = !s.incluido;
+            if (s) {
+                s.incluido = !s.incluido;
+                if (s.incluido && editingServicioExtra === lineId + ':' + code) editingServicioExtra = null;
+            }
+            renderFormulasList();
+        }
+
+        function toggleServicioExtraEdit(lineId, code) {
+            const key = lineId + ':' + code;
+            editingServicioExtra = editingServicioExtra === key ? null : key;
+            renderFormulasList();
+        }
+
+        // Costo adicional y nota libre de un servicio NO incluido — para
+        // que el cliente vea claro cuánto le costaría agregarlo (o por qué
+        // no está cubierto). Igual que la nota de insumos, es propio de
+        // esta cotización, no se escribe en el catálogo reutilizable.
+        function updateServicioExtra(lineId, code, field, value) {
+            const f = quoteFormulas.find(x => x.lineId === lineId);
+            const s = f && f.servicios.find(x => x.code === code);
+            if (s) {
+                if (field === 'precioAdicional') {
+                    const n = value === '' ? null : Number(value);
+                    s.precioAdicional = (n === null || Number.isNaN(n)) ? null : n;
+                } else if (field === 'nota') {
+                    s.nota = value.trim();
+                }
+            }
             renderFormulasList();
         }
 
@@ -1854,14 +1912,32 @@
         // Caja de "Servicios incluidos en la maquila" por fórmula — lista en
         // 2 columnas con un distintivo SÍ/NO (texto, no símbolos ✓/✗: esos
         // glifos no existen en las fuentes estándar de jsPDF y no se verían
-        // bien impresos) junto a cada servicio.
+        // bien impresos) junto a cada servicio. Los servicios NO incluidos
+        // que tengan costo adicional y/o nota se listan debajo, para que el
+        // cliente vea claro cuánto le costaría cada cosa que no está
+        // cubierta por el precio del producto.
         const SERVICIOS_COLS = 2;
-        function serviciosBoxHeight(count) {
-            const rows = Math.ceil(count / SERVICIOS_COLS);
-            return 9 + rows * 5.5 + 4;
+        function serviciosExtraLines(doc, w, servicios) {
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(7.5);
+            return servicios
+                .filter(s => !s.incluido && (s.precioAdicional != null || s.nota))
+                .flatMap(s => {
+                    const parts = [];
+                    if (s.precioAdicional != null) parts.push(`Costo adicional: ${formatCOP(s.precioAdicional)}`);
+                    if (s.nota) parts.push(s.nota);
+                    return doc.splitTextToSize(`• ${s.nombre} — ${parts.join(' · ')}`, w - 8);
+                });
+        }
+        function serviciosBoxHeight(doc, w, servicios) {
+            const rows = Math.ceil(servicios.length / SERVICIOS_COLS);
+            const extraLines = serviciosExtraLines(doc, w, servicios);
+            return 9 + rows * 5.5 + (extraLines.length ? extraLines.length * 4 + 4 : 0) + 4;
         }
         function drawServiciosBox(doc, x, y, w, servicios) {
-            const boxH = serviciosBoxHeight(servicios.length);
+            const rows = Math.ceil(servicios.length / SERVICIOS_COLS);
+            const extraLines = serviciosExtraLines(doc, w, servicios);
+            const boxH = serviciosBoxHeight(doc, w, servicios);
             doc.setFillColor(248, 250, 252);
             doc.setDrawColor(226, 232, 240);
             doc.setLineWidth(0.3);
@@ -1887,6 +1963,18 @@
                 if (s.incluido) doc.setTextColor(51, 65, 85); else doc.setTextColor(150, 150, 150);
                 doc.text(s.nombre, rowX + 7, rowY);
             });
+
+            if (extraLines.length) {
+                const extraY = y + 9 + rows * 5.5 + 3;
+                doc.setDrawColor(226, 232, 240);
+                doc.setLineWidth(0.2);
+                doc.line(x + 4, extraY - 2, x + w - 4, extraY - 2);
+                doc.setFont('helvetica', 'italic');
+                doc.setFontSize(7.5);
+                doc.setTextColor(180, 130, 10);
+                doc.text(extraLines, x + 4, extraY);
+            }
+
             return boxH;
         }
 
@@ -1997,7 +2085,7 @@
                 y += mezclaLines.length * 4.2 + 5;
 
                 if (f.servicios && f.servicios.length) {
-                    ensureSpace(serviciosBoxHeight(f.servicios.length) + 5);
+                    ensureSpace(serviciosBoxHeight(doc, pageW - marginX * 2, f.servicios) + 5);
                     y += drawServiciosBox(doc, marginX, y, pageW - marginX * 2, f.servicios) + 5;
                 }
 
