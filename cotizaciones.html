@@ -1042,19 +1042,29 @@
                             ${f.servicios.map(s => {
                                 const isEditingExtra = editingServicioExtra === (f.lineId + ':' + s.code);
                                 const hasExtra = s.precioAdicional != null || s.nota;
+                                const isHidden = !s.incluido && s.visible === false;
                                 return `
-                                <div class="rounded-lg border p-2 ${s.incluido ? 'bg-emerald-950/30 border-emerald-500/30' : 'bg-deepblue-900/40 border-white/5'}">
+                                <div class="rounded-lg border p-2 ${isHidden ? 'opacity-50' : ''} ${s.incluido ? 'bg-emerald-950/30 border-emerald-500/30' : 'bg-deepblue-900/40 border-white/5'}">
                                     <div class="flex items-center justify-between gap-2">
                                         <button type="button" onclick="toggleServicioIncluido('${f.lineId}','${s.code}')"
                                             class="flex items-center gap-2 min-w-0 text-left transition-colors ${s.incluido ? 'text-emerald-300' : 'text-gray-500'}">
                                             <i data-lucide="${s.incluido ? 'check-circle-2' : 'circle'}" class="w-3.5 h-3.5 shrink-0"></i>
                                             <span class="text-[10px] font-medium truncate">${escapeHtml(s.nombre)}</span>
                                         </button>
-                                        <button type="button" onclick="toggleServicioExtraEdit('${f.lineId}','${s.code}')" title="${s.incluido ? 'Nota' : 'Costo adicional / nota'}"
-                                            class="shrink-0 ${hasExtra ? 'text-amber-400 hover:text-amber-300' : 'text-gray-500 hover:text-emerald-400'}">
-                                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                        </button>
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            ${!s.incluido ? `
+                                                <button type="button" onclick="toggleServicioVisible('${f.lineId}','${s.code}')" title="${isHidden ? 'Oculto en el PDF — no aplica para este producto' : 'Se muestra en el PDF'}"
+                                                    class="${isHidden ? 'text-gray-500 hover:text-sky-400' : 'text-sky-400 hover:text-sky-300'}">
+                                                    <i data-lucide="${isHidden ? 'eye-off' : 'eye'}" class="w-3.5 h-3.5"></i>
+                                                </button>
+                                            ` : ''}
+                                            <button type="button" onclick="toggleServicioExtraEdit('${f.lineId}','${s.code}')" title="${s.incluido ? 'Nota' : 'Costo adicional / nota'}"
+                                                class="${hasExtra ? 'text-amber-400 hover:text-amber-300' : 'text-gray-500 hover:text-emerald-400'}">
+                                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </div>
                                     </div>
+                                    ${isHidden ? '<p class="text-[9px] text-gray-500 mt-1">No aplica para este producto — no sale en el PDF.</p>' : ''}
                                     ${isEditingExtra ? `
                                         <div class="mt-1.5 grid ${s.incluido ? 'grid-cols-1' : 'grid-cols-2'} gap-1.5">
                                             ${!s.incluido ? `
@@ -1391,9 +1401,20 @@
             if (!Array.isArray(f.servicios)) f.servicios = [];
             servicesCache.forEach(s => {
                 if (!f.servicios.some(x => x.code === s.code)) {
-                    f.servicios.push({ code: s.code, nombre: s.nombre, incluido: true, precioAdicional: null, nota: '' });
+                    f.servicios.push({ code: s.code, nombre: s.nombre, incluido: true, precioAdicional: null, nota: '', visible: true });
                 }
             });
+        }
+
+        // Un servicio no incluido se puede ocultar del PDF (visible=false)
+        // cuando simplemente no aplica para este tipo de producto — a
+        // diferencia de uno no incluido que SÍ se muestra porque se cobra
+        // aparte o se quiere dejar explícito que no está cubierto.
+        function toggleServicioVisible(lineId, code) {
+            const f = quoteFormulas.find(x => x.lineId === lineId);
+            const s = f && f.servicios.find(x => x.code === code);
+            if (s) s.visible = s.visible === false ? true : false;
+            renderFormulasList();
         }
 
         function toggleServicioIncluido(lineId, code) {
@@ -2007,6 +2028,13 @@
         // cliente vea claro cuánto le costaría cada cosa que no está
         // cubierta por el precio del producto.
         const SERVICIOS_COLS = 2;
+        // Solo los servicios "visibles" entran al PDF — un servicio no
+        // incluido se puede ocultar (visible=false) cuando simplemente no
+        // aplica para ese producto, para no sugerir que es un costo
+        // opcional que el cliente podría pedir.
+        function serviciosVisibles(servicios) {
+            return servicios.filter(s => s.incluido || s.visible !== false);
+        }
         function serviciosExtraLines(doc, w, servicios) {
             doc.setFont('helvetica', 'italic');
             doc.setFontSize(7.5);
@@ -2019,15 +2047,33 @@
                     return doc.splitTextToSize(`• ${s.nombre} — ${parts.join(' · ')}`, w - 8);
                 });
         }
+        // Suma de los costos adicionales de servicios NO incluidos — un
+        // subtotal aparte, nunca sumado al Total general de la cotización
+        // (ver computeQuoteTotal), para que el cliente vea claro cuánto
+        // sumaría SI decide pedir esos extras, sin que parezca que ya se
+        // le están cobrando.
+        function serviciosSubtotalAdicional(servicios) {
+            return servicios
+                .filter(s => !s.incluido && s.precioAdicional != null)
+                .reduce((sum, s) => sum + Number(s.precioAdicional || 0), 0);
+        }
         function serviciosBoxHeight(doc, w, servicios) {
-            const rows = Math.ceil(servicios.length / SERVICIOS_COLS);
-            const extraLines = serviciosExtraLines(doc, w, servicios);
-            return 9 + rows * 5.5 + (extraLines.length ? extraLines.length * 4 + 4 : 0) + 4;
+            const visibles = serviciosVisibles(servicios);
+            const rows = Math.ceil(visibles.length / SERVICIOS_COLS);
+            const extraLines = serviciosExtraLines(doc, w, visibles);
+            const subtotal = serviciosSubtotalAdicional(visibles);
+            let h = 9 + rows * 6 + 4;
+            if (extraLines.length) h += extraLines.length * 4 + 4;
+            if (subtotal > 0) h += 10;
+            return h;
         }
         function drawServiciosBox(doc, x, y, w, servicios) {
-            const rows = Math.ceil(servicios.length / SERVICIOS_COLS);
-            const extraLines = serviciosExtraLines(doc, w, servicios);
+            const visibles = serviciosVisibles(servicios);
+            const rows = Math.ceil(visibles.length / SERVICIOS_COLS);
+            const extraLines = serviciosExtraLines(doc, w, visibles);
+            const subtotal = serviciosSubtotalAdicional(visibles);
             const boxH = serviciosBoxHeight(doc, w, servicios);
+
             doc.setFillColor(248, 250, 252);
             doc.setDrawColor(226, 232, 240);
             doc.setLineWidth(0.3);
@@ -2037,32 +2083,61 @@
             doc.setTextColor(10, 37, 64);
             doc.text('Servicios incluidos en la maquila', x + 4, y + 6.5);
 
+            // Cada servicio con una "chip" rellena en vez de solo texto SÍ/NO
+            // — más fácil de escanear de un vistazo que texto plano.
             const colW = (w - 8) / SERVICIOS_COLS;
-            const rowH = 5.5;
-            servicios.forEach((s, i) => {
+            const rowH = 6;
+            const chipW = 7.5, chipH = 3.6;
+            visibles.forEach((s, i) => {
                 const col = i % SERVICIOS_COLS;
                 const row = Math.floor(i / SERVICIOS_COLS);
                 const rowX = x + 4 + col * colW;
-                const rowY = y + 12 + row * rowH;
+                const rowY = y + 11 + row * rowH;
+
+                if (s.incluido) {
+                    doc.setFillColor(0, 168, 150);
+                    doc.roundedRect(rowX, rowY - 2.7, chipW, chipH, 1, 1, 'F');
+                    doc.setTextColor(255, 255, 255);
+                } else {
+                    doc.setFillColor(253, 242, 242);
+                    doc.setDrawColor(220, 140, 140);
+                    doc.setLineWidth(0.25);
+                    doc.roundedRect(rowX, rowY - 2.7, chipW, chipH, 1, 1, 'FD');
+                    doc.setTextColor(175, 70, 70);
+                }
                 doc.setFont('helvetica', 'bold');
-                doc.setFontSize(6.5);
-                if (s.incluido) doc.setTextColor(0, 140, 90); else doc.setTextColor(190, 70, 70);
-                doc.text(s.incluido ? 'SÍ' : 'NO', rowX, rowY);
+                doc.setFontSize(6);
+                doc.text(s.incluido ? 'SÍ' : 'NO', rowX + chipW / 2, rowY, { align: 'center' });
+
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8);
-                if (s.incluido) doc.setTextColor(51, 65, 85); else doc.setTextColor(150, 150, 150);
-                doc.text(s.nombre, rowX + 7, rowY);
+                if (s.incluido) doc.setTextColor(51, 65, 85); else doc.setTextColor(120, 120, 120);
+                doc.text(s.nombre, rowX + chipW + 2.5, rowY);
             });
 
+            let curY = y + 9 + rows * rowH + 4;
+
             if (extraLines.length) {
-                const extraY = y + 9 + rows * 5.5 + 3;
                 doc.setDrawColor(226, 232, 240);
                 doc.setLineWidth(0.2);
-                doc.line(x + 4, extraY - 2, x + w - 4, extraY - 2);
+                doc.line(x + 4, curY - 2, x + w - 4, curY - 2);
                 doc.setFont('helvetica', 'italic');
                 doc.setFontSize(7.5);
                 doc.setTextColor(180, 130, 10);
-                doc.text(extraLines, x + 4, extraY);
+                doc.text(extraLines, x + 4, curY);
+                curY += extraLines.length * 4 + 4;
+            }
+
+            if (subtotal > 0) {
+                doc.setFillColor(255, 251, 235);
+                doc.setDrawColor(245, 200, 100);
+                doc.setLineWidth(0.3);
+                doc.roundedRect(x + 4, curY - 1, w - 8, 7, 1.5, 1.5, 'FD');
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7.5);
+                doc.setTextColor(146, 90, 10);
+                doc.text('Costos adicionales opcionales:', x + 7, curY + 3.8);
+                doc.text(formatCOP(subtotal), x + w - 7, curY + 3.8, { align: 'right' });
             }
 
             return boxH;
@@ -2174,7 +2249,7 @@
                 doc.text(mezclaLines, marginX, y);
                 y += mezclaLines.length * 4.2 + 5;
 
-                if (f.servicios && f.servicios.length) {
+                if (f.servicios && serviciosVisibles(f.servicios).length) {
                     ensureSpace(serviciosBoxHeight(doc, pageW - marginX * 2, f.servicios) + 5);
                     y += drawServiciosBox(doc, marginX, y, pageW - marginX * 2, f.servicios) + 5;
                 }
