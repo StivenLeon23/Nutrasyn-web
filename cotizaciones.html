@@ -2165,6 +2165,7 @@
 
             function ensureSpace(needed) {
                 if (y + needed > pageH - 20) {
+                    drawContinuaNote();
                     drawFooter();
                     doc.addPage();
                     y = 20;
@@ -2174,6 +2175,19 @@
                 doc.setFontSize(7.5);
                 doc.setTextColor(148, 163, 184);
                 doc.text('NutraSyn Lab | operaciones@synergia-360.com | +57 314 281 8326 | www.nutrasynlab.co', marginX, pageH - 10);
+            }
+            // Aviso de que la cotización sigue en la página siguiente —
+            // sin esto, alguien que solo mira la primera hoja (algo que
+            // pasaba seguido) no se da cuenta de que hay más contenido.
+            // Se dibuja en TODO salto de página, no solo entre fórmulas.
+            function drawContinuaNote() {
+                const cx = pageW / 2;
+                doc.setFillColor(0, 168, 150);
+                doc.triangle(cx - 2.2, 276.5, cx + 2.2, 276.5, cx, 279.5, 'F');
+                doc.setFont('helvetica', 'italic');
+                doc.setFontSize(7.5);
+                doc.setTextColor(0, 140, 125);
+                doc.text('Continúa en la página siguiente', cx, 283, { align: 'center' });
             }
 
             // Header
@@ -2226,7 +2240,63 @@
             let quoteTotal = 0;
             let hasAnyPricing = false;
 
+            // Alto total de una fórmula completa (título + mezcla +
+            // servicios + todas sus presentaciones) — réplica de las mismas
+            // cuentas que hace el bucle de abajo al dibujar, pero sin
+            // dibujar nada, solo para decidir si conviene saltar de página
+            // ANTES de empezar la fórmula (ver uso más abajo). Si cambian
+            // los números de ese bucle, hay que actualizar esto también.
+            function computeFormulaTotalHeight(f) {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8.5);
+                const mezclaLines = doc.splitTextToSize(mezclaLabel(f), pageW - marginX * 2);
+                let total = 6 + mezclaLines.length * 4.2 + 5;
+
+                if (f.servicios && serviciosVisibles(f.servicios).length) {
+                    total += serviciosBoxHeight(doc, pageW - marginX * 2, f.servicios) + 5;
+                }
+
+                const multiplePresentaciones = f.presentaciones.length > 1;
+                f.presentaciones.forEach((p, pIdx) => {
+                    const singleEscala = p.escalas.length === 1;
+                    const hasImage = Boolean(p.imagenMockup);
+                    const IMG_SIZE = 42, IMG_GAP = 5;
+                    const presTextWidth = pageW - marginX * 2 - (hasImage ? IMG_SIZE + IMG_GAP : 0);
+                    let imgCaptionLines = [];
+                    if (hasImage) {
+                        doc.setFont('helvetica', 'bolditalic');
+                        doc.setFontSize(6.5);
+                        imgCaptionLines = doc.splitTextToSize('Imagen de referencia, no es el producto final', IMG_SIZE);
+                    }
+                    const presentacionLabel = [p.presentacionTipo, p.presentacionTamano].filter(Boolean).join(' · ');
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(8.5);
+                    const presInsumosText = p.insumos.length ? p.insumos.map(insumoLabel).join(', ') : null;
+                    const presInsumosLines = presInsumosText ? doc.splitTextToSize(`Insumos: ${presInsumosText}`, presTextWidth) : [];
+                    const priceSectionHeight = singleEscala ? 21 : (18.5 * p.escalas.length + 4 * (p.escalas.length - 1)) + 9;
+                    const presTextTopHeight = (multiplePresentaciones ? 5 : 0) + (presentacionLabel ? 5 : 0)
+                        + (presInsumosLines.length ? presInsumosLines.length * 4.2 + 2 : 0);
+                    const imgColumnHeight = hasImage ? IMG_SIZE + 3 + imgCaptionLines.length * 3.2 : 0;
+                    const presTopHeight = hasImage ? Math.max(presTextTopHeight, imgColumnHeight) : presTextTopHeight;
+                    total += presTopHeight + priceSectionHeight;
+                    if (pIdx < f.presentaciones.length - 1) total += 2;
+                });
+                return total;
+            }
+
             quoteFormulas.forEach((f, idx) => {
+                // Si la fórmula completa cabe en una página en blanco, se
+                // reserva ese espacio de una sola vez para que, si no cabe
+                // en lo que queda de la página actual, salte completa a la
+                // siguiente en vez de partirse a la mitad. Si la fórmula es
+                // tan larga que ni siquiera cabría sola en una página en
+                // blanco, no se fuerza nada: sigue paginándose sección por
+                // sección como antes (lo único que se puede hacer en ese caso).
+                const formulaTotalHeight = computeFormulaTotalHeight(f);
+                if (formulaTotalHeight <= pageH - 40) {
+                    ensureSpace(formulaTotalHeight);
+                }
+
                 // El título y la mezcla de ingredientes se dibujan UNA sola
                 // vez por fórmula (son los mismos para todas sus
                 // presentaciones). Cada presentación (imagen, empaque,
