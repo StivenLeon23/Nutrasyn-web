@@ -1041,7 +1041,7 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                             ${f.servicios.map(s => {
                                 const isEditingExtra = editingServicioExtra === (f.lineId + ':' + s.code);
-                                const hasExtra = !s.incluido && (s.precioAdicional != null || s.nota);
+                                const hasExtra = s.precioAdicional != null || s.nota;
                                 return `
                                 <div class="rounded-lg border p-2 ${s.incluido ? 'bg-emerald-950/30 border-emerald-500/30' : 'bg-deepblue-900/40 border-white/5'}">
                                     <div class="flex items-center justify-between gap-2">
@@ -1050,25 +1050,25 @@
                                             <i data-lucide="${s.incluido ? 'check-circle-2' : 'circle'}" class="w-3.5 h-3.5 shrink-0"></i>
                                             <span class="text-[10px] font-medium truncate">${escapeHtml(s.nombre)}</span>
                                         </button>
-                                        ${!s.incluido ? `
-                                            <button type="button" onclick="toggleServicioExtraEdit('${f.lineId}','${s.code}')" title="Costo adicional / nota"
-                                                class="shrink-0 ${hasExtra ? 'text-amber-400 hover:text-amber-300' : 'text-gray-500 hover:text-emerald-400'}">
-                                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                            </button>
-                                        ` : ''}
+                                        <button type="button" onclick="toggleServicioExtraEdit('${f.lineId}','${s.code}')" title="${s.incluido ? 'Nota' : 'Costo adicional / nota'}"
+                                            class="shrink-0 ${hasExtra ? 'text-amber-400 hover:text-amber-300' : 'text-gray-500 hover:text-emerald-400'}">
+                                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                        </button>
                                     </div>
-                                    ${!s.incluido && isEditingExtra ? `
-                                        <div class="mt-1.5 grid grid-cols-2 gap-1.5">
-                                            <input type="number" min="0" step="1" value="${s.precioAdicional ?? ''}"
-                                                onchange="updateServicioExtra('${f.lineId}','${s.code}','precioAdicional', this.value)"
-                                                placeholder="Costo adicional (COP)" class="field-input !text-[10px] !py-1.5">
+                                    ${isEditingExtra ? `
+                                        <div class="mt-1.5 grid ${s.incluido ? 'grid-cols-1' : 'grid-cols-2'} gap-1.5">
+                                            ${!s.incluido ? `
+                                                <input type="number" min="0" step="1" value="${s.precioAdicional ?? ''}"
+                                                    onchange="updateServicioExtra('${f.lineId}','${s.code}','precioAdicional', this.value)"
+                                                    placeholder="Costo adicional (COP)" class="field-input !text-[10px] !py-1.5">
+                                            ` : ''}
                                             <input type="text" value="${escapeHtml(s.nota || '')}"
                                                 onchange="updateServicioExtra('${f.lineId}','${s.code}','nota', this.value)"
-                                                placeholder="Nota (opcional)" class="field-input !text-[10px] !py-1.5">
+                                                placeholder="${s.incluido ? 'Nota (ej: a nombre del cliente)' : 'Nota (opcional)'}" class="field-input !text-[10px] !py-1.5">
                                         </div>
                                     ` : ''}
-                                    ${!s.incluido && !isEditingExtra && hasExtra ? `
-                                        <p class="text-[9px] text-amber-400 mt-1 leading-snug">${s.precioAdicional != null ? escapeHtml(formatCOP(s.precioAdicional)) : ''}${s.precioAdicional != null && s.nota ? ' — ' : ''}${escapeHtml(s.nota || '')}</p>
+                                    ${!isEditingExtra && hasExtra ? `
+                                        <p class="text-[9px] ${s.incluido ? 'text-emerald-400/80' : 'text-amber-400'} mt-1 leading-snug">${s.precioAdicional != null ? escapeHtml(formatCOP(s.precioAdicional)) : ''}${s.precioAdicional != null && s.nota ? ' — ' : ''}${escapeHtml(s.nota || '')}</p>
                                     ` : ''}
                                 </div>
                             `;
@@ -2011,7 +2011,7 @@
             doc.setFont('helvetica', 'italic');
             doc.setFontSize(7.5);
             return servicios
-                .filter(s => !s.incluido && (s.precioAdicional != null || s.nota))
+                .filter(s => s.precioAdicional != null || s.nota)
                 .flatMap(s => {
                     const parts = [];
                     if (s.precioAdicional != null) parts.push(`Costo adicional: ${formatCOP(s.precioAdicional)}`);
