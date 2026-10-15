@@ -2246,7 +2246,18 @@
             // dibujar nada, solo para decidir si conviene saltar de página
             // ANTES de empezar la fórmula (ver uso más abajo). Si cambian
             // los números de ese bucle, hay que actualizar esto también.
-            function computeFormulaTotalHeight(f) {
+            // Alto de un bloque de "producto" (título + mezcla + servicios +
+            // UNA presentación). Reservar solo esto —y no la fórmula
+            // completa— evita el problema de antes: con varias
+            // presentaciones, forzar TODO el producto a una página nueva
+            // dejaba un hueco grande en la página anterior. Lo único que de
+            // verdad se ve mal es el título quedando solo, sin ni siquiera
+            // su primer precio — por eso alcanza con mantener junto el
+            // título y la primera presentación; de la segunda en adelante,
+            // cada una ya se paginaba sola de forma correcta (nunca se
+            // parte una presentación a la mitad) y ahora además queda claro
+            // con el aviso "Continúa en la página siguiente".
+            function computeFormulaHeadHeight(f) {
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8.5);
                 const mezclaLines = doc.splitTextToSize(mezclaLabel(f), pageW - marginX * 2);
@@ -2256,45 +2267,42 @@
                     total += serviciosBoxHeight(doc, pageW - marginX * 2, f.servicios) + 5;
                 }
 
+                const p = f.presentaciones[0];
                 const multiplePresentaciones = f.presentaciones.length > 1;
-                f.presentaciones.forEach((p, pIdx) => {
-                    const singleEscala = p.escalas.length === 1;
-                    const hasImage = Boolean(p.imagenMockup);
-                    const IMG_SIZE = 42, IMG_GAP = 5;
-                    const presTextWidth = pageW - marginX * 2 - (hasImage ? IMG_SIZE + IMG_GAP : 0);
-                    let imgCaptionLines = [];
-                    if (hasImage) {
-                        doc.setFont('helvetica', 'bolditalic');
-                        doc.setFontSize(6.5);
-                        imgCaptionLines = doc.splitTextToSize('Imagen de referencia, no es el producto final', IMG_SIZE);
-                    }
-                    const presentacionLabel = [p.presentacionTipo, p.presentacionTamano].filter(Boolean).join(' · ');
-                    doc.setFont('helvetica', 'normal');
-                    doc.setFontSize(8.5);
-                    const presInsumosText = p.insumos.length ? p.insumos.map(insumoLabel).join(', ') : null;
-                    const presInsumosLines = presInsumosText ? doc.splitTextToSize(`Insumos: ${presInsumosText}`, presTextWidth) : [];
-                    const priceSectionHeight = singleEscala ? 21 : (18.5 * p.escalas.length + 4 * (p.escalas.length - 1)) + 9;
-                    const presTextTopHeight = (multiplePresentaciones ? 5 : 0) + (presentacionLabel ? 5 : 0)
-                        + (presInsumosLines.length ? presInsumosLines.length * 4.2 + 2 : 0);
-                    const imgColumnHeight = hasImage ? IMG_SIZE + 3 + imgCaptionLines.length * 3.2 : 0;
-                    const presTopHeight = hasImage ? Math.max(presTextTopHeight, imgColumnHeight) : presTextTopHeight;
-                    total += presTopHeight + priceSectionHeight;
-                    if (pIdx < f.presentaciones.length - 1) total += 2;
-                });
+                const singleEscala = p.escalas.length === 1;
+                const hasImage = Boolean(p.imagenMockup);
+                const IMG_SIZE = 42, IMG_GAP = 5;
+                const presTextWidth = pageW - marginX * 2 - (hasImage ? IMG_SIZE + IMG_GAP : 0);
+                let imgCaptionLines = [];
+                if (hasImage) {
+                    doc.setFont('helvetica', 'bolditalic');
+                    doc.setFontSize(6.5);
+                    imgCaptionLines = doc.splitTextToSize('Imagen de referencia, no es el producto final', IMG_SIZE);
+                }
+                const presentacionLabel = [p.presentacionTipo, p.presentacionTamano].filter(Boolean).join(' · ');
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8.5);
+                const presInsumosText = p.insumos.length ? p.insumos.map(insumoLabel).join(', ') : null;
+                const presInsumosLines = presInsumosText ? doc.splitTextToSize(`Insumos: ${presInsumosText}`, presTextWidth) : [];
+                const priceSectionHeight = singleEscala ? 21 : (18.5 * p.escalas.length + 4 * (p.escalas.length - 1)) + 9;
+                const presTextTopHeight = (multiplePresentaciones ? 5 : 0) + (presentacionLabel ? 5 : 0)
+                    + (presInsumosLines.length ? presInsumosLines.length * 4.2 + 2 : 0);
+                const imgColumnHeight = hasImage ? IMG_SIZE + 3 + imgCaptionLines.length * 3.2 : 0;
+                const presTopHeight = hasImage ? Math.max(presTextTopHeight, imgColumnHeight) : presTextTopHeight;
+                total += presTopHeight + priceSectionHeight;
                 return total;
             }
 
             quoteFormulas.forEach((f, idx) => {
-                // Si la fórmula completa cabe en una página en blanco, se
-                // reserva ese espacio de una sola vez para que, si no cabe
-                // en lo que queda de la página actual, salte completa a la
-                // siguiente en vez de partirse a la mitad. Si la fórmula es
-                // tan larga que ni siquiera cabría sola en una página en
-                // blanco, no se fuerza nada: sigue paginándose sección por
-                // sección como antes (lo único que se puede hacer en ese caso).
-                const formulaTotalHeight = computeFormulaTotalHeight(f);
-                if (formulaTotalHeight <= pageH - 40) {
-                    ensureSpace(formulaTotalHeight);
+                // Si el título + la primera presentación caben en una
+                // página en blanco, se reservan de una sola vez para que,
+                // si no caben en lo que queda de la página actual, salten
+                // juntos a la siguiente en vez de dejar el título solo. El
+                // resto de presentaciones (si hay más de una) siguen
+                // fluyendo normalmente, cada una completa en sí misma.
+                const formulaHeadHeight = computeFormulaHeadHeight(f);
+                if (formulaHeadHeight <= pageH - 40) {
+                    ensureSpace(formulaHeadHeight);
                 }
 
                 // El título y la mezcla de ingredientes se dibujan UNA sola
