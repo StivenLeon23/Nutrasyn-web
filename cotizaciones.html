@@ -115,6 +115,9 @@
                             <button onclick="newQuote()" class="btn-secondary flex items-center gap-1.5">
                                 <i data-lucide="file-plus" class="w-3.5 h-3.5"></i> Nueva
                             </button>
+                            <button onclick="previewQuotePDF()" class="btn-secondary flex items-center gap-1.5">
+                                <i data-lucide="eye" class="w-3.5 h-3.5"></i> Vista previa
+                            </button>
                             <button onclick="downloadQuotePDF()" class="btn-secondary flex items-center gap-1.5">
                                 <i data-lucide="file-down" class="w-3.5 h-3.5"></i> PDF
                             </button>
@@ -1966,10 +1969,14 @@
         // independientes (en vez de una sola franja de texto), con el
         // subtotal resaltado como "resultado" de los otros dos. Devuelve el
         // alto que ocupó, para que el llamador siga avanzando el cursor.
-        function drawPriceBoxes(doc, x, y, w, unitPrice, qty, subtotal) {
+        // boxH/labelSize/valueSize son opcionales (valores normales por
+        // defecto) — drawEscalasTable pasa unos más chicos para que los
+        // recuadros de cada "OPCIÓN" ocupen menos que los de precio normal.
+        function drawPriceBoxes(doc, x, y, w, unitPrice, qty, subtotal, boxH = 14, labelSize = 6.5, valueSize = 10) {
             const gap = 4;
             const boxW = (w - gap * 2) / 3;
-            const boxH = 14;
+            const labelY = y + boxH * 0.36;
+            const valueY = y + boxH * 0.75;
 
             function box(bx, label, value, dark) {
                 if (dark) {
@@ -1983,15 +1990,15 @@
                     doc.roundedRect(bx, y, boxW, boxH, 2, 2, 'S');
                 }
                 doc.setFont('helvetica', 'bold');
-                doc.setFontSize(6.5);
+                doc.setFontSize(labelSize);
                 if (dark) doc.setTextColor(150, 230, 214); else doc.setTextColor(0, 140, 125);
-                doc.text(label, bx + boxW / 2, y + 5, { align: 'center' });
+                doc.text(label, bx + boxW / 2, labelY, { align: 'center' });
 
                 doc.setFont('helvetica', 'bold');
-                doc.setFontSize(10);
+                doc.setFontSize(valueSize);
                 if (dark) doc.setTextColor(255, 255, 255); else doc.setTextColor(10, 37, 64);
                 const valueLines = doc.splitTextToSize(String(value), boxW - 6);
-                doc.text(valueLines[0], bx + boxW / 2, y + boxH - 3.5, { align: 'center' });
+                doc.text(valueLines[0], bx + boxW / 2, valueY, { align: 'center' });
             }
 
             box(x, 'CANTIDAD', qty != null ? Number(qty).toLocaleString('es-CO') : 'No definida', false);
@@ -2006,16 +2013,20 @@
         // "bonitos" que los de precio unitario/cantidad/subtotal normales—
         // por cada escala, una debajo de otra, con una etiqueta "OPCIÓN N"
         // arriba de cada trío. Devuelve el alto total que ocupó.
+        // Recuadros más chicos que los de precio normal (boxH 11 en vez de
+        // 14, textos más pequeños) — son varias opciones una debajo de
+        // otra, así que conviene que ocupen menos espacio cada una.
+        const OPCION_BOX_H = 11;
         function drawEscalasTable(doc, x, y, w, escalas) {
             const startY = y;
             escalas.forEach((e, i) => {
-                if (i > 0) y += 4;
+                if (i > 0) y += 3;
                 doc.setFont('helvetica', 'bold');
-                doc.setFontSize(8);
+                doc.setFontSize(7);
                 doc.setTextColor(10, 37, 64);
-                doc.text(`OPCIÓN ${i + 1}`, x, y + 3);
-                y += 4.5;
-                y += drawPriceBoxes(doc, x, y, w, e.precioUnitario, e.cantidad, escalaSubtotal(e));
+                doc.text(`OPCIÓN ${i + 1}`, x, y + 2.8);
+                y += 4;
+                y += drawPriceBoxes(doc, x, y, w, e.precioUnitario, e.cantidad, escalaSubtotal(e), OPCION_BOX_H, 5.8, 8.5);
             });
             return y - startY;
         }
@@ -2144,18 +2155,21 @@
         }
 
         // --- PDF de cotización ---
-        async function downloadQuotePDF() {
+        // Arma el documento PDF completo pero NO lo guarda ni lo abre — eso
+        // lo deciden downloadQuotePDF() (lo descarga) y previewQuotePDF()
+        // (lo abre en una pestaña nueva para revisarlo antes de descargar),
+        // que comparten exactamente la misma construcción del documento.
+        async function buildQuotePdfDoc() {
             const payload = buildQuotePayload();
             if (!payload.cliente.nombre) {
                 toast('Falta el cliente', 'Escribe el nombre del cliente antes de generar el PDF.', 'warning');
-                return;
+                return null;
             }
             if (!quoteFormulas.length) {
                 toast('Sin fórmulas', 'Agrega al menos una fórmula antes de generar el PDF.', 'warning');
-                return;
+                return null;
             }
 
-            toast('Generando PDF', 'Preparando el documento...', 'info');
             const logoDataUrl = await getLogoDataUrl();
 
             const { jsPDF } = window.jspdf;
@@ -2190,39 +2204,42 @@
                 doc.text('Continúa en la página siguiente', cx, 283, { align: 'center' });
             }
 
-            // Header
+            // Header — más bajo que antes, con el folio como protagonista
+            // (más grande y en negrilla) en vez del nombre de la empresa.
             doc.setFillColor(10, 37, 64);
-            doc.rect(0, 0, pageW, 30, 'F');
+            doc.rect(0, 0, pageW, 22, 'F');
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(16);
+            doc.setFontSize(13);
             doc.setTextColor(255, 255, 255);
-            doc.text('NutraSyn Lab', marginX, 15);
+            doc.text('NutraSyn Lab', marginX, 11);
             doc.setFont('helvetica', 'normal');
-            doc.setFontSize(9.5);
-            doc.setTextColor(0, 168, 150);
-            doc.text('Cotización Comercial B2B', marginX, 22);
-            const folioLabel = currentQuoteId ? (document.getElementById('builder-mode-badge').textContent.replace('Editando ', '')) : 'Borrador (sin guardar)';
-            doc.setFontSize(9);
-            doc.setTextColor(226, 232, 240);
-            doc.text(folioLabel, pageW - marginX, 15, { align: 'right' });
             doc.setFontSize(8);
+            doc.setTextColor(0, 168, 150);
+            doc.text('Cotización Comercial B2B', marginX, 17);
+            const folioLabel = currentQuoteId ? (document.getElementById('builder-mode-badge').textContent.replace('Editando ', '')) : 'Borrador (sin guardar)';
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.setTextColor(255, 255, 255);
+            doc.text(folioLabel, pageW - marginX, 12, { align: 'right' });
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
             doc.setTextColor(148, 163, 184);
-            doc.text(new Date().toLocaleDateString('es-CO'), pageW - marginX, 22, { align: 'right' });
+            doc.text(new Date().toLocaleDateString('es-CO'), pageW - marginX, 18, { align: 'right' });
 
-            y = 40;
+            y = 30;
 
             // Cliente
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(10.5);
             doc.setTextColor(10, 37, 64);
             doc.text('Cliente', marginX, y);
-            y += 6;
+            y += 5.5;
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(9.5);
             doc.setTextColor(51, 65, 85);
-            doc.text(`Nombre: ${payload.cliente.nombre}`, marginX, y); y += 5.5;
-            doc.text(`NIT: ${payload.cliente.nit || 'No indicado'}`, marginX, y); y += 5.5;
-            doc.text(`Teléfono: ${payload.cliente.telefono || 'No indicado'}`, marginX, y); y += 9;
+            doc.text(`Nombre: ${payload.cliente.nombre}`, marginX, y); y += 4.8;
+            doc.text(`NIT: ${payload.cliente.nit || 'No indicado'}`, marginX, y); y += 4.8;
+            doc.text(`Teléfono: ${payload.cliente.telefono || 'No indicado'}`, marginX, y); y += 6;
 
             // Productos cotizados: cada fórmula es un producto terminado con
             // su propia presentación, insumos (listado por coma) y precio.
@@ -2330,7 +2347,7 @@
                     doc.setFontSize(8.5);
                     const presInsumosText = p.insumos.length ? p.insumos.map(insumoLabel).join(', ') : null;
                     const presInsumosLines = presInsumosText ? doc.splitTextToSize(`Insumos: ${presInsumosText}`, presTextWidth) : [];
-                    const priceSectionHeight = singleEscala ? 21 : (18.5 * p.escalas.length + 4 * (p.escalas.length - 1)) + 9;
+                    const priceSectionHeight = singleEscala ? 21 : (18 * p.escalas.length - 3) + 7;
                     const presTextTopHeight = (multiplePresentaciones ? 5 : 0) + (presentacionLabel ? 5 : 0)
                         + (presInsumosLines.length ? presInsumosLines.length * 4.2 + 2 : 0);
                     const imgColumnHeight = hasImage ? IMG_SIZE + 3 + imgCaptionLines.length * 3.2 : 0;
@@ -2400,7 +2417,7 @@
                         y += drawPriceBoxes(doc, marginX, y, pageW - marginX * 2, p.escalas[0].precioUnitario, p.escalas[0].cantidad, subtotal) + 7;
                         // (boxH=14 + 7 de margen = 21, igual al priceSectionHeight de arriba)
                     } else {
-                        y += drawEscalasTable(doc, marginX, y, pageW - marginX * 2, p.escalas) + 9;
+                        y += drawEscalasTable(doc, marginX, y, pageW - marginX * 2, p.escalas) + 7;
                     }
                     if (pIdx < f.presentaciones.length - 1) y += 2;
                 });
@@ -2523,8 +2540,28 @@
 
             const safeName = (payload.cliente.nombre || 'cliente').replace(/[^\w]+/g, '_');
             const filenameFolio = currentQuoteId ? folioLabel.replace(/[^\w-]+/g, '_') : 'borrador';
-            doc.save(`NutraSyn_Cotizacion_${filenameFolio}_${safeName}.pdf`);
+            const filename = `NutraSyn_Cotizacion_${filenameFolio}_${safeName}.pdf`;
+            return { doc, filename };
+        }
+
+        async function downloadQuotePDF() {
+            toast('Generando PDF', 'Preparando el documento...', 'info');
+            const result = await buildQuotePdfDoc();
+            if (!result) return;
+            result.doc.save(result.filename);
             toast('PDF generado', 'La cotización se descargó correctamente.');
+        }
+
+        // Genera el mismo PDF pero lo abre en una pestaña nueva (visor de
+        // PDF del navegador) en vez de descargarlo — para revisar cómo
+        // quedó (espacios, saltos de página...) antes de decidir si
+        // descargarlo o seguir ajustando la cotización.
+        async function previewQuotePDF() {
+            toast('Generando vista previa', 'Preparando el documento...', 'info');
+            const result = await buildQuotePdfDoc();
+            if (!result) return;
+            const blobUrl = result.doc.output('bloburl');
+            window.open(blobUrl, '_blank');
         }
 
         // --- Init ---
