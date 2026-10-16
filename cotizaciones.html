@@ -2009,27 +2009,14 @@
         }
 
         // Para fórmulas con varias escalas de cantidad (opciones para que el
-        // cliente elija una), se dibuja un trío de recuadros —igual de
-        // "bonitos" que los de precio unitario/cantidad/subtotal normales—
-        // por cada escala, una debajo de otra, con una etiqueta "OPCIÓN N"
-        // arriba de cada trío. Devuelve el alto total que ocupó.
-        // Recuadros más chicos que los de precio normal (boxH 11 en vez de
-        // 14, textos más pequeños) — son varias opciones una debajo de
-        // otra, así que conviene que ocupen menos espacio cada una.
+        // cliente elija una) se dibuja un trío de recuadros —igual de
+        // "bonitos" que los de precio unitario/cantidad/subtotal normales,
+        // pero más chicos (boxH 11 en vez de 14)— por cada escala, con una
+        // etiqueta "OPCIÓN N" arriba de cada trío. Se dibujan una por una
+        // en el bucle principal (no en una función aparte) para poder
+        // evaluar el salto de página de cada opción por separado — ver el
+        // comentario junto a "priceSectionHeight" más abajo.
         const OPCION_BOX_H = 11;
-        function drawEscalasTable(doc, x, y, w, escalas) {
-            const startY = y;
-            escalas.forEach((e, i) => {
-                if (i > 0) y += 3;
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(7);
-                doc.setTextColor(10, 37, 64);
-                doc.text(`OPCIÓN ${i + 1}`, x, y + 2.8);
-                y += 4;
-                y += drawPriceBoxes(doc, x, y, w, e.precioUnitario, e.cantidad, escalaSubtotal(e), OPCION_BOX_H, 5.8, 8.5);
-            });
-            return y - startY;
-        }
 
         // Caja de "Servicios incluidos en la maquila" por fórmula — lista en
         // 2 columnas con un distintivo SÍ/NO (texto, no símbolos ✓/✗: esos
@@ -2368,7 +2355,16 @@
                     doc.setFontSize(8.5);
                     const presInsumosText = p.insumos.length ? p.insumos.map(insumoLabel).join(', ') : null;
                     const presInsumosLines = presInsumosText ? doc.splitTextToSize(`Insumos: ${presInsumosText}`, presTextWidth) : [];
-                    const priceSectionHeight = singleEscala ? 21 : (18 * p.escalas.length - 3) + 7;
+                    // Con varias escalas ("opciones"), solo se reserva de
+                    // antemano el espacio de la PRIMERA junto con la imagen/
+                    // etiqueta/insumos (para que esos nunca queden solos sin
+                    // ningún precio debajo) — las demás opciones se evalúan
+                    // una por una más abajo, así que si no caben todas en lo
+                    // que queda de la página, solo las que sobran pasan a la
+                    // siguiente en vez de todo el bloque junto (eso dejaba
+                    // huecos grandes cuando una presentación tenía varias
+                    // opciones y casi-pero-no-del-todo cabía completa).
+                    const priceSectionHeight = singleEscala ? 21 : (4 + OPCION_BOX_H + 7);
                     const presTextTopHeight = (multiplePresentaciones ? 5 : 0) + (presentacionLabel ? 5 : 0)
                         + (presInsumosLines.length ? presInsumosLines.length * 4.2 + 2 : 0);
                     const imgColumnHeight = hasImage ? IMG_SIZE + 3 + imgCaptionLines.length * 3.2 : 0;
@@ -2438,7 +2434,19 @@
                         y += drawPriceBoxes(doc, marginX, y, pageW - marginX * 2, p.escalas[0].precioUnitario, p.escalas[0].cantidad, subtotal) + 7;
                         // (boxH=14 + 7 de margen = 21, igual al priceSectionHeight de arriba)
                     } else {
-                        y += drawEscalasTable(doc, marginX, y, pageW - marginX * 2, p.escalas) + 7;
+                        p.escalas.forEach((e, i) => {
+                            if (i > 0) {
+                                ensureSpace(4 + OPCION_BOX_H + 3);
+                                y += 3;
+                            }
+                            doc.setFont('helvetica', 'bold');
+                            doc.setFontSize(7);
+                            doc.setTextColor(10, 37, 64);
+                            doc.text(`OPCIÓN ${i + 1}`, marginX, y + 2.8);
+                            y += 4;
+                            y += drawPriceBoxes(doc, marginX, y, pageW - marginX * 2, e.precioUnitario, e.cantidad, escalaSubtotal(e), OPCION_BOX_H, 5.8, 8.5);
+                        });
+                        y += 7;
                     }
                     if (pIdx < f.presentaciones.length - 1) y += 2;
                 });
