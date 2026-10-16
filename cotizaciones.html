@@ -2069,24 +2069,22 @@
                 .filter(s => !s.incluido && s.precioAdicional != null)
                 .reduce((sum, s) => sum + Number(s.precioAdicional || 0), 0);
         }
-        // La caja de servicios se parte en DOS cajas independientes (en vez
-        // de una sola grande) para que, si el catálogo crece (más
-        // servicios, notas más largas), nunca se repita el mismo problema
-        // de las opciones de escala: un bloque gigante que si no cabe
-        // completo salta entero a la página siguiente dejando un hueco. El
-        // checklist SÍ/NO (acotado: unos 6mm por fila) casi siempre cabe
-        // donde sea; las notas/costos adicionales (lo que de verdad puede
-        // crecer sin límite) quedan en su propia caja, que puede seguir en
-        // la página siguiente sin arrastrar al checklist con ella.
-        function serviciosChecklistBoxHeight(servicios) {
+        function serviciosBoxHeight(doc, w, servicios) {
             const visibles = serviciosVisibles(servicios);
             const rows = Math.ceil(visibles.length / SERVICIOS_COLS);
-            return 9 + rows * 6 + 4;
+            const entries = serviciosExtraEntries(doc, w, visibles);
+            const subtotal = serviciosSubtotalAdicional(visibles);
+            let h = 9 + rows * 6 + 4;
+            if (entries.length) h += 3 + serviciosExtraHeight(entries) + 3; // margen antes + texto + margen después
+            if (subtotal > 0) h += 10;
+            return h;
         }
-        function drawServiciosChecklistBox(doc, x, y, w, servicios) {
+        function drawServiciosBox(doc, x, y, w, servicios) {
             const visibles = serviciosVisibles(servicios);
             const rows = Math.ceil(visibles.length / SERVICIOS_COLS);
-            const boxH = serviciosChecklistBoxHeight(servicios);
+            const entries = serviciosExtraEntries(doc, w, visibles);
+            const subtotal = serviciosSubtotalAdicional(visibles);
+            const boxH = serviciosBoxHeight(doc, w, servicios);
 
             doc.setFillColor(248, 250, 252);
             doc.setDrawColor(226, 232, 240);
@@ -2129,35 +2127,13 @@
                 doc.text(s.nombre, rowX + chipW + 2.5, rowY);
             });
 
-            return boxH;
-        }
+            let curY = y + 9 + rows * rowH + 4;
 
-        // Devuelve 0 si no hay nada que mostrar (para que el llamador sepa
-        // que no debe reservar ni dibujar esta caja).
-        function serviciosExtrasBoxHeight(doc, w, servicios) {
-            const visibles = serviciosVisibles(servicios);
-            const entries = serviciosExtraEntries(doc, w, visibles);
-            const subtotal = serviciosSubtotalAdicional(visibles);
-            if (!entries.length && !(subtotal > 0)) return 0;
-            let h = 3;
-            if (entries.length) h += serviciosExtraHeight(entries) + 3;
-            if (subtotal > 0) h += 9;
-            return h;
-        }
-        function drawServiciosExtrasBox(doc, x, y, w, servicios) {
-            const visibles = serviciosVisibles(servicios);
-            const entries = serviciosExtraEntries(doc, w, visibles);
-            const subtotal = serviciosSubtotalAdicional(visibles);
-            const boxH = serviciosExtrasBoxHeight(doc, w, servicios);
-            if (boxH === 0) return 0;
-
-            doc.setFillColor(248, 250, 252);
-            doc.setDrawColor(226, 232, 240);
-            doc.setLineWidth(0.3);
-            doc.roundedRect(x, y, w, boxH, 2, 2, 'FD');
-
-            let curY = y + 3;
             if (entries.length) {
+                doc.setDrawColor(226, 232, 240);
+                doc.setLineWidth(0.2);
+                doc.line(x + 4, curY - 1.5, x + w - 4, curY - 1.5);
+                curY += 3; // aire después de la línea divisoria, antes del primer renglón
                 doc.setFont('helvetica', 'italic');
                 doc.setFontSize(7.5);
                 doc.setTextColor(180, 130, 10);
@@ -2168,7 +2144,7 @@
                     });
                     if (i < entries.length - 1) curY += SERVICIOS_EXTRA_ENTRY_GAP;
                 });
-                curY += 3;
+                curY += 3; // margen antes de lo siguiente (subtotal u otra cosa)
             }
 
             if (subtotal > 0) {
@@ -2344,17 +2320,8 @@
                 y += mezclaLines.length * 4.2 + 5;
 
                 if (f.servicios && serviciosVisibles(f.servicios).length) {
-                    ensureSpace(serviciosChecklistBoxHeight(f.servicios) + 3);
-                    y += drawServiciosChecklistBox(doc, marginX, y, pageW - marginX * 2, f.servicios) + 3;
-
-                    // Caja aparte para notas/costos adicionales — si el
-                    // checklist ya cupo pero esto no, solo esto salta de
-                    // página, sin arrastrar el checklist con él.
-                    const extrasH = serviciosExtrasBoxHeight(doc, pageW - marginX * 2, f.servicios);
-                    if (extrasH > 0) {
-                        ensureSpace(extrasH + 5);
-                        y += drawServiciosExtrasBox(doc, marginX, y, pageW - marginX * 2, f.servicios) + 5;
-                    }
+                    ensureSpace(serviciosBoxHeight(doc, pageW - marginX * 2, f.servicios) + 5);
+                    y += drawServiciosBox(doc, marginX, y, pageW - marginX * 2, f.servicios) + 5;
                 }
 
                 const multiplePresentaciones = f.presentaciones.length > 1;
