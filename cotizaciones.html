@@ -2046,17 +2046,31 @@
         function serviciosVisibles(servicios) {
             return servicios.filter(s => s.incluido || s.visible !== false);
         }
-        function serviciosExtraLines(doc, w, servicios) {
+        // Una "entrada" por servicio (no una lista plana de líneas) para
+        // poder controlar el espaciado a mano: dibujar con doc.text(array,
+        // x, y) deja que jsPDF decida el interlineado, que resultó más
+        // apretado que el alto que se había reservado — sobraba espacio al
+        // final del bloque y el primer renglón quedaba pegado a la línea
+        // divisoria de arriba. Con cada línea dibujada una por una (ver
+        // drawServiciosBox) el alto reservado es exactamente el real.
+        const SERVICIOS_EXTRA_LINE_H = 3.6;
+        const SERVICIOS_EXTRA_ENTRY_GAP = 1.3;
+        function serviciosExtraEntries(doc, w, servicios) {
             doc.setFont('helvetica', 'italic');
             doc.setFontSize(7.5);
             return servicios
                 .filter(s => s.precioAdicional != null || s.nota)
-                .flatMap(s => {
+                .map(s => {
                     const parts = [];
                     if (s.precioAdicional != null) parts.push(`Costo adicional: ${formatCOP(s.precioAdicional)}`);
                     if (s.nota) parts.push(s.nota);
                     return doc.splitTextToSize(`• ${s.nombre} — ${parts.join(' · ')}`, w - 8);
                 });
+        }
+        function serviciosExtraHeight(entries) {
+            if (!entries.length) return 0;
+            const totalLines = entries.reduce((sum, lines) => sum + lines.length, 0);
+            return totalLines * SERVICIOS_EXTRA_LINE_H + (entries.length - 1) * SERVICIOS_EXTRA_ENTRY_GAP;
         }
         // Suma de los costos adicionales de servicios NO incluidos — un
         // subtotal aparte, nunca sumado al Total general de la cotización
@@ -2071,17 +2085,17 @@
         function serviciosBoxHeight(doc, w, servicios) {
             const visibles = serviciosVisibles(servicios);
             const rows = Math.ceil(visibles.length / SERVICIOS_COLS);
-            const extraLines = serviciosExtraLines(doc, w, visibles);
+            const entries = serviciosExtraEntries(doc, w, visibles);
             const subtotal = serviciosSubtotalAdicional(visibles);
             let h = 9 + rows * 6 + 4;
-            if (extraLines.length) h += extraLines.length * 4 + 4;
+            if (entries.length) h += 3 + serviciosExtraHeight(entries) + 3; // margen antes + texto + margen después
             if (subtotal > 0) h += 10;
             return h;
         }
         function drawServiciosBox(doc, x, y, w, servicios) {
             const visibles = serviciosVisibles(servicios);
             const rows = Math.ceil(visibles.length / SERVICIOS_COLS);
-            const extraLines = serviciosExtraLines(doc, w, visibles);
+            const entries = serviciosExtraEntries(doc, w, visibles);
             const subtotal = serviciosSubtotalAdicional(visibles);
             const boxH = serviciosBoxHeight(doc, w, servicios);
 
@@ -2128,15 +2142,22 @@
 
             let curY = y + 9 + rows * rowH + 4;
 
-            if (extraLines.length) {
+            if (entries.length) {
                 doc.setDrawColor(226, 232, 240);
                 doc.setLineWidth(0.2);
-                doc.line(x + 4, curY - 2, x + w - 4, curY - 2);
+                doc.line(x + 4, curY - 1.5, x + w - 4, curY - 1.5);
+                curY += 3; // aire después de la línea divisoria, antes del primer renglón
                 doc.setFont('helvetica', 'italic');
                 doc.setFontSize(7.5);
                 doc.setTextColor(180, 130, 10);
-                doc.text(extraLines, x + 4, curY);
-                curY += extraLines.length * 4 + 4;
+                entries.forEach((lines, i) => {
+                    lines.forEach(line => {
+                        doc.text(line, x + 4, curY);
+                        curY += SERVICIOS_EXTRA_LINE_H;
+                    });
+                    if (i < entries.length - 1) curY += SERVICIOS_EXTRA_ENTRY_GAP;
+                });
+                curY += 3; // margen antes de lo siguiente (subtotal u otra cosa)
             }
 
             if (subtotal > 0) {
@@ -2330,7 +2351,7 @@
                     // tiene, se reserva una columna a la derecha igual que
                     // antes se hacía a nivel de fórmula.
                     const hasImage = Boolean(p.imagenMockup);
-                    const IMG_SIZE = 42;
+                    const IMG_SIZE = 36;
                     const IMG_GAP = 5;
                     const IMG_CAPTION = 'Imagen de referencia, no es el producto final';
                     const presTextWidth = pageW - marginX * 2 - (hasImage ? IMG_SIZE + IMG_GAP : 0);
