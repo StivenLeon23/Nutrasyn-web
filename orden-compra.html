@@ -661,20 +661,34 @@
 
             y = 30;
 
-            // Proveedor
+            // NutraSyn Lab (comprador) y Proveedor, en dos columnas — una
+            // orden de compra siempre debe dejar claros los datos de las
+            // dos partes, no solo del proveedor.
+            const colRightX = pageW / 2 + 5;
+
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(10.5);
             doc.setTextColor(10, 37, 64);
-            doc.text('Proveedor', marginX, y);
-            y += 5.5;
+            doc.text('NutraSyn Lab (Comprador)', marginX, y);
+            doc.text('Proveedor', colRightX, y);
+            let yLeft = y + 5.5;
+            let yRight = y + 5.5;
+
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(9.5);
             doc.setTextColor(51, 65, 85);
-            doc.text(`Nombre: ${payload.proveedor.nombre}`, marginX, y); y += 4.8;
-            doc.text(`NIT: ${payload.proveedor.nit || 'No indicado'}`, marginX, y); y += 4.8;
-            doc.text(`Contacto: ${payload.proveedor.contacto || 'No indicado'}`, marginX, y); y += 4.8;
-            doc.text(`Teléfono: ${payload.proveedor.telefono || 'No indicado'}`, marginX, y); y += 4.8;
-            doc.text(`Correo: ${payload.proveedor.email || 'No indicado'}`, marginX, y); y += 7;
+            doc.text('NIT: 1.053.821.090', marginX, yLeft); yLeft += 4.8;
+            doc.text('Dirección: La Gloria Vereda Cacicazgo Casa 2', marginX, yLeft); yLeft += 4.8;
+            doc.text('Teléfono: 314 281 8326', marginX, yLeft); yLeft += 4.8;
+            doc.text('Correo: operaciones@synergia-360.com', marginX, yLeft); yLeft += 4.8;
+
+            doc.text(`Nombre: ${payload.proveedor.nombre}`, colRightX, yRight); yRight += 4.8;
+            doc.text(`NIT: ${payload.proveedor.nit || 'No indicado'}`, colRightX, yRight); yRight += 4.8;
+            doc.text(`Contacto: ${payload.proveedor.contacto || 'No indicado'}`, colRightX, yRight); yRight += 4.8;
+            doc.text(`Teléfono: ${payload.proveedor.telefono || 'No indicado'}`, colRightX, yRight); yRight += 4.8;
+            doc.text(`Correo: ${payload.proveedor.email || 'No indicado'}`, colRightX, yRight); yRight += 4.8;
+
+            y = Math.max(yLeft, yRight) + 2;
 
             // Tabla de ítems
             const colX = { tipo: marginX, codigo: marginX + 20, nombre: marginX + 43, cant: marginX + 108, iva: marginX + 123, precio: marginX + 153, subtotal: pageW - marginX };
