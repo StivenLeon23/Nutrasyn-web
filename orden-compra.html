@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orden de Compra | NutraSyn Lab</title>
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <link rel="icon" type="image/svg+xml"
+        href="https://res.cloudinary.com/dj761bgxw/image/upload/v1777037267/svg_1_-cropped_p9sqmo.svg" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&family=Manrope:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Manrope', 'sans-serif'], heading: ['Lexend', 'sans-serif'] },
+                    colors: {
+                        deepblue: { DEFAULT: '#0A2540', 50: '#f0f4f8', 100: '#d9e2ec', 200: '#bcccdc', 300: '#9fb3c8', 400: '#829ab1', 500: '#627d98', 600: '#486581', 700: '#334e68', 800: '#243b53', 900: '#0A2540', 950: '#061727' },
+                        emerald: { DEFAULT: '#00A896', 50: '#f0fdfa', 100: '#ccfbf1', 200: '#99f6e4', 300: '#5eead4', 400: '#2dd4bf', 500: '#00A896', 600: '#008c7d', 700: '#007064', 800: '#00574e', 900: '#00403a' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #061727; font-family: 'Manrope', sans-serif; }
+        h1, h2, h3, h4, .font-heading { font-family: 'Lexend', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(10, 37, 64, 0.5); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #00A896; border-radius: 4px; }
+        .field-input {
+            width: 100%; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem;
+            padding: 0.65rem 0.85rem; background: #0A2540; color: #fff; outline: none;
+        }
+        .field-input:focus { box-shadow: 0 0 0 1px #00A896; border-color: #00A896; }
+        .field-label { display:block; font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; letter-spacing: .05em; }
+        .btn-primary { background: #00A896; color: #fff; font-weight: 700; border-radius: 0.75rem; padding: 0.65rem 1.25rem; font-size: 0.75rem; transition: background .2s; }
+        .btn-primary:hover { background: #008c7d; }
+        .btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; font-weight: 600; border-radius: 0.75rem; padding: 0.65rem 1.25rem; font-size: 0.75rem; transition: all .2s; }
+        .btn-secondary:hover { border-color: #00A896; color: #fff; }
+        .card { background: rgba(10, 37, 64, 0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 1.5rem; }
+    </style>
+</head>
+
+<body class="text-gray-300 antialiased min-h-screen">
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[150] flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- Bloqueo de acceso: se decide en JS según window.__PORTAL_SESSION__ -->
+    <div id="access-denied" class="hidden min-h-screen items-center justify-center p-6">
+        <div class="card max-w-md w-full p-8 text-center space-y-4">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-red-500/10 text-red-400 flex items-center justify-center">
+                <i data-lucide="lock" class="w-7 h-7"></i>
+            </div>
+            <h1 class="text-lg font-bold text-white">Acceso restringido</h1>
+            <p id="access-denied-message" class="text-xs text-gray-400 leading-relaxed"></p>
+            <a href="/portafolio.html" class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Volver al portafolio
+            </a>
+        </div>
+    </div>
+
+    <div id="app-root" class="hidden">
+        <!-- Nav -->
+        <nav class="border-b border-white/5 bg-deepblue-900/90 backdrop-blur-md">
+            <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
+                <a href="/portafolio.html" class="flex items-center gap-3">
+                    <img src="https://res.cloudinary.com/dj761bgxw/image/upload/v1777030919/svg_1_vfsoo4.svg"
+                        alt="NutraSyn Lab" class="h-9 w-auto object-contain brightness-0 invert">
+                    <span class="hidden sm:inline text-xs font-bold text-gray-400 border-l border-white/10 pl-3">Orden de Compra</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span id="session-user-badge" class="text-[10px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/20 px-2.5 py-1 rounded-lg"></span>
+                    <a href="/cotizaciones.html" class="btn-secondary flex items-center gap-1.5">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Cotizaciones
+                    </a>
+                    <a href="/portafolio.html" class="btn-secondary flex items-center gap-1.5">
+                        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Portafolio
+                    </a>
+                    <a href="/orden-compra.html?logout=1" class="btn-secondary flex items-center gap-1.5" title="Cerrar sesión">
+                        <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-[1600px] w-full mx-auto p-4 lg:p-8 flex flex-col space-y-8">
+
+            <div class="space-y-1">
+                <h1 class="text-2xl lg:text-3xl font-extrabold text-white">Orden de Compra</h1>
+                <p class="text-xs text-gray-400">Trae insumos o ingredientes ya creados en el catálogo, ponles cantidad y precio unitario, y genera la orden para el proveedor. Puedes guardar como borrador aunque falten datos.</p>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                <!-- BUILDER -->
+                <div class="xl:col-span-8 flex flex-col space-y-6">
+
+                    <div class="card p-6 flex items-center justify-between flex-wrap gap-3">
+                        <div>
+                            <span id="builder-mode-badge" class="text-[10px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/20 px-2.5 py-1 rounded-lg uppercase tracking-wider">Nueva orden</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="newOrder()" class="btn-secondary flex items-center gap-1.5">
+                                <i data-lucide="file-plus" class="w-3.5 h-3.5"></i> Nueva
+                            </button>
+                            <button onclick="previewOrderPDF()" class="btn-secondary flex items-center gap-1.5">
+                                <i data-lucide="eye" class="w-3.5 h-3.5"></i> Vista previa
+                            </button>
+                            <button onclick="downloadOrderPDF()" class="btn-secondary flex items-center gap-1.5">
+                                <i data-lucide="file-down" class="w-3.5 h-3.5"></i> PDF
+                            </button>
+                            <button id="save-order-btn" onclick="saveOrder()" class="btn-primary flex items-center gap-1.5">
+                                <i data-lucide="save" class="w-3.5 h-3.5"></i> <span>Guardar Orden</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Proveedor -->
+                    <div class="card p-6 space-y-4">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="truck" class="w-4 h-4 text-emerald-400"></i> Datos del Proveedor</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="field-label">Nombre / Razón social</label>
+                                <input type="text" id="proveedor-nombre" class="field-input" placeholder="Nombre del proveedor">
+                            </div>
+                            <div>
+                                <label class="field-label">NIT</label>
+                                <input type="text" id="proveedor-nit" class="field-input" placeholder="NIT">
+                            </div>
+                            <div>
+                                <label class="field-label">Contacto</label>
+                                <input type="text" id="proveedor-contacto" class="field-input" placeholder="Nombre de contacto">
+                            </div>
+                            <div>
+                                <label class="field-label">Teléfono</label>
+                                <input type="text" id="proveedor-telefono" class="field-input" placeholder="Teléfono">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="field-label">Correo</label>
+                                <input type="email" id="proveedor-email" class="field-input" placeholder="correo@proveedor.com">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ítems -->
+                    <div class="card p-6 space-y-4">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="package" class="w-4 h-4 text-emerald-400"></i> Ítems a comprar</h3>
+                        <p class="text-[10px] text-gray-500 -mt-2">Busca por nombre o código entre los insumos e ingredientes ya creados en el catálogo (el mismo que usa Cotizaciones). Si falta algo, créalo primero allá.</p>
+                        <div class="relative">
+                            <input type="text" id="item-search" oninput="renderItemSearchResults()"
+                                placeholder="Buscar insumo o ingrediente..." class="field-input pl-9">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-gray-500 absolute left-3 top-3"></i>
+                        </div>
+                        <div id="item-search-results" class="hidden max-h-52 overflow-y-auto custom-scrollbar space-y-1.5 border border-white/5 rounded-xl p-2 bg-deepblue-950/60"></div>
+
+                        <div id="order-items-list" class="space-y-2">
+                            <p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Aún no hay ítems agregados.</p>
+                        </div>
+
+                        <div class="p-4 bg-emerald-950/30 border border-emerald-500/20 rounded-xl flex items-center justify-between">
+                            <span class="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">Total (suma de subtotales)</span>
+                            <span id="order-total-preview" class="text-base font-extrabold text-white">No definido</span>
+                        </div>
+                    </div>
+
+                    <!-- Observaciones -->
+                    <div class="card p-6 space-y-4">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="pencil" class="w-4 h-4 text-emerald-400"></i> Observaciones</h3>
+                        <div>
+                            <label class="field-label">Observaciones / condiciones para el proveedor</label>
+                            <textarea id="observaciones" rows="3" class="field-input" placeholder="Tiempos de entrega esperados, forma de pago, instrucciones..."></textarea>
+                        </div>
+                        <div>
+                            <label class="field-label">Elaborado por</label>
+                            <input type="text" id="elaborado-por" class="field-input" placeholder="Nombre de quien hace la orden">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SAVED ORDERS -->
+                <div class="xl:col-span-4 flex flex-col space-y-4">
+                    <div class="card p-6 space-y-4 xl:sticky xl:top-6">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="list" class="w-4 h-4 text-emerald-400"></i> Órdenes Guardadas</h3>
+                        <input type="text" id="orders-search" oninput="renderOrdersList()" placeholder="Buscar por folio o proveedor..." class="field-input">
+                        <div id="orders-list" class="space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar pr-1">
+                            <p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const session = window.__PORTAL_SESSION__;
+        const collaboratorDisplayName = session ? (session.name || session.user) : '';
+        let currentOrderId = null;
+        let orderItems = []; // [{tipo:'insumo'|'ingrediente', code, nombre, cantidad, precioUnitario}]
+        let packagingCache = [];
+        let ingredientsCache = [];
+        let ordersCache = [];
+
+        // --- Guardia de acceso (mismo criterio que cotizaciones.html) ---
+        function denyAccess(message) {
+            document.getElementById('access-denied-message').textContent = message;
+            document.getElementById('access-denied').classList.remove('hidden');
+            document.getElementById('access-denied').classList.add('flex');
+            lucide.createIcons();
+        }
+
+        if (!session) {
+            denyAccess('No se detectó una sesión activa. Vuelve a iniciar sesión desde el portafolio e intenta de nuevo.');
+        } else if (session.role !== 'colaborador') {
+            denyAccess('Este módulo es exclusivo para colaboradores de NutraSyn Lab. Si necesitas acceso, pide a un administrador que actualice tu usuario en la variable PORTAL_USERS con el rol "colaborador".');
+        } else if (!session.token) {
+            denyAccess('Tu usuario tiene permiso de colaborador, pero el servidor no tiene configurada la variable PORTAL_TOKEN_SECRET, así que no es posible conectar con la API. Pide a un administrador que la configure en Netlify y vuelve a intentar.');
+        } else {
+            document.getElementById('app-root').classList.remove('hidden');
+            document.getElementById('session-user-badge').textContent = collaboratorDisplayName + ' · colaborador';
+            lucide.createIcons();
+            initApp();
+        }
+
+        // --- Toasts ---
+        function toast(title, message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            let colorBorder = 'border-emerald-500';
+            if (type === 'warning') colorBorder = 'border-yellow-500';
+            if (type === 'error') colorBorder = 'border-red-500';
+            el.className = `p-4 border-l-4 ${colorBorder} bg-deepblue-950 border border-white/5 rounded-xl shadow-2xl flex items-start space-x-3 pointer-events-auto transition-all duration-300 transform translate-y-4 opacity-0 max-w-xs`;
+            el.innerHTML = `<div><h5 class="text-xs font-bold text-white">${title}</h5><p class="text-[10px] text-gray-400 mt-0.5">${message || ''}</p></div>`;
+            container.appendChild(el);
+            setTimeout(() => el.classList.remove('translate-y-4', 'opacity-0'), 50);
+            setTimeout(() => { el.classList.add('opacity-0'); setTimeout(() => el.remove(), 300); }, 3500);
+        }
+
+        // --- API ---
+        async function apiFetch(path, opts = {}) {
+            const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+            headers['Authorization'] = 'Bearer ' + session.token;
+            const res = await fetch(path, Object.assign({}, opts, { headers }));
+            let data = null;
+            try { data = await res.json(); } catch (e) { /* respuesta sin cuerpo JSON */ }
+            if (!res.ok) throw new Error((data && data.error) || ('Error HTTP ' + res.status));
+            return data;
+        }
+
+        function formatCOP(value) {
+            if (value === null || value === undefined || value === '') return 'No definido';
+            return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value);
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
+        // --- Catálogos (insumos / ingredientes ya existentes, mismos que Cotizaciones) ---
+        async function loadCatalogs() {
+            try {
+                const [pack, ing] = await Promise.all([
+                    apiFetch('/api/packaging'),
+                    apiFetch('/api/ingredients'),
+                ]);
+                packagingCache = pack.items || [];
+                ingredientsCache = ing.items || [];
+            } catch (err) {
+                toast('Error al cargar catálogos', err.message, 'error');
+            }
+        }
+
+        function renderItemSearchResults() {
+            const q = document.getElementById('item-search').value.trim().toLowerCase();
+            const box = document.getElementById('item-search-results');
+            if (!q) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+
+            const insumoMatches = packagingCache
+                .filter(i => i.code.toLowerCase().includes(q) || i.name.toLowerCase().includes(q))
+                .slice(0, 12)
+                .map(i => ({ tipo: 'insumo', code: i.code, nombre: i.name }));
+            const ingredienteMatches = ingredientsCache
+                .filter(i => i.code.toLowerCase().includes(q) || i.nombre.toLowerCase().includes(q))
+                .slice(0, 12)
+                .map(i => ({ tipo: 'ingrediente', code: i.code, nombre: i.nombre }));
+            const matches = [...insumoMatches, ...ingredienteMatches];
+
+            box.classList.remove('hidden');
+            if (!matches.length) {
+                box.innerHTML = '<p class="text-[11px] text-gray-500 p-2">Sin resultados. Créalo primero en Cotizaciones.</p>';
+                return;
+            }
+            box.innerHTML = matches.map(m => `
+                <button onclick="addItemToOrder('${m.tipo}','${m.code}')" class="w-full flex items-center gap-1.5 p-2 rounded-lg hover:bg-white/5 transition-colors text-left">
+                    <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${m.tipo === 'insumo' ? 'bg-violet-950 text-violet-300' : 'bg-sky-950 text-sky-300'}">${m.tipo === 'insumo' ? 'Insumo' : 'Ingrediente'}</span>
+                    <span class="text-[11px] truncate">
+                        <span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded uppercase font-mono">${escapeHtml(m.code)}</span>
+                        <span class="font-bold text-white ml-1">${escapeHtml(m.nombre)}</span>
+                    </span>
+                </button>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function addItemToOrder(tipo, code) {
+            const source = tipo === 'insumo' ? packagingCache.find(i => i.code === code) : ingredientsCache.find(i => i.code === code);
+            if (!source) return;
+            const nombre = tipo === 'insumo' ? source.name : source.nombre;
+            const alreadyHasIt = orderItems.some(i => i.tipo === tipo && i.code === code);
+            orderItems.push({ tipo, code, nombre, cantidad: null, precioUnitario: null });
+            document.getElementById('item-search').value = '';
+            document.getElementById('item-search-results').classList.add('hidden');
+            renderItemsList();
+            if (alreadyHasIt) toast('Agregado de nuevo', 'Ya tenías este ítem — se agregó como otra línea independiente.');
+        }
+
+        function removeOrderItem(index) {
+            orderItems.splice(index, 1);
+            renderItemsList();
+        }
+
+        function itemSubtotal(item) {
+            if (item.cantidad == null || item.precioUnitario == null) return null;
+            const qty = Number(item.cantidad), unit = Number(item.precioUnitario);
+            if (!Number.isFinite(qty) || !Number.isFinite(unit)) return null;
+            return qty * unit;
+        }
+
+        // Actualiza solo el subtotal de esa fila y el total general por DOM
+        // directo (evita re-renderizar toda la lista y perder el foco).
+        function updateOrderItem(index, field, rawValue) {
+            const item = orderItems[index];
+            if (!item) return;
+            const n = rawValue === '' ? null : Number(rawValue);
+            item[field] = (n === null || Number.isNaN(n)) ? null : n;
+            const subtotalEl = document.getElementById(`item-subtotal-${index}`);
+            if (subtotalEl) subtotalEl.textContent = formatCOP(itemSubtotal(item));
+            updateOrderTotalDisplay();
+        }
+
+        function computeOrderTotal() {
+            const subtotals = orderItems.map(itemSubtotal).filter(s => s != null);
+            return subtotals.length ? subtotals.reduce((a, b) => a + b, 0) : null;
+        }
+
+        function updateOrderTotalDisplay() {
+            const el = document.getElementById('order-total-preview');
+            if (el) el.textContent = formatCOP(computeOrderTotal());
+        }
+
+        function renderItemsList() {
+            const box = document.getElementById('order-items-list');
+            if (!orderItems.length) {
+                box.innerHTML = '<p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Aún no hay ítems agregados.</p>';
+                updateOrderTotalDisplay();
+                return;
+            }
+            box.innerHTML = orderItems.map((item, index) => `
+                <div class="p-3 bg-deepblue-950/60 border border-white/5 rounded-xl">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${item.tipo === 'insumo' ? 'bg-violet-950 text-violet-300' : 'bg-sky-950 text-sky-300'}">${item.tipo === 'insumo' ? 'Insumo' : 'Ingrediente'}</span>
+                            <span class="text-[9px] font-mono text-gray-500 shrink-0">${escapeHtml(item.code)}</span>
+                            <span class="text-[11px] font-bold text-white truncate">${escapeHtml(item.nombre)}</span>
+                        </div>
+                        <button onclick="removeOrderItem(${index})" class="text-gray-500 hover:text-red-400 shrink-0"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="field-label">Cantidad</label>
+                            <input type="number" min="0" step="1" value="${item.cantidad ?? ''}"
+                                onchange="updateOrderItem(${index}, 'cantidad', this.value)"
+                                class="field-input" placeholder="Unidades">
+                        </div>
+                        <div>
+                            <label class="field-label">Precio unitario</label>
+                            <input type="number" min="0" step="1" value="${item.precioUnitario ?? ''}"
+                                onchange="updateOrderItem(${index}, 'precioUnitario', this.value)"
+                                class="field-input" placeholder="COP">
+                        </div>
+                        <div>
+                            <label class="field-label">Subtotal</label>
+                            <div id="item-subtotal-${index}" class="field-input flex items-center font-bold text-emerald-300">${formatCOP(itemSubtotal(item))}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            updateOrderTotalDisplay();
+            lucide.createIcons();
+        }
+
+        // --- Guardar / Cargar / Nueva ---
+        function setBuilderMode(folio) {
+            const badge = document.getElementById('builder-mode-badge');
+            const saveBtn = document.getElementById('save-order-btn');
+            if (folio) {
+                badge.textContent = 'Editando ' + folio;
+                saveBtn.querySelector('span').textContent = 'Actualizar Orden';
+            } else {
+                badge.textContent = 'Nueva orden';
+                saveBtn.querySelector('span').textContent = 'Guardar Orden';
+            }
+        }
+
+        function newOrder() {
+            currentOrderId = null;
+            orderItems = [];
+            document.getElementById('proveedor-nombre').value = '';
+            document.getElementById('proveedor-nit').value = '';
+            document.getElementById('proveedor-contacto').value = '';
+            document.getElementById('proveedor-telefono').value = '';
+            document.getElementById('proveedor-email').value = '';
+            document.getElementById('observaciones').value = '';
+            document.getElementById('elaborado-por').value = collaboratorDisplayName;
+            renderItemsList();
+            setBuilderMode(null);
+            toast('Orden nueva', 'Lienzo limpio para armar otra orden de compra.');
+        }
+
+        function buildOrderPayload() {
+            return {
+                proveedor: {
+                    nombre: document.getElementById('proveedor-nombre').value.trim(),
+                    nit: document.getElementById('proveedor-nit').value.trim(),
+                    contacto: document.getElementById('proveedor-contacto').value.trim(),
+                    telefono: document.getElementById('proveedor-telefono').value.trim(),
+                    email: document.getElementById('proveedor-email').value.trim(),
+                },
+                items: orderItems,
+                observaciones: document.getElementById('observaciones').value.trim(),
+                elaboradoPor: document.getElementById('elaborado-por').value.trim(),
+            };
+        }
+
+        async function saveOrder() {
+            const payload = buildOrderPayload();
+            if (!payload.proveedor.nombre && !orderItems.length) {
+                toast('Orden vacía', 'Agrega al menos el nombre del proveedor o un ítem antes de guardar.', 'warning');
+                return;
+            }
+            try {
+                let data;
+                if (currentOrderId) {
+                    data = await apiFetch('/api/purchase-orders/' + currentOrderId, { method: 'PUT', body: JSON.stringify(payload) });
+                    toast('Orden actualizada', data.order.folio);
+                } else {
+                    data = await apiFetch('/api/purchase-orders', { method: 'POST', body: JSON.stringify(payload) });
+                    currentOrderId = data.order.id;
+                    toast('Orden guardada', data.order.folio);
+                }
+                setBuilderMode(data.order.folio);
+                await loadOrdersList();
+            } catch (err) {
+                toast('Error al guardar', err.message, 'error');
+            }
+        }
+
+        function loadOrderIntoBuilder(o, { keepProveedor }) {
+            const p = keepProveedor ? (o.proveedor || {}) : {};
+            document.getElementById('proveedor-nombre').value = p.nombre || '';
+            document.getElementById('proveedor-nit').value = p.nit || '';
+            document.getElementById('proveedor-contacto').value = p.contacto || '';
+            document.getElementById('proveedor-telefono').value = p.telefono || '';
+            document.getElementById('proveedor-email').value = p.email || '';
+            document.getElementById('observaciones').value = o.observaciones || '';
+            document.getElementById('elaborado-por').value = o.elaboradoPor || collaboratorDisplayName;
+            orderItems = (o.items || []).map(i => ({ ...i }));
+            renderItemsList();
+        }
+
+        async function editOrder(id) {
+            try {
+                const data = await apiFetch('/api/purchase-orders/' + id);
+                currentOrderId = data.order.id;
+                loadOrderIntoBuilder(data.order, { keepProveedor: true });
+                setBuilderMode(data.order.folio);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                toast('Orden cargada', data.order.folio + ' lista para editar.');
+            } catch (err) {
+                toast('Error al cargar', err.message, 'error');
+            }
+        }
+
+        async function loadOrdersList() {
+            try {
+                const data = await apiFetch('/api/purchase-orders');
+                ordersCache = data.orders || [];
+                renderOrdersList();
+            } catch (err) {
+                toast('Error al cargar órdenes', err.message, 'error');
+                document.getElementById('orders-list').innerHTML =
+                    '<p class="text-[11px] text-red-400 border border-dashed border-red-500/30 rounded-xl p-4 text-center">No se pudo cargar el listado.</p>';
+            }
+        }
+
+        function isDraftOrder(o) {
+            const hasProveedor = Boolean(o.proveedor?.nombre);
+            const itemCount = o.itemCount ?? (Array.isArray(o.items) ? o.items.length : 0);
+            return !hasProveedor || itemCount === 0;
+        }
+
+        function renderOrdersList() {
+            const q = (document.getElementById('orders-search').value || '').trim().toLowerCase();
+            const box = document.getElementById('orders-list');
+            const filtered = !q ? ordersCache : ordersCache.filter(item =>
+                item.folio.toLowerCase().includes(q) || (item.proveedor?.nombre || '').toLowerCase().includes(q)
+            );
+            if (!filtered.length) {
+                box.innerHTML = '<p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">No hay órdenes guardadas.</p>';
+                return;
+            }
+            box.innerHTML = filtered.map(item => `
+                <button onclick="editOrder('${item.id}')" class="w-full text-left p-3 bg-deepblue-950/60 border border-white/5 hover:border-emerald-500/40 rounded-xl transition-colors">
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                        <span class="text-xs font-bold text-white">${escapeHtml(item.folio)}</span>
+                        ${isDraftOrder(item) ? '<span class="text-[9px] font-bold text-amber-300 bg-amber-950/50 border border-amber-500/30 px-1.5 py-0.5 rounded uppercase">Borrador</span>' : ''}
+                    </div>
+                    <p class="text-[11px] text-gray-400 truncate">${escapeHtml(item.proveedor?.nombre || 'Sin proveedor')}</p>
+                    <div class="flex items-center justify-between mt-1.5">
+                        <span class="text-[10px] text-gray-500">${item.itemCount || 0} ítem(s)</span>
+                        <span class="text-[11px] font-bold text-emerald-300">${formatCOP(item.totalEstimado)}</span>
+                    </div>
+                </button>
+            `).join('');
+        }
+
+        // --- PDF de la orden (liviano: sin logo/marca de agua, solo tabla) ---
+        async function buildOrderPdfDoc() {
+            const payload = buildOrderPayload();
+            if (!payload.proveedor.nombre) {
+                toast('Falta el proveedor', 'Escribe el nombre del proveedor antes de generar el PDF.', 'warning');
+                return null;
+            }
+            if (!orderItems.length) {
+                toast('Sin ítems', 'Agrega al menos un ítem antes de generar el PDF.', 'warning');
+                return null;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const pageW = 210, pageH = 297, marginX = 15;
+            let y = 20;
+
+            function ensureSpace(needed) {
+                if (y + needed > pageH - 20) {
+                    drawFooter();
+                    doc.addPage();
+                    y = 20;
+                }
+            }
+            function drawFooter() {
+                doc.setFontSize(7.5);
+                doc.setTextColor(148, 163, 184);
+                doc.text('NutraSyn Lab | operaciones@synergia-360.com | +57 314 281 8326 | www.nutrasynlab.co', marginX, pageH - 10);
+            }
+
+            // Header compacto, folio grande en negrilla (mismo criterio que Cotizaciones)
+            doc.setFillColor(10, 37, 64);
+            doc.rect(0, 0, pageW, 22, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(13);
+            doc.setTextColor(255, 255, 255);
+            doc.text('NutraSyn Lab', marginX, 11);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(0, 168, 150);
+            doc.text('Orden de Compra', marginX, 17);
+            const folioLabel = currentOrderId ? (document.getElementById('builder-mode-badge').textContent.replace('Editando ', '')) : 'Borrador (sin guardar)';
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.setTextColor(255, 255, 255);
+            doc.text(folioLabel, pageW - marginX, 12, { align: 'right' });
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(148, 163, 184);
+            doc.text(new Date().toLocaleDateString('es-CO'), pageW - marginX, 18, { align: 'right' });
+
+            y = 30;
+
+            // Proveedor
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10.5);
+            doc.setTextColor(10, 37, 64);
+            doc.text('Proveedor', marginX, y);
+            y += 5.5;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.setTextColor(51, 65, 85);
+            doc.text(`Nombre: ${payload.proveedor.nombre}`, marginX, y); y += 4.8;
+            doc.text(`NIT: ${payload.proveedor.nit || 'No indicado'}`, marginX, y); y += 4.8;
+            doc.text(`Contacto: ${payload.proveedor.contacto || 'No indicado'}`, marginX, y); y += 4.8;
+            doc.text(`Teléfono: ${payload.proveedor.telefono || 'No indicado'}`, marginX, y); y += 4.8;
+            doc.text(`Correo: ${payload.proveedor.email || 'No indicado'}`, marginX, y); y += 7;
+
+            // Tabla de ítems
+            const colX = { tipo: marginX, codigo: marginX + 20, nombre: marginX + 45, cant: marginX + 115, precio: marginX + 140, subtotal: pageW - marginX };
+            function drawTableHeader() {
+                doc.setFillColor(10, 37, 64);
+                doc.rect(marginX, y, pageW - marginX * 2, 7, 'F');
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7.5);
+                doc.setTextColor(255, 255, 255);
+                doc.text('TIPO', colX.tipo + 2, y + 4.7);
+                doc.text('CÓDIGO', colX.codigo, y + 4.7);
+                doc.text('DESCRIPCIÓN', colX.nombre, y + 4.7);
+                doc.text('CANT.', colX.cant, y + 4.7, { align: 'right' });
+                doc.text('PRECIO UNIT.', colX.precio, y + 4.7, { align: 'right' });
+                doc.text('SUBTOTAL', colX.subtotal - 2, y + 4.7, { align: 'right' });
+                y += 7;
+            }
+            ensureSpace(7 + 8);
+            drawTableHeader();
+
+            let orderTotal = 0;
+            let hasAnyPricing = false;
+            orderItems.forEach((item, idx) => {
+                const subtotal = itemSubtotal(item);
+                if (subtotal != null) { orderTotal += subtotal; hasAnyPricing = true; }
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8.5);
+                const nombreLines = doc.splitTextToSize(item.nombre, 68);
+                const rowH = Math.max(6.5, nombreLines.length * 4.2 + 2);
+                ensureSpace(rowH);
+                // La tabla no repite el encabezado al pasar de página — para
+                // una orden de compra (lista corta y simple) no hace falta
+                // esa complejidad extra, y mantiene el módulo liviano.
+
+                if (idx % 2 === 0) {
+                    doc.setFillColor(248, 250, 252);
+                    doc.rect(marginX, y, pageW - marginX * 2, rowH, 'F');
+                }
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7);
+                doc.setTextColor(item.tipo === 'insumo' ? 120 : 20, item.tipo === 'insumo' ? 60 : 110, item.tipo === 'insumo' ? 160 : 150);
+                doc.text(item.tipo === 'insumo' ? 'INSUMO' : 'INGREDIENTE', colX.tipo + 2, y + 4.5);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(7.5);
+                doc.setTextColor(0, 140, 125);
+                doc.text(item.code, colX.codigo, y + 4.5);
+                doc.setFontSize(8.5);
+                doc.setTextColor(51, 65, 85);
+                doc.text(nombreLines, colX.nombre, y + 4.5);
+                doc.text(item.cantidad != null ? Number(item.cantidad).toLocaleString('es-CO') : '—', colX.cant, y + 4.5, { align: 'right' });
+                doc.text(item.precioUnitario != null ? formatCOP(item.precioUnitario) : '—', colX.precio, y + 4.5, { align: 'right' });
+                doc.setFont('helvetica', 'bold');
+                doc.text(subtotal != null ? formatCOP(subtotal) : '—', colX.subtotal - 2, y + 4.5, { align: 'right' });
+                y += rowH;
+            });
+
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.3);
+            doc.line(marginX, y, pageW - marginX, y);
+            y += 2;
+
+            // Total
+            ensureSpace(16);
+            doc.setFillColor(10, 37, 64);
+            doc.rect(marginX, y, pageW - marginX * 2, 12, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.setTextColor(255, 255, 255);
+            doc.text('TOTAL', marginX + 5, y + 8);
+            doc.setFontSize(12);
+            doc.text(formatCOP(hasAnyPricing ? orderTotal : null), pageW - marginX - 5, y + 8, { align: 'right' });
+            y += 18;
+
+            // Observaciones
+            if (payload.observaciones) {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                const obsLines = doc.splitTextToSize(payload.observaciones, pageW - marginX * 2);
+                ensureSpace(6 + obsLines.length * 4.6);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10.5);
+                doc.setTextColor(10, 37, 64);
+                doc.text('Observaciones', marginX, y);
+                y += 6;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(51, 65, 85);
+                doc.text(obsLines, marginX, y);
+                y += obsLines.length * 4.6 + 6;
+            }
+
+            // Elaborado por
+            if (payload.elaboradoPor) {
+                ensureSpace(12);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(71, 85, 105);
+                doc.text(`Orden elaborada por: ${payload.elaboradoPor}`, marginX, y);
+                y += 6;
+            }
+
+            drawFooter();
+
+            const safeName = (payload.proveedor.nombre || 'proveedor').replace(/[^\w]+/g, '_');
+            const filenameFolio = currentOrderId ? folioLabel.replace(/[^\w-]+/g, '_') : 'borrador';
+            const filename = `NutraSyn_OrdenCompra_${filenameFolio}_${safeName}.pdf`;
+            return { doc, filename };
+        }
+
+        async function downloadOrderPDF() {
+            toast('Generando PDF', 'Preparando el documento...', 'info');
+            const result = await buildOrderPdfDoc();
+            if (!result) return;
+            result.doc.save(result.filename);
+            toast('PDF generado', 'La orden se descargó correctamente.');
+        }
+
+        async function previewOrderPDF() {
+            toast('Generando vista previa', 'Preparando el documento...', 'info');
+            const result = await buildOrderPdfDoc();
+            if (!result) return;
+            window.open(result.doc.output('bloburl'), '_blank');
+        }
+
+        // --- Init ---
+        function initApp() {
+            document.getElementById('elaborado-por').value = collaboratorDisplayName;
+            renderItemsList();
+            loadCatalogs();
+            loadOrdersList();
+        }
+    </script>
+</body>
+
+</html>

@@ -24,3 +24,12 @@
 [[edge_functions]]
   path = "/cotizaciones"
   function = "portal-auth"
+
+# Módulo de Órdenes de Compra (solo colaboradores) — mismo gate que Cotizaciones.
+[[edge_functions]]
+  path = "/orden-compra.html"
+  function = "portal-auth"
+
+[[edge_functions]]
+  path = "/orden-compra"
+  function = "portal-auth"

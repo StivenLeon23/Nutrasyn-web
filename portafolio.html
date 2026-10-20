@@ -871,6 +871,10 @@
                         class="hidden shrink-0 items-center gap-1.5 text-gray-300 hover:text-emerald font-medium text-sm transition-colors whitespace-nowrap">
                         <i data-lucide="file-text" class="w-3.5 h-3.5 text-emerald-400"></i> Cotizaciones
                     </a>
+                    <a id="nav-orden-compra-link" href="/orden-compra.html"
+                        class="hidden shrink-0 items-center gap-1.5 text-gray-300 hover:text-emerald font-medium text-sm transition-colors whitespace-nowrap">
+                        <i data-lucide="truck" class="w-3.5 h-3.5 text-emerald-400"></i> Orden de Compra
+                    </a>
                 </div>
 
                 <!-- B2B Actions -->
@@ -929,6 +933,10 @@
                 <a id="mobile-nav-cotizaciones-link" href="/cotizaciones.html"
                     class="hidden items-center gap-2 px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">
                     <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i> Cotizaciones
+                </a>
+                <a id="mobile-nav-orden-compra-link" href="/orden-compra.html"
+                    class="hidden items-center gap-2 px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg">
+                    <i data-lucide="truck" class="w-4 h-4 text-emerald-400"></i> Orden de Compra
                 </a>
                 <div class="flex justify-between items-center px-3 py-3 mt-2 border-t border-white/5">
                     <span class="text-sm font-medium text-gray-300">Modo Claro</span>
@@ -1376,6 +1384,11 @@
                 const mobileNavLink = document.getElementById('mobile-nav-cotizaciones-link');
                 if (navLink) { navLink.classList.remove('hidden'); navLink.classList.add('flex'); }
                 if (mobileNavLink) { mobileNavLink.classList.remove('hidden'); mobileNavLink.classList.add('flex'); }
+
+                const ocNavLink = document.getElementById('nav-orden-compra-link');
+                const ocMobileNavLink = document.getElementById('mobile-nav-orden-compra-link');
+                if (ocNavLink) { ocNavLink.classList.remove('hidden'); ocNavLink.classList.add('flex'); }
+                if (ocMobileNavLink) { ocMobileNavLink.classList.remove('hidden'); ocMobileNavLink.classList.add('flex'); }
             }
 
             // Mostrar "Cerrar sesión" cuando hay cookie de sesión activa (token presente).
