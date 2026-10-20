@@ -7,11 +7,16 @@
 // Cada ítem es un insumo o ingrediente tomado de los catálogos ya
 // existentes (/api/packaging, /api/ingredients) — se guarda como snapshot
 // propio de ESTA orden (código/nombre al momento de agregarlo, más la
-// cantidad y el precio unitario que se negocien con el proveedor), nunca
-// modifica el catálogo:
-//   { tipo: "insumo"|"ingrediente", code, nombre, cantidad, precioUnitario }
-// El total es la suma de (cantidad × precioUnitario) de los ítems que
-// tengan ambos valores.
+// cantidad, el precio unitario y el % de IVA que se negocien con el
+// proveedor), nunca modifica el catálogo:
+//   { tipo: "insumo"|"ingrediente", code, nombre, cantidad, precioUnitario, ivaPercent }
+// ivaPercent es por ítem (no uno solo para toda la orden) porque se
+// pueden mezclar insumos con distinta tarifa de IVA en la misma compra;
+// 19 (la tarifa general en Colombia) es el valor por defecto si no se
+// indica otro. El subtotal es la suma de (cantidad × precioUnitario) de
+// los ítems que tengan ambos valores, el IVA es la suma del IVA de cada
+// uno según su propio ivaPercent, y el total es subtotal + iva — ver
+// computeTotals().
 //
 // El folio (OC-2026-0001...) es un consecutivo propio de este módulo,
 // independiente del de Cotizaciones — arranca en 1, no continúa ninguna
@@ -52,38 +57,51 @@ function normalizeItems(items) {
     .map((i) => {
       const cantidad = i?.cantidad != null && i.cantidad !== "" && Number.isFinite(Number(i.cantidad)) ? Number(i.cantidad) : null;
       const precioUnitario = i?.precioUnitario != null && i.precioUnitario !== "" && Number.isFinite(Number(i.precioUnitario)) ? Number(i.precioUnitario) : null;
+      // 19% (tarifa general en Colombia) por defecto si no viene nada —
+      // se puede bajar a 0 o a cualquier otro valor por ítem (ej. productos
+      // exentos mezclados con otros gravados en la misma orden).
+      const ivaPercent = i?.ivaPercent != null && i.ivaPercent !== "" && Number.isFinite(Number(i.ivaPercent)) ? Number(i.ivaPercent) : 19;
       return {
         tipo: i?.tipo === "ingrediente" ? "ingrediente" : "insumo",
         code: String(i?.code || "").trim(),
         nombre: String(i?.nombre || "").trim(),
         cantidad,
         precioUnitario,
+        ivaPercent,
       };
     })
     .filter((i) => i.code || i.nombre);
 }
 
-// Suma cantidad × precioUnitario de los ítems que tengan ambos valores. Si
-// ninguno tiene precio todavía, se devuelve null (no 0) para distinguir
-// "sin definir" de "total es cero".
-function computeTotal(items) {
-  let total = 0;
+// Subtotal = suma de cantidad × precioUnitario (antes de IVA) de los
+// ítems que tengan ambos valores. IVA = suma del IVA de cada uno de esos
+// ítems según su propio ivaPercent. Total = subtotal + iva. Si ningún
+// ítem tiene precio todavía, los tres quedan en null (no 0) para
+// distinguir "sin definir" de "total es cero".
+function computeTotals(items) {
+  let subtotal = 0;
+  let iva = 0;
   let hasAny = false;
   for (const i of items || []) {
     if (i.cantidad != null && i.precioUnitario != null) {
-      total += i.cantidad * i.precioUnitario;
+      const lineSubtotal = i.cantidad * i.precioUnitario;
+      subtotal += lineSubtotal;
+      iva += lineSubtotal * ((i.ivaPercent || 0) / 100);
       hasAny = true;
     }
   }
-  return hasAny ? total : null;
+  if (!hasAny) return { subtotal: null, iva: null, total: null };
+  return { subtotal, iva, total: subtotal + iva };
 }
 
 function orderSummary(order) {
+  // El listado muestra el total CON IVA (lo que de verdad se le pagaría
+  // al proveedor), no el subtotal.
   return {
     id: order.id,
     folio: order.folio,
     proveedor: order.proveedor,
-    totalEstimado: computeTotal(order.items),
+    totalEstimado: computeTotals(order.items).total,
     itemCount: Array.isArray(order.items) ? order.items.length : 0,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
@@ -143,7 +161,7 @@ export default async (req) => {
         id: newId,
         folio: assignedFolio,
         proveedor,
-        totalEstimado: computeTotal(items),
+        totalEstimado: computeTotals(items).total,
         itemCount: items.length,
         createdAt: now,
         updatedAt: now,

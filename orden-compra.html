@@ -164,9 +164,19 @@
                             <p class="text-[11px] text-gray-500 border border-dashed border-white/10 rounded-xl p-4 text-center">Aún no hay ítems agregados.</p>
                         </div>
 
-                        <div class="p-4 bg-emerald-950/30 border border-emerald-500/20 rounded-xl flex items-center justify-between">
-                            <span class="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">Total (suma de subtotales)</span>
-                            <span id="order-total-preview" class="text-base font-extrabold text-white">No definido</span>
+                        <div class="p-4 bg-deepblue-950/60 border border-white/5 rounded-xl space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Subtotal</span>
+                                <span id="order-subtotal-preview" class="text-xs font-bold text-gray-300">No definido</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">IVA</span>
+                                <span id="order-iva-preview" class="text-xs font-bold text-gray-300">No definido</span>
+                            </div>
+                            <div class="flex items-center justify-between pt-1.5 border-t border-white/10">
+                                <span class="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">Total</span>
+                                <span id="order-total-preview" class="text-base font-extrabold text-white">No definido</span>
+                            </div>
                         </div>
                     </div>
 
@@ -316,7 +326,9 @@
             if (!source) return;
             const nombre = tipo === 'insumo' ? source.name : source.nombre;
             const alreadyHasIt = orderItems.some(i => i.tipo === tipo && i.code === code);
-            orderItems.push({ tipo, code, nombre, cantidad: null, precioUnitario: null });
+            // 19% (tarifa general en Colombia) como valor inicial — se puede
+            // bajar a 0 o cambiar por ítem si alguno tiene otra tarifa.
+            orderItems.push({ tipo, code, nombre, cantidad: null, precioUnitario: null, ivaPercent: 19 });
             document.getElementById('item-search').value = '';
             document.getElementById('item-search-results').classList.add('hidden');
             renderItemsList();
@@ -328,11 +340,19 @@
             renderItemsList();
         }
 
+        // Subtotal de la línea = cantidad × precio unitario, ANTES de IVA.
         function itemSubtotal(item) {
             if (item.cantidad == null || item.precioUnitario == null) return null;
             const qty = Number(item.cantidad), unit = Number(item.precioUnitario);
             if (!Number.isFinite(qty) || !Number.isFinite(unit)) return null;
             return qty * unit;
+        }
+
+        function itemIva(item) {
+            const subtotal = itemSubtotal(item);
+            if (subtotal == null) return null;
+            const pct = item.ivaPercent != null && Number.isFinite(Number(item.ivaPercent)) ? Number(item.ivaPercent) : 0;
+            return subtotal * (pct / 100);
         }
 
         // Actualiza solo el subtotal de esa fila y el total general por DOM
@@ -347,14 +367,26 @@
             updateOrderTotalDisplay();
         }
 
-        function computeOrderTotal() {
+        // Subtotal (antes de IVA) + IVA (suma del IVA de cada ítem según su
+        // propio %) + Total (subtotal + iva) — nunca se junta el IVA en un
+        // solo % para toda la orden porque distintos ítems pueden tener
+        // tarifas distintas.
+        function computeOrderTotals() {
             const subtotals = orderItems.map(itemSubtotal).filter(s => s != null);
-            return subtotals.length ? subtotals.reduce((a, b) => a + b, 0) : null;
+            if (!subtotals.length) return { subtotal: null, iva: null, total: null };
+            const subtotal = subtotals.reduce((a, b) => a + b, 0);
+            const iva = orderItems.map(itemIva).filter(v => v != null).reduce((a, b) => a + b, 0);
+            return { subtotal, iva, total: subtotal + iva };
         }
 
         function updateOrderTotalDisplay() {
-            const el = document.getElementById('order-total-preview');
-            if (el) el.textContent = formatCOP(computeOrderTotal());
+            const totals = computeOrderTotals();
+            const subtotalEl = document.getElementById('order-subtotal-preview');
+            const ivaEl = document.getElementById('order-iva-preview');
+            const totalEl = document.getElementById('order-total-preview');
+            if (subtotalEl) subtotalEl.textContent = formatCOP(totals.subtotal);
+            if (ivaEl) ivaEl.textContent = formatCOP(totals.iva);
+            if (totalEl) totalEl.textContent = formatCOP(totals.total);
         }
 
         function renderItemsList() {
@@ -374,7 +406,7 @@
                         </div>
                         <button onclick="removeOrderItem(${index})" class="text-gray-500 hover:text-red-400 shrink-0"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
                     </div>
-                    <div class="grid grid-cols-3 gap-2">
+                    <div class="grid grid-cols-4 gap-2">
                         <div>
                             <label class="field-label">Cantidad</label>
                             <input type="number" min="0" step="1" value="${item.cantidad ?? ''}"
@@ -386,6 +418,12 @@
                             <input type="number" min="0" step="1" value="${item.precioUnitario ?? ''}"
                                 onchange="updateOrderItem(${index}, 'precioUnitario', this.value)"
                                 class="field-input" placeholder="COP">
+                        </div>
+                        <div>
+                            <label class="field-label">IVA %</label>
+                            <input type="number" min="0" max="100" step="0.1" value="${item.ivaPercent ?? ''}"
+                                onchange="updateOrderItem(${index}, 'ivaPercent', this.value)"
+                                class="field-input" placeholder="19">
                         </div>
                         <div>
                             <label class="field-label">Subtotal</label>
@@ -602,7 +640,7 @@
             doc.text(`Correo: ${payload.proveedor.email || 'No indicado'}`, marginX, y); y += 7;
 
             // Tabla de ítems
-            const colX = { tipo: marginX, codigo: marginX + 20, nombre: marginX + 45, cant: marginX + 115, precio: marginX + 140, subtotal: pageW - marginX };
+            const colX = { tipo: marginX, codigo: marginX + 20, nombre: marginX + 43, cant: marginX + 108, iva: marginX + 123, precio: marginX + 153, subtotal: pageW - marginX };
             function drawTableHeader() {
                 doc.setFillColor(10, 37, 64);
                 doc.rect(marginX, y, pageW - marginX * 2, 7, 'F');
@@ -613,6 +651,7 @@
                 doc.text('CÓDIGO', colX.codigo, y + 4.7);
                 doc.text('DESCRIPCIÓN', colX.nombre, y + 4.7);
                 doc.text('CANT.', colX.cant, y + 4.7, { align: 'right' });
+                doc.text('IVA', colX.iva, y + 4.7, { align: 'right' });
                 doc.text('PRECIO UNIT.', colX.precio, y + 4.7, { align: 'right' });
                 doc.text('SUBTOTAL', colX.subtotal - 2, y + 4.7, { align: 'right' });
                 y += 7;
@@ -620,15 +659,17 @@
             ensureSpace(7 + 8);
             drawTableHeader();
 
-            let orderTotal = 0;
+            let orderSubtotal = 0;
+            let orderIva = 0;
             let hasAnyPricing = false;
             orderItems.forEach((item, idx) => {
                 const subtotal = itemSubtotal(item);
-                if (subtotal != null) { orderTotal += subtotal; hasAnyPricing = true; }
+                const iva = itemIva(item);
+                if (subtotal != null) { orderSubtotal += subtotal; orderIva += (iva || 0); hasAnyPricing = true; }
 
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8.5);
-                const nombreLines = doc.splitTextToSize(item.nombre, 68);
+                const nombreLines = doc.splitTextToSize(item.nombre, 62);
                 const rowH = Math.max(6.5, nombreLines.length * 4.2 + 2);
                 ensureSpace(rowH);
                 // La tabla no repite el encabezado al pasar de página — para
@@ -651,6 +692,9 @@
                 doc.setTextColor(51, 65, 85);
                 doc.text(nombreLines, colX.nombre, y + 4.5);
                 doc.text(item.cantidad != null ? Number(item.cantidad).toLocaleString('es-CO') : '—', colX.cant, y + 4.5, { align: 'right' });
+                doc.setFontSize(7.5);
+                doc.text(item.ivaPercent != null ? `${item.ivaPercent}%` : '—', colX.iva, y + 4.5, { align: 'right' });
+                doc.setFontSize(8.5);
                 doc.text(item.precioUnitario != null ? formatCOP(item.precioUnitario) : '—', colX.precio, y + 4.5, { align: 'right' });
                 doc.setFont('helvetica', 'bold');
                 doc.text(subtotal != null ? formatCOP(subtotal) : '—', colX.subtotal - 2, y + 4.5, { align: 'right' });
@@ -662,8 +706,17 @@
             doc.line(marginX, y, pageW - marginX, y);
             y += 2;
 
-            // Total
-            ensureSpace(16);
+            // Subtotal / IVA / Total
+            ensureSpace(24);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(71, 85, 105);
+            doc.text('Subtotal:', pageW - marginX - 55, y + 4);
+            doc.text(formatCOP(hasAnyPricing ? orderSubtotal : null), pageW - marginX, y + 4, { align: 'right' });
+            doc.text('IVA:', pageW - marginX - 55, y + 9.5);
+            doc.text(formatCOP(hasAnyPricing ? orderIva : null), pageW - marginX, y + 9.5, { align: 'right' });
+            y += 13;
+
             doc.setFillColor(10, 37, 64);
             doc.rect(marginX, y, pageW - marginX * 2, 12, 'F');
             doc.setFont('helvetica', 'bold');
@@ -671,7 +724,7 @@
             doc.setTextColor(255, 255, 255);
             doc.text('TOTAL', marginX + 5, y + 8);
             doc.setFontSize(12);
-            doc.text(formatCOP(hasAnyPricing ? orderTotal : null), pageW - marginX - 5, y + 8, { align: 'right' });
+            doc.text(formatCOP(hasAnyPricing ? orderSubtotal + orderIva : null), pageW - marginX - 5, y + 8, { align: 'right' });
             y += 18;
 
             // Observaciones
