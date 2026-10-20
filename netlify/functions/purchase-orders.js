@@ -7,9 +7,10 @@
 // Cada ítem es un insumo o ingrediente tomado de los catálogos ya
 // existentes (/api/packaging, /api/ingredients) — se guarda como snapshot
 // propio de ESTA orden (código/nombre al momento de agregarlo, más la
-// cantidad, el precio unitario y el % de IVA que se negocien con el
-// proveedor), nunca modifica el catálogo:
-//   { tipo: "insumo"|"ingrediente", code, nombre, cantidad, precioUnitario, ivaPercent }
+// cantidad, el precio unitario, el % de IVA y una nota libre opcional
+// —ej. "color azul"— que se negocien con el proveedor), nunca modifica
+// el catálogo:
+//   { tipo: "insumo"|"ingrediente", code, nombre, cantidad, precioUnitario, ivaPercent, nota? }
 // ivaPercent es por ítem (no uno solo para toda la orden) porque se
 // pueden mezclar insumos con distinta tarifa de IVA en la misma compra;
 // 19 (la tarifa general en Colombia) es el valor por defecto si no se
@@ -61,6 +62,9 @@ function normalizeItems(items) {
       // se puede bajar a 0 o a cualquier otro valor por ítem (ej. productos
       // exentos mezclados con otros gravados en la misma orden).
       const ivaPercent = i?.ivaPercent != null && i.ivaPercent !== "" && Number.isFinite(Number(i.ivaPercent)) ? Number(i.ivaPercent) : 19;
+      // Nota libre por ítem (ej. "color azul"), propia de esta orden — igual
+      // que la nota de insumos en Cotizaciones, nunca toca el catálogo.
+      const nota = String(i?.nota || "").trim();
       return {
         tipo: i?.tipo === "ingrediente" ? "ingrediente" : "insumo",
         code: String(i?.code || "").trim(),
@@ -68,6 +72,7 @@ function normalizeItems(items) {
         cantidad,
         precioUnitario,
         ivaPercent,
+        ...(nota ? { nota } : {}),
       };
     })
     .filter((i) => i.code || i.nombre);

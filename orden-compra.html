@@ -213,9 +213,10 @@
         const session = window.__PORTAL_SESSION__;
         const collaboratorDisplayName = session ? (session.name || session.user) : '';
         let currentOrderId = null;
-        let orderItems = []; // [{tipo:'insumo'|'ingrediente', code, nombre, cantidad, precioUnitario}]
+        let orderItems = []; // [{tipo:'insumo'|'ingrediente', code, nombre, cantidad, precioUnitario, ivaPercent, nota?}]
         let packagingCache = [];
         let ingredientsCache = [];
+        let editingItemNota = null; // índice del ítem cuya nota está en edición, o null
         let ordersCache = [];
 
         // --- Guardia de acceso (mismo criterio que cotizaciones.html) ---
@@ -337,6 +338,26 @@
 
         function removeOrderItem(index) {
             orderItems.splice(index, 1);
+            if (editingItemNota === index) editingItemNota = null;
+            renderItemsList();
+        }
+
+        // Nota libre por ítem, propia de esta orden (ej. "color azul") —
+        // igual mecánica que la nota de insumos en Cotizaciones: se ve/edita
+        // detrás de un lápiz, no un campo siempre abierto, y nunca se
+        // escribe en el catálogo reutilizable de insumos/ingredientes.
+        function toggleItemNotaEdit(index) {
+            editingItemNota = editingItemNota === index ? null : index;
+            renderItemsList();
+        }
+
+        function updateItemNota(index, value) {
+            const item = orderItems[index];
+            if (item) {
+                const trimmed = value.trim();
+                if (trimmed) item.nota = trimmed; else delete item.nota;
+            }
+            editingItemNota = null;
             renderItemsList();
         }
 
@@ -396,7 +417,9 @@
                 updateOrderTotalDisplay();
                 return;
             }
-            box.innerHTML = orderItems.map((item, index) => `
+            box.innerHTML = orderItems.map((item, index) => {
+                const isEditingNota = editingItemNota === index;
+                return `
                 <div class="p-3 bg-deepblue-950/60 border border-white/5 rounded-xl">
                     <div class="flex items-center justify-between gap-2 mb-2">
                         <div class="flex items-center gap-1.5 min-w-0">
@@ -404,8 +427,21 @@
                             <span class="text-[9px] font-mono text-gray-500 shrink-0">${escapeHtml(item.code)}</span>
                             <span class="text-[11px] font-bold text-white truncate">${escapeHtml(item.nombre)}</span>
                         </div>
-                        <button onclick="removeOrderItem(${index})" class="text-gray-500 hover:text-red-400 shrink-0"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button onclick="toggleItemNotaEdit(${index})" title="${item.nota ? 'Editar nota' : 'Agregar nota'}"
+                                class="${item.nota ? 'text-emerald-400 hover:text-emerald-300' : 'text-gray-500 hover:text-emerald-400'}">
+                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="removeOrderItem(${index})" class="text-gray-500 hover:text-red-400"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
+                        </div>
                     </div>
+                    ${isEditingNota ? `
+                        <input type="text" value="${escapeHtml(item.nota || '')}" autofocus
+                            onblur="updateItemNota(${index}, this.value)"
+                            onkeydown="if(event.key==='Enter') this.blur()"
+                            placeholder="Nota para esta orden (opcional, ej: color especial, referencia...)"
+                            class="field-input !text-[10px] !py-1.5 mb-2">
+                    ` : (item.nota ? `<p class="text-[10px] text-gray-500 italic mb-2">${escapeHtml(item.nota)}</p>` : '')}
                     <div class="grid grid-cols-4 gap-2">
                         <div>
                             <label class="field-label">Cantidad</label>
@@ -431,7 +467,8 @@
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
             updateOrderTotalDisplay();
             lucide.createIcons();
         }
@@ -669,7 +706,8 @@
 
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8.5);
-                const nombreLines = doc.splitTextToSize(item.nombre, 62);
+                const nombreConNota = item.nombre + (item.nota ? ' — ' + item.nota : '');
+                const nombreLines = doc.splitTextToSize(nombreConNota, 62);
                 const rowH = Math.max(6.5, nombreLines.length * 4.2 + 2);
                 ensureSpace(rowH);
                 // La tabla no repite el encabezado al pasar de página — para
