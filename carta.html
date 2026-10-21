@@ -155,6 +155,20 @@
                     <label class="field-label">Cuerpo de la carta</label>
                     <textarea id="cuerpo" rows="10" class="field-input" placeholder="Escribe el contenido de la carta. Cada línea en blanco separa un párrafo nuevo en el documento final."></textarea>
                 </div>
+                <div>
+                    <label class="field-label">Firma del representante legal (opcional)</label>
+                    <p class="text-[10px] text-gray-500 mb-2">Si subes una imagen de la firma (foto o escaneo con fondo blanco/transparente), se pone sobre el nombre en vez de la línea en blanco. Si no, la carta queda con la línea para firmar a mano.</p>
+                    <div class="flex items-center gap-3">
+                        <label class="btn-secondary flex items-center gap-1.5 cursor-pointer shrink-0">
+                            <i data-lucide="upload" class="w-3.5 h-3.5"></i> Subir firma
+                            <input type="file" id="firma-file" accept="image/*" class="hidden" onchange="previsualizarFirma(this)">
+                        </label>
+                        <div id="firma-preview-wrap" class="hidden items-center gap-2">
+                            <img id="firma-preview" class="h-10 bg-white rounded border border-white/10 px-2" alt="Vista previa de la firma">
+                            <button type="button" onclick="quitarFirma()" class="text-gray-500 hover:text-red-400" title="Quitar firma"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="flex justify-end">
@@ -166,7 +180,14 @@
     </div>
 
     <script type="module">
-        import { Document, Paragraph, TextRun, AlignmentType, ImageRun, Header, Footer, Packer } from 'https://cdn.jsdelivr.net/npm/docx@8/build/index.js';
+        import { Document, Paragraph, TextRun, AlignmentType, ImageRun, Header, Footer, Packer, BorderStyle } from 'https://cdn.jsdelivr.net/npm/docx@8/build/index.js';
+
+        // Mismos colores de marca que el resto del sitio (ver tailwind.config
+        // arriba): navy para texto destacado/firma, teal para los acentos.
+        const COLOR_NAVY = '0A2540';
+        const COLOR_TEAL = '00A896';
+        const COLOR_BODY = '1F2937';
+        const COLOR_MUTED = '64748B';
 
         const session = window.__PORTAL_SESSION__;
         const collaboratorDisplayName = session ? (session.name || session.user) : '';
@@ -238,11 +259,23 @@
             return cachedLogoBase64;
         }
 
+        // Arial en todo el documento, 11pt (size:22, docx mide en
+        // medio-puntos) para el cuerpo normal y 12pt (size:24) para lo que
+        // debe resaltar un poco más (asunto, nombre de firma) — igual que
+        // pidió el dueño del sitio. Color por defecto texto oscuro normal;
+        // "bold" además lo pinta en navy para que se note como énfasis.
         function parrafo(texto, opts = {}) {
             return new Paragraph({
-                children: [new TextRun({ text: texto, bold: Boolean(opts.bold), size: opts.size || 22 })],
+                children: [new TextRun({
+                    text: texto,
+                    bold: Boolean(opts.bold),
+                    size: opts.size || 22,
+                    font: 'Arial',
+                    color: opts.color || (opts.bold ? COLOR_NAVY : COLOR_BODY),
+                })],
                 spacing: { after: opts.after ?? 0 },
                 alignment: opts.align,
+                border: opts.border,
             });
         }
 
@@ -255,6 +288,66 @@
                 .map((p) => p.trim())
                 .filter(Boolean)
                 .map((p) => parrafo(p, { after: 240 }));
+        }
+
+        // --- Firma del representante legal (imagen opcional subida por el
+        // colaborador) --- Se ve/edita en el navegador solo como vista
+        // previa; el archivo en sí se lee y se incrusta recién al generar
+        // el documento (no se sube a ningún servidor, todo pasa en el
+        // navegador, igual que el resto de este módulo).
+        window.previsualizarFirma = function previsualizarFirma(input) {
+            const file = input.files && input.files[0];
+            const wrap = document.getElementById('firma-preview-wrap');
+            const img = document.getElementById('firma-preview');
+            if (!file) { wrap.classList.add('hidden'); wrap.classList.remove('flex'); return; }
+            const reader = new FileReader();
+            reader.onload = () => {
+                img.src = reader.result;
+                wrap.classList.remove('hidden');
+                wrap.classList.add('flex');
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.quitarFirma = function quitarFirma() {
+            const input = document.getElementById('firma-file');
+            input.value = '';
+            document.getElementById('firma-preview-wrap').classList.add('hidden');
+            document.getElementById('firma-preview-wrap').classList.remove('flex');
+        };
+
+        function readFileAsDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('No se pudo leer el archivo de la firma.'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Devuelve {base64, type, width, height} listo para un ImageRun, o
+        // null si no se subió ninguna firma — el ancho se fija y el alto se
+        // calcula a partir de las proporciones reales de la imagen, para
+        // que no salga estirada ni achatada.
+        async function getFirmaParaDocx() {
+            const input = document.getElementById('firma-file');
+            const file = input.files && input.files[0];
+            if (!file) return null;
+            const dataUrl = await readFileAsDataUrl(file);
+            const img = await new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = () => reject(new Error('No se pudo procesar la imagen de la firma.'));
+                image.src = dataUrl;
+            });
+            const anchoDeseado = 150;
+            const alto = anchoDeseado * (img.naturalHeight / img.naturalWidth || 0.4);
+            return {
+                base64: dataUrl.split(',')[1],
+                type: file.type.includes('png') ? 'png' : 'jpg',
+                width: anchoDeseado,
+                height: alto,
+            };
         }
 
         window.generarCarta = async function generarCarta() {
@@ -277,15 +370,31 @@
 
             const fechaHoy = new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
             const logoBase64 = await getLogoBase64();
+            // La firma nunca debe tumbar la generación de la carta: si algo
+            // sale mal leyendo la imagen, se avisa pero se sigue sin ella
+            // (queda la línea en blanco de siempre para firmar a mano).
+            let firma = null;
+            try {
+                firma = await getFirmaParaDocx();
+            } catch (err) {
+                toast('No se pudo usar la firma', err.message + ' La carta se genera con la línea en blanco.', 'warning');
+            }
 
             const headerChildren = [];
             if (logoBase64) {
                 headerChildren.push(new Paragraph({
                     children: [new ImageRun({ data: logoBase64, type: 'png', transformation: { width: 150, height: 150 * (129 / 550) } })],
+                    spacing: { after: 80 },
                 }));
             } else {
-                headerChildren.push(parrafo('NUTRASYN LAB', { bold: true, size: 26 }));
+                headerChildren.push(parrafo('NUTRASYN LAB', { bold: true, size: 26, after: 80 }));
             }
+            // Línea de acento en el color de marca debajo del logo, como
+            // membrete — mismo tono que el resto del sitio (ver COLOR_TEAL).
+            headerChildren.push(new Paragraph({
+                children: [],
+                border: { bottom: { color: COLOR_TEAL, space: 1, style: BorderStyle.SINGLE, size: 12 } },
+            }));
 
             const bodyChildren = [
                 parrafo(`${ciudadOrigen}, ${fechaHoy}`, { bold: true, after: 300 }),
@@ -294,18 +403,32 @@
                 parrafo(ciudadDestinatario, { after: 300 }),
             ];
             if (asunto) {
+                // ASUNTO en 12pt (un poco más grande que el resto, 11pt) para
+                // que resalte como un mini-título, con la etiqueta en el
+                // color de marca y el texto en navy.
                 bodyChildren.push(new Paragraph({
-                    children: [new TextRun({ text: 'ASUNTO: ', bold: true, size: 22 }), new TextRun({ text: asunto, bold: true, size: 22 })],
+                    children: [
+                        new TextRun({ text: 'ASUNTO: ', bold: true, size: 24, font: 'Arial', color: COLOR_TEAL }),
+                        new TextRun({ text: asunto, bold: true, size: 24, font: 'Arial', color: COLOR_NAVY }),
+                    ],
                     spacing: { after: 300 },
                 }));
             }
             bodyChildren.push(parrafo('Respetados señores,', { after: 300 }));
             bodyChildren.push(...parrafosDeCuerpo(cuerpo));
+            bodyChildren.push(parrafo('', { after: 400 }));
+            bodyChildren.push(parrafo('Atentamente,', { after: 900 }));
+            if (firma) {
+                bodyChildren.push(new Paragraph({
+                    children: [new ImageRun({ data: firma.base64, type: firma.type, transformation: { width: firma.width, height: firma.height } })],
+                }));
+            } else {
+                bodyChildren.push(parrafo('_________________________________________'));
+            }
             bodyChildren.push(
-                parrafo('', { after: 400 }),
-                parrafo('Atentamente,', { after: 900 }),
-                parrafo('_________________________________________'),
-                parrafo(repNombre, { bold: true }),
+                // Nombre de quien firma en 12pt, un poco más grande que el
+                // resto del cuerpo (11pt), para que se note como el cierre.
+                parrafo(repNombre, { bold: true, size: 24 }),
                 parrafo(`C.C. ${repCedula}`),
                 parrafo('Representante Legal'),
             );
@@ -317,8 +440,13 @@
                     footers: {
                         default: new Footer({
                             children: [
-                                parrafo(empresaNombre, { bold: true, size: 16, align: AlignmentType.CENTER }),
-                                parrafo(`NIT ${empresaNit}`, { size: 16, align: AlignmentType.CENTER }),
+                                new Paragraph({
+                                    children: [],
+                                    border: { top: { color: COLOR_TEAL, space: 4, style: BorderStyle.SINGLE, size: 6 } },
+                                    spacing: { after: 60 },
+                                }),
+                                parrafo(empresaNombre, { bold: true, size: 16, align: AlignmentType.CENTER, color: COLOR_NAVY }),
+                                parrafo(`NIT ${empresaNit}`, { size: 16, align: AlignmentType.CENTER, color: COLOR_MUTED }),
                             ],
                         }),
                     },
