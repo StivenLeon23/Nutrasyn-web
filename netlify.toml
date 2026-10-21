@@ -33,3 +33,12 @@
 [[edge_functions]]
   path = "/orden-compra"
   function = "portal-auth"
+
+# Módulo de Cartas (solo colaboradores) — mismo gate que Cotizaciones.
+[[edge_functions]]
+  path = "/carta.html"
+  function = "portal-auth"
+
+[[edge_functions]]
+  path = "/carta"
+  function = "portal-auth"

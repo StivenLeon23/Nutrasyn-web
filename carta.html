@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carta | NutraSyn Lab</title>
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <link rel="icon" type="image/svg+xml"
+        href="https://res.cloudinary.com/dj761bgxw/image/upload/v1777037267/svg_1_-cropped_p9sqmo.svg" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&family=Manrope:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Manrope', 'sans-serif'], heading: ['Lexend', 'sans-serif'] },
+                    colors: {
+                        deepblue: { DEFAULT: '#0A2540', 50: '#f0f4f8', 100: '#d9e2ec', 200: '#bcccdc', 300: '#9fb3c8', 400: '#829ab1', 500: '#627d98', 600: '#486581', 700: '#334e68', 800: '#243b53', 900: '#0A2540', 950: '#061727' },
+                        emerald: { DEFAULT: '#00A896', 50: '#f0fdfa', 100: '#ccfbf1', 200: '#99f6e4', 300: '#5eead4', 400: '#2dd4bf', 500: '#00A896', 600: '#008c7d', 700: '#007064', 800: '#00574e', 900: '#00403a' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #061727; font-family: 'Manrope', sans-serif; }
+        h1, h2, h3, h4, .font-heading { font-family: 'Lexend', sans-serif; }
+        .field-input {
+            width: 100%; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem;
+            padding: 0.65rem 0.85rem; background: #0A2540; color: #fff; outline: none;
+        }
+        .field-input:focus { box-shadow: 0 0 0 1px #00A896; border-color: #00A896; }
+        .field-label { display:block; font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; letter-spacing: .05em; }
+        .btn-primary { background: #00A896; color: #fff; font-weight: 700; border-radius: 0.75rem; padding: 0.65rem 1.25rem; font-size: 0.75rem; transition: background .2s; }
+        .btn-primary:hover { background: #008c7d; }
+        .btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; font-weight: 600; border-radius: 0.75rem; padding: 0.65rem 1.25rem; font-size: 0.75rem; transition: all .2s; }
+        .btn-secondary:hover { border-color: #00A896; color: #fff; }
+        .card { background: rgba(10, 37, 64, 0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 1.5rem; }
+    </style>
+</head>
+
+<body class="text-gray-300 antialiased min-h-screen">
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[150] flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- Bloqueo de acceso: se decide en JS según window.__PORTAL_SESSION__ -->
+    <div id="access-denied" class="hidden min-h-screen items-center justify-center p-6">
+        <div class="card max-w-md w-full p-8 text-center space-y-4">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-red-500/10 text-red-400 flex items-center justify-center">
+                <i data-lucide="lock" class="w-7 h-7"></i>
+            </div>
+            <h1 class="text-lg font-bold text-white">Acceso restringido</h1>
+            <p id="access-denied-message" class="text-xs text-gray-400 leading-relaxed"></p>
+            <a href="/portafolio.html" class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Volver al portafolio
+            </a>
+        </div>
+    </div>
+
+    <div id="app-root" class="hidden">
+        <!-- Nav -->
+        <nav class="border-b border-white/5 bg-deepblue-900/90 backdrop-blur-md">
+            <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
+                <a href="/portafolio.html" class="flex items-center gap-3">
+                    <img src="https://res.cloudinary.com/dj761bgxw/image/upload/v1777030919/svg_1_vfsoo4.svg"
+                        alt="NutraSyn Lab" class="h-9 w-auto object-contain brightness-0 invert">
+                    <span class="hidden sm:inline text-xs font-bold text-gray-400 border-l border-white/10 pl-3">Carta</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span id="session-user-badge" class="text-[10px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/20 px-2.5 py-1 rounded-lg"></span>
+                    <a href="/orden-compra.html" class="btn-secondary flex items-center gap-1.5">
+                        <i data-lucide="truck" class="w-3.5 h-3.5"></i> Orden de Compra
+                    </a>
+                    <a href="/portafolio.html" class="btn-secondary flex items-center gap-1.5">
+                        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Portafolio
+                    </a>
+                    <a href="/carta.html?logout=1" class="btn-secondary flex items-center gap-1.5" title="Cerrar sesión">
+                        <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-[1000px] w-full mx-auto p-4 lg:p-8 flex flex-col space-y-6">
+
+            <div class="space-y-1">
+                <h1 class="text-2xl lg:text-3xl font-extrabold text-white">Generador de Cartas</h1>
+                <p class="text-xs text-gray-400">Descarga un formato de carta en Word (.docx) con el membrete de NutraSyn Lab y los datos legales de la empresa ya puestos — solo completa el destinatario, el asunto y el cuerpo.</p>
+            </div>
+
+            <!-- Datos legales de la empresa (editables por si cambian el representante, la dirección, etc.) -->
+            <div class="card p-6 space-y-4">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="building-2" class="w-4 h-4 text-emerald-400"></i> Datos de NutraSyn Lab (membrete y firma)</h3>
+                <p class="text-[10px] text-gray-500 -mt-2">Vienen precargados — solo cámbialos si el representante legal, la dirección o algún dato cambió.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="field-label">Razón social</label>
+                        <input type="text" id="empresa-nombre" class="field-input" value="NUTRASYN LAB COLOMBIA S.A.S.">
+                    </div>
+                    <div>
+                        <label class="field-label">NIT</label>
+                        <input type="text" id="empresa-nit" class="field-input" value="902.118.607-0">
+                    </div>
+                    <div>
+                        <label class="field-label">Representante legal</label>
+                        <input type="text" id="representante-nombre" class="field-input" value="MABEL SOFÍA GONZÁLEZ CHAVES">
+                    </div>
+                    <div>
+                        <label class="field-label">Cédula del representante</label>
+                        <input type="text" id="representante-cedula" class="field-input" value="1.001.216.462 de Bogotá D.C.">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="field-label">Dirección comercial</label>
+                        <input type="text" id="empresa-direccion" class="field-input" value="Calle 181 B # 10 B - 28, Bogotá D.C.">
+                    </div>
+                    <div>
+                        <label class="field-label">Correo</label>
+                        <input type="email" id="empresa-correo" class="field-input" value="administrativo@synergia-360.com">
+                    </div>
+                    <div>
+                        <label class="field-label">Teléfono</label>
+                        <input type="text" id="empresa-telefono" class="field-input" value="311 894 1725">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Datos de esta carta -->
+            <div class="card p-6 space-y-4">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="file-pen-line" class="w-4 h-4 text-emerald-400"></i> Esta carta</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="field-label">Ciudad y fecha de origen</label>
+                        <input type="text" id="ciudad-origen" class="field-input" value="Bogotá D.C.">
+                    </div>
+                    <div>
+                        <label class="field-label">Asunto</label>
+                        <input type="text" id="asunto" class="field-input" placeholder="Ej: Carta de Responsabilidad del Representante Legal">
+                    </div>
+                    <div>
+                        <label class="field-label">Destinatario (Señores)</label>
+                        <input type="text" id="destinatario" class="field-input" placeholder="Ej: [Nombre de la Entidad / Institución Financiera]">
+                    </div>
+                    <div>
+                        <label class="field-label">Ciudad del destinatario</label>
+                        <input type="text" id="ciudad-destinatario" class="field-input" placeholder="Ciudad" value="Ciudad">
+                    </div>
+                </div>
+                <div>
+                    <label class="field-label">Cuerpo de la carta</label>
+                    <textarea id="cuerpo" rows="10" class="field-input" placeholder="Escribe el contenido de la carta. Cada línea en blanco separa un párrafo nuevo en el documento final."></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button onclick="generarCarta()" class="btn-primary flex items-center gap-1.5">
+                    <i data-lucide="file-down" class="w-3.5 h-3.5"></i> Descargar carta en Word (.docx)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Document, Paragraph, TextRun, AlignmentType, ImageRun, Header, Footer, Packer } from 'https://cdn.jsdelivr.net/npm/docx@8/build/index.js';
+
+        const session = window.__PORTAL_SESSION__;
+        const collaboratorDisplayName = session ? (session.name || session.user) : '';
+
+        // --- Guardia de acceso (mismo criterio que cotizaciones.html / orden-compra.html) ---
+        function denyAccess(message) {
+            document.getElementById('access-denied-message').textContent = message;
+            document.getElementById('access-denied').classList.remove('hidden');
+            document.getElementById('access-denied').classList.add('flex');
+            lucide.createIcons();
+        }
+
+        if (!session) {
+            denyAccess('No se detectó una sesión activa. Vuelve a iniciar sesión desde el portafolio e intenta de nuevo.');
+        } else if (session.role !== 'colaborador') {
+            denyAccess('Este módulo es exclusivo para colaboradores de NutraSyn Lab. Si necesitas acceso, pide a un administrador que actualice tu usuario en la variable PORTAL_USERS con el rol "colaborador".');
+        } else {
+            document.getElementById('app-root').classList.remove('hidden');
+            document.getElementById('session-user-badge').textContent = collaboratorDisplayName + ' · colaborador';
+            lucide.createIcons();
+        }
+
+        // --- Toasts (mismo patrón que el resto del portal) ---
+        function toast(title, message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            let colorBorder = 'border-emerald-500';
+            if (type === 'warning') colorBorder = 'border-yellow-500';
+            if (type === 'error') colorBorder = 'border-red-500';
+            el.className = `p-4 border-l-4 ${colorBorder} bg-deepblue-950 border border-white/5 rounded-xl shadow-2xl flex items-start space-x-3 pointer-events-auto transition-all duration-300 transform translate-y-4 opacity-0 max-w-xs`;
+            el.innerHTML = `<div><h5 class="text-xs font-bold text-white">${title}</h5><p class="text-[10px] text-gray-400 mt-0.5">${message || ''}</p></div>`;
+            container.appendChild(el);
+            setTimeout(() => el.classList.remove('translate-y-4', 'opacity-0'), 50);
+            setTimeout(() => { el.classList.add('opacity-0'); setTimeout(() => el.remove(), 300); }, 3500);
+        }
+
+        // Logo rasterizado una sola vez (mismo SVG que el resto del sitio,
+        // misma técnica que getLogoDataUrl() en cotizaciones.html) para
+        // ponerlo en el membrete del Word. Si falla (sin internet, CDN
+        // caído...) la carta se genera igual, sin el logo — nunca bloquea
+        // la descarga por esto.
+        let cachedLogoBase64 = undefined;
+        async function getLogoBase64() {
+            if (cachedLogoBase64 !== undefined) return cachedLogoBase64;
+            try {
+                const res = await fetch('https://res.cloudinary.com/dj761bgxw/image/upload/v1777030919/svg_1_vfsoo4.svg');
+                const svgText = await res.text();
+                const blobUrl = URL.createObjectURL(new Blob([svgText], { type: 'image/svg+xml' }));
+                cachedLogoBase64 = await new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        try {
+                            const scale = 3;
+                            const w = (img.naturalWidth || 550) * scale;
+                            const h = (img.naturalHeight || 129) * scale;
+                            const canvas = document.createElement('canvas');
+                            canvas.width = w; canvas.height = h;
+                            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                            resolve(canvas.toDataURL('image/png').split(',')[1]);
+                        } catch (e) { resolve(null); }
+                    };
+                    img.onerror = () => resolve(null);
+                    img.src = blobUrl;
+                });
+                URL.revokeObjectURL(blobUrl);
+            } catch (e) {
+                cachedLogoBase64 = null;
+            }
+            return cachedLogoBase64;
+        }
+
+        function parrafo(texto, opts = {}) {
+            return new Paragraph({
+                children: [new TextRun({ text: texto, bold: Boolean(opts.bold), size: opts.size || 22 })],
+                spacing: { after: opts.after ?? 0 },
+                alignment: opts.align,
+            });
+        }
+
+        // El cuerpo es texto libre del colaborador — una línea en blanco
+        // separa un párrafo nuevo en el documento final (igual que en un
+        // editor de texto normal), para no forzar a escribir HTML ni nada raro.
+        function parrafosDeCuerpo(texto) {
+            return texto
+                .split(/\n\s*\n/)
+                .map((p) => p.trim())
+                .filter(Boolean)
+                .map((p) => parrafo(p, { after: 240 }));
+        }
+
+        window.generarCarta = async function generarCarta() {
+            const empresaNombre = document.getElementById('empresa-nombre').value.trim();
+            const empresaNit = document.getElementById('empresa-nit').value.trim();
+            const repNombre = document.getElementById('representante-nombre').value.trim();
+            const repCedula = document.getElementById('representante-cedula').value.trim();
+            const ciudadOrigen = document.getElementById('ciudad-origen').value.trim() || 'Bogotá D.C.';
+            const asunto = document.getElementById('asunto').value.trim();
+            const destinatario = document.getElementById('destinatario').value.trim() || '[Nombre de la Entidad / Institución]';
+            const ciudadDestinatario = document.getElementById('ciudad-destinatario').value.trim() || 'Ciudad';
+            const cuerpo = document.getElementById('cuerpo').value.trim();
+
+            if (!cuerpo) {
+                toast('Falta el cuerpo', 'Escribe el contenido de la carta antes de descargarla.', 'warning');
+                return;
+            }
+
+            toast('Generando carta', 'Preparando el documento Word...', 'info');
+
+            const fechaHoy = new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+            const logoBase64 = await getLogoBase64();
+
+            const headerChildren = [];
+            if (logoBase64) {
+                headerChildren.push(new Paragraph({
+                    children: [new ImageRun({ data: logoBase64, type: 'png', transformation: { width: 150, height: 150 * (129 / 550) } })],
+                }));
+            } else {
+                headerChildren.push(parrafo('NUTRASYN LAB', { bold: true, size: 26 }));
+            }
+
+            const bodyChildren = [
+                parrafo(`${ciudadOrigen}, ${fechaHoy}`, { bold: true, after: 300 }),
+                parrafo('Señores:', { bold: true }),
+                parrafo(destinatario),
+                parrafo(ciudadDestinatario, { after: 300 }),
+            ];
+            if (asunto) {
+                bodyChildren.push(new Paragraph({
+                    children: [new TextRun({ text: 'ASUNTO: ', bold: true, size: 22 }), new TextRun({ text: asunto, bold: true, size: 22 })],
+                    spacing: { after: 300 },
+                }));
+            }
+            bodyChildren.push(parrafo('Respetados señores,', { after: 300 }));
+            bodyChildren.push(...parrafosDeCuerpo(cuerpo));
+            bodyChildren.push(
+                parrafo('', { after: 400 }),
+                parrafo('Atentamente,', { after: 900 }),
+                parrafo('_________________________________________'),
+                parrafo(repNombre, { bold: true }),
+                parrafo(`C.C. ${repCedula}`),
+                parrafo('Representante Legal'),
+            );
+
+            const doc = new Document({
+                sections: [{
+                    properties: {},
+                    headers: { default: new Header({ children: headerChildren }) },
+                    footers: {
+                        default: new Footer({
+                            children: [
+                                parrafo(empresaNombre, { bold: true, size: 16, align: AlignmentType.CENTER }),
+                                parrafo(`NIT ${empresaNit}`, { size: 16, align: AlignmentType.CENTER }),
+                            ],
+                        }),
+                    },
+                    children: bodyChildren,
+                }],
+            });
+
+            try {
+                const blob = await Packer.toBlob(doc);
+                const safeAsunto = (asunto || 'Carta').replace(/[^\w]+/g, '_').slice(0, 60);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `NutraSyn_Carta_${safeAsunto}.docx`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                toast('Carta generada', 'El documento Word se descargó correctamente.');
+            } catch (err) {
+                toast('Error al generar la carta', err.message, 'error');
+            }
+        };
+    </script>
+</body>
+
+</html>
